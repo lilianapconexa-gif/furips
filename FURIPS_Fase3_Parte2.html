@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FURIPS 1 & 2 — Fase 3 Parte 2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{--bg:#0d1117;--sur:#161b22;--sur2:#1f2937;--brd:#30363d;--brd2:#3d444d;--acc:#1a7f64;--acc2:#238636;--blue:#1f6feb;--red:#da3633;--warn:#d29922;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;}
+
+.hdr{background:var(--sur);border-bottom:1px solid var(--brd);padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:50px;position:sticky;top:0;z-index:200;}
+.hbrand{display:flex;align-items:center;gap:9px;}
+.hbadge{background:var(--acc);color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;}
+.hright{display:flex;align-items:center;gap:8px;}
+
+.tabs{display:flex;border-bottom:1px solid var(--brd);background:var(--sur);padding:0 18px;}
+.tab{padding:10px 20px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--tx2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.tab:hover{color:var(--tx);}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc);}
+
+.pbar{background:var(--sur);border-bottom:1px solid var(--brd);padding:7px 18px;display:flex;align-items:center;gap:12px;}
+.ptr{flex:1;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;}
+.pfl{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:3px;transition:width .4s;}
+.ppc{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--acc);min-width:32px;text-align:right;}
+.plb{font-size:11px;color:var(--tx2);}
+
+.layout{display:flex;height:calc(100vh - 108px);overflow:hidden;}
+.steps{width:175px;min-width:175px;background:var(--sur);border-right:1px solid var(--brd);overflow-y:auto;padding:8px 0;}
+.mcont{flex:1;overflow-y:auto;padding:16px 20px 100px;}
+
+.si{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;}
+.si:hover{background:var(--sur2);}
+.si.active{background:rgba(26,127,100,.1);border-left-color:var(--acc);}
+.si.done{border-left-color:var(--acc2);}
+.si.herr{border-left-color:var(--red);}
+.sdot{width:20px;height:20px;border-radius:50%;border:2px solid var(--brd2);display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--mono);font-weight:600;flex-shrink:0;transition:all .2s;}
+.si.done .sdot{background:var(--acc2);border-color:var(--acc2);color:#fff;}
+.si.active .sdot{border-color:var(--acc);color:var(--acc);}
+.si.herr .sdot{background:var(--red);border-color:var(--red);color:#fff;}
+.slbl{font-size:11px;color:var(--tx2);}
+.si.active .slbl{color:var(--tx);font-weight:500;}
+.sst{font-size:9px;font-family:var(--mono);color:var(--tx3);margin-left:auto;}
+
+.fsec{display:none;}.fsec.on{display:block;}
+.ft{font-size:15px;font-weight:600;margin-bottom:12px;}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:9px;}
+.s2{grid-column:span 2;}.s3{grid-column:span 3;}
+
+.field{display:flex;flex-direction:column;gap:3px;}
+.field.ok input,.field.ok select,.field.ok textarea{border-color:rgba(26,127,100,.5);background:rgba(26,127,100,.05);}
+.field.err input,.field.err select,.field.err textarea{border-color:var(--red)!important;box-shadow:0 0 0 2px rgba(218,54,51,.1);}
+.fl{font-size:11px;font-weight:500;color:var(--tx2);display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.fn{font-family:var(--mono);font-size:9px;color:var(--tx3);background:var(--sur2);padding:1px 4px;border-radius:3px;}
+.req{color:var(--red);font-size:10px;}
+.cnd{color:#79c0ff;font-size:10px;}
+.hint{font-size:10px;color:var(--tx3);}
+input,select,textarea{background:var(--sur2);border:1px solid var(--brd);border-radius:5px;color:var(--tx);font-family:var(--sans);font-size:12.5px;padding:6px 8px;transition:all .15s;width:100%;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 2px rgba(26,127,100,.15);}
+input::placeholder{color:var(--tx3);}
+select option{background:var(--sur2);}
+textarea{resize:vertical;min-height:56px;}
+
+.tq{background:var(--sur2);border:1px solid var(--brd2);border-radius:6px;padding:10px 13px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
+.tqi{font-size:18px;flex-shrink:0;}
+.tqt{font-size:12px;color:var(--tx2);flex:1;}
+.tqt strong{color:var(--tx);}
+
+.sh{background:var(--sur2);border:1px solid var(--brd);border-radius:6px 6px 0 0;padding:7px 13px;font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--tx2);letter-spacing:.8px;text-transform:uppercase;margin-top:12px;}
+.sb{border:1px solid var(--brd);border-top:none;border-radius:0 0 6px 6px;padding:12px;background:var(--sur);}
+
+.btn{padding:7px 14px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:5px;transition:all .15s;font-family:var(--sans);}
+.btn-sm{padding:4px 9px;font-size:11px;}
+.bp{background:var(--acc2);border-color:#2ea043;color:#fff;}.bp:hover{background:#2ea043;}
+.bs{background:var(--sur2);border-color:var(--brd2);color:var(--tx);}.bs:hover{background:var(--sur);}
+.bd{background:rgba(218,54,51,.1);border-color:var(--red);color:#f85149;}.bd:hover{background:rgba(218,54,51,.18);}
+.bb{background:var(--blue);border-color:#388bfd;color:#fff;}.bb:hover{background:#388bfd;}
+
+.alert{padding:9px 13px;border-radius:6px;font-size:12px;margin-bottom:10px;}
+.ai{background:rgba(31,111,235,.1);border:1px solid rgba(31,111,235,.3);color:#79c0ff;}
+.as{background:rgba(26,127,100,.1);border:1px solid rgba(26,127,100,.3);color:#3fb950;}
+.aw{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);color:#e3b341;}
+.ae{background:rgba(218,54,51,.1);border:1px solid rgba(218,54,51,.3);color:#f85149;}
+
+.badge{display:inline-flex;align-items:center;font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:10px;font-weight:600;}
+.bg{background:rgba(26,127,100,.2);color:#3fb950;}
+.bb2{background:rgba(31,111,235,.2);color:#79c0ff;}
+
+.tw{overflow-x:auto;border-radius:6px;border:1px solid var(--brd);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead{background:var(--sur2);}
+th{padding:7px 8px;text-align:left;font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--tx2);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--brd);white-space:nowrap;}
+td{padding:5px 6px;border-bottom:1px solid var(--brd);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
+
+.tbar{display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--brd);background:var(--sur);position:fixed;bottom:0;width:100%;z-index:50;}
+.sumbox{background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:10px 14px;display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
+.sum-item .sl{color:var(--tx3);font-size:10px;display:block;}
+.sum-item .sv{font-family:var(--mono);font-size:13px;font-weight:600;}
+.vi{font-size:11px;padding:4px 8px;border-radius:4px;margin-bottom:3px;display:flex;align-items:center;gap:6px;}
+.vok{background:rgba(26,127,100,.1);color:#3fb950;}
+.ver{background:rgba(218,54,51,.1);color:#f85149;}
+.divider{height:1px;background:var(--brd);margin:12px 0;}
+.hidden{display:none!important;}
+.outpanel{background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:#3fb950;line-height:1.8;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;}
+
+#toast{position:fixed;bottom:80px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:5px;pointer-events:none;}
+.tm{background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:9px 14px;font-size:12px;max-width:320px;animation:fin .2s ease;box-shadow:0 4px 18px rgba(0,0,0,.4);}
+.tok{border-color:var(--acc);color:#3fb950;}
+.twn{border-color:var(--warn);color:#e3b341;}
+.ter{border-color:var(--red);color:#f85149;}
+@keyframes fin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+#loader{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center;}
+.ldr{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:24px 32px;display:flex;align-items:center;gap:14px;font-size:13px;}
+.spin{width:22px;height:22px;border:3px solid var(--brd2);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+.tabcont{display:none;}.tabcont.on{display:flex;flex-direction:column;}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="loader" class="hidden"><div class="ldr"><div class="spin"></div>Guardando en Firebase…</div></div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hbrand">
+    <span class="hbadge">ADRES</span>
+    <span style="font-size:14px;font-weight:600;">FURIPS 1 & 2</span>
+    <span style="font-size:11px;color:var(--tx2);margin-left:6px;">Circular 022 · 2023</span>
+  </div>
+  <div class="hright">
+    <span id="hdr-fac" style="font-family:var(--mono);font-size:12px;color:var(--tx2);"></span>
+    <span class="badge bb2" id="hdr-rol2"></span>
+    <button class="btn btn-sm bs" onclick="window.close()">✕ Cerrar</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" id="tab-f1" onclick="switchTab('f1')">📋 FURIPS 1 — Detalle Reclamación</div>
+  <div class="tab" id="tab-f2" onclick="switchTab('f2')">🧾 FURIPS 2 — Detalle Factura</div>
+</div>
+
+<!-- PROGRESS (solo FURIPS 1) -->
+<div class="pbar" id="pbar">
+  <span style="font-size:11px;color:var(--tx2);">Completado:</span>
+  <div class="ptr"><div class="pfl" id="pfl" style="width:0%"></div></div>
+  <span class="ppc" id="ppc">0%</span>
+  <span class="plb" id="plb"></span>
+</div>
+
+<!-- ═══ FURIPS 1 TAB ═══ -->
+<div class="tabcont on" id="tc-f1">
+  <div class="layout">
+    <nav class="steps" id="f1-steps"></nav>
+    <div class="mcont" id="f1-mcont">
+      <div id="f1-norec" class="alert aw">⚠️ No hay reclamación activa. Cierra esta ventana y selecciona una desde la Parte 1.</div>
+      <div id="f1-body" class="hidden"></div>
+    </div>
+  </div>
+  <div class="tbar">
+    <button class="btn bs" id="btn-prev" onclick="navS(-1)" disabled>← Anterior</button>
+    <button class="btn bp" id="btn-next" onclick="navS(1)">Siguiente →</button>
+    <div style="flex:1;"></div>
+    <button class="btn bb" onclick="valAll();showS(SECS.length-1)">🔍 Validar</button>
+    <button class="btn bp" onclick="guardarF1()">💾 Guardar F1 en nube</button>
+  </div>
+</div>
+
+<!-- ═══ FURIPS 2 TAB ═══ -->
+<div class="tabcont" id="tc-f2" style="padding:18px 22px 100px;">
+  <div id="f2-norec" class="alert aw">⚠️ No hay reclamación activa.</div>
+  <div id="f2-body" class="hidden">
+    <div id="f2-sumbox" class="sumbox"></div>
+    <div class="alert ai" style="margin-bottom:10px;">ℹ️ Total facturado = cantidad × valor unitario (automático). Sin separador de miles ni decimales.</div>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>C1 Factura</th><th>C2 Consec.</th><th>C3 Tipo</th><th>C4 Código</th><th>C5 Descripción</th><th>C6 Cant.</th><th>C7 Vr.Unit.</th><th>C8 Tot.Fact.</th><th>C9 Tot.Rec.</th><th></th></tr></thead>
+      <tbody id="f2-tbody"></tbody>
+    </table></div>
+    <button class="btn bs" style="margin-top:9px;font-size:12px;" onclick="f2Add()">✚ Agregar Ítem</button>
+    <div id="f2-tots" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--tx2);"></div>
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bp" onclick="guardarF2()">💾 Guardar F2 en nube</button>
+    </div>
+    <div id="f2-alr" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const FB={apiKey:"AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g",authDomain:"conexa-soat.firebaseapp.com",projectId:"conexa-soat",storageBucket:"conexa-soat.firebasestorage.app",messagingSenderId:"410323697377",appId:"1:410323697377:web:f76e88fe905b8c265e41a0"};
+const appFB=initializeApp(FB); const db=getFirestore(appFB);
+
+// ── CARGAR DATOS DESDE PARTE 1 ──
+let REC=null, ROL='digitador';
+try{ const raw=localStorage.getItem('furips_p2_rec'); if(raw) REC=JSON.parse(raw); ROL=localStorage.getItem('furips_p2_rol')||'digitador'; }catch(e){}
+
+if(REC){
+  g('hdr-fac').textContent='Factura: '+REC.factura+' · '+REC.consec;
+  g('hdr-rol2').textContent=ROL; g('hdr-rol2').className='badge '+(ROL==='admin'?'bg':'bb2');
+  g('f1-norec').classList.add('hidden'); g('f1-body').classList.remove('hidden');
+  g('f2-norec').classList.add('hidden'); g('f2-body').classList.remove('hidden');
+  buildSteps(); buildF1(); loadF1Data(); showS(0);
+  loadF2();
+} else {
+  g('f2-norec').classList.remove('hidden'); g('f2-body').classList.add('hidden');
+}
+
+async function saveToFB(data){
+  if(!REC) return false;
+  try{ await updateDoc(doc(db,'reclamaciones',REC.id),{...data,actualizado:serverTimestamp()}); return true; }
+  catch(e){ toast('Error Firebase: '+e.message,'e'); return false; }
+}
+
+// ════ FURIPS 1 ════
+const SECS=[
+  {t:'I. Reclamación'},{t:'II. Prestador'},{t:'III. Víctima'},{t:'IV. Evento'},
+  {t:'V. Vehículo'},{t:'VI. Atención'},{t:'VII. Remisión'},{t:'VIII. Transporte'},
+  {t:'IX. Certif.'},{t:'X. Médico'},{t:'XI. Amparos'},{t:'XII. Resumen'}
+];
+let CUR_S=0;
+
+function buildSteps(){
+  g('f1-steps').innerHTML=SECS.map((s,i)=>`
+    <div class="si" id="si${i}" onclick="showS(${i})">
+      <div class="sdot" id="sd${i}">${i+1}</div>
+      <div><div class="slbl">${s.t}</div><div class="sst" id="ss${i}"></div></div>
+    </div>`).join('');
+}
+
+function buildF1(){
+  g('f1-body').innerHTML=`
+<div class="fsec" id="s0"><div class="ft">I. Datos de la Reclamación</div>
+  <div class="tq"><span class="tqi">📋</span><span class="tqt"><strong>¿Es RGO (Respuesta a Glosa)?</strong></span><label style="cursor:pointer;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="es-rgo" onchange="rules()"> Sí</label></div>
+  <div id="rgo-f" class="hidden g2"><div class="field"><span class="fl"><span class="fn">C1</span>Radicado Anterior<span class="cnd">●</span></span><input id="c1" maxlength="10" oninput="fv('c1');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C1</span>Tipo Glosa<span class="cnd">●</span></span><select id="c1t" onchange="fp()"><option value="">Sel...</option><option value="0">0-Total</option><option value="1">1-Parcial</option><option value="6">6-Transversal</option></select></div></div>
+  <div class="g3" style="margin-top:10px;">
+    <div class="field" id="ff-c2"><span class="fl"><span class="fn">C2</span>Número Factura<span class="req">*</span></span><input id="c2" maxlength="20" oninput="fv('c2');fp()"></div>
+    <div class="field" id="ff-c3"><span class="fl"><span class="fn">C3</span>Consecutivo<span class="req">*</span></span><input id="c3" maxlength="12" oninput="fv('c3');fp()"></div>
+  </div>
+</div>
+<div class="fsec" id="s1"><div class="ft">II. Prestador de Servicios</div>
+  <div class="g2"><div class="field" id="ff-c4"><span class="fl"><span class="fn">C4</span>Código Habilitación IPS<span class="req">*</span></span><input id="c4" maxlength="12" oninput="fv('c4');fp()"></div></div>
+</div>
+<div class="fsec" id="s2"><div class="ft">III. Datos de la Víctima</div>
+  <div class="g4">
+    <div class="field" id="ff-c5"><span class="fl"><span class="fn">C5</span>Primer Apellido<span class="req">*</span></span><input id="c5" maxlength="30" placeholder="NN si no se identifica" oninput="fv('c5');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C6</span>Segundo Apellido</span><input id="c6" maxlength="30"></div>
+    <div class="field" id="ff-c7"><span class="fl"><span class="fn">C7</span>Primer Nombre<span class="req">*</span></span><input id="c7" maxlength="30" placeholder="NN si no se identifica" oninput="fv('c7');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C8</span>Segundo Nombre</span><input id="c8" maxlength="30"></div>
+    <div class="field" id="ff-c9"><span class="fl"><span class="fn">C9</span>Tipo Documento<span class="req">*</span></span><select id="c9" onchange="fv('c9');fp()"><option value="">Sel...</option><option>CC</option><option>CE</option><option>CN</option><option>PA</option><option>TI</option><option>RC</option><option>AS</option><option>MS</option><option>CD</option><option>SC</option><option>PE</option><option>PT</option><option>DE</option></select></div>
+    <div class="field" id="ff-c10"><span class="fl"><span class="fn">C10</span>Número Documento<span class="req">*</span></span><input id="c10" maxlength="16" oninput="fv('c10');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C11</span>Fecha Nacimiento</span><input id="c11" type="date"></div>
+    <div class="field"><span class="fl"><span class="fn">C12</span>Fecha Fallecimiento<span class="cnd">●</span></span><input id="c12" type="date"><span class="hint">Solo si fallece durante atención.</span></div>
+    <div class="field" id="ff-c13"><span class="fl"><span class="fn">C13</span>Sexo<span class="req">*</span></span><select id="c13" onchange="fv('c13');fp()"><option value="">Sel...</option><option value="F">F-Femenino</option><option value="M">M-Masculino</option><option value="O">O-Otro</option></select></div>
+    <div class="field s2" id="ff-c14"><span class="fl"><span class="fn">C14</span>Dirección Residencia<span class="req">*</span></span><input id="c14" maxlength="100" oninput="fv('c14');fp()"></div>
+    <div class="field" id="ff-c15"><span class="fl"><span class="fn">C15</span>Cód.Depto.Res.<span class="req">*</span></span><input id="c15" maxlength="2" placeholder="DANE" oninput="fv('c15');fp()"></div>
+    <div class="field" id="ff-c16"><span class="fl"><span class="fn">C16</span>Cód.Mun.Res.<span class="req">*</span></span><input id="c16" maxlength="3" placeholder="DANE" oninput="fv('c16');fp()"></div>
+    <div class="field" id="ff-c17"><span class="fl"><span class="fn">C17</span>Teléfono<span class="req">*</span></span><input id="c17" maxlength="10" oninput="fv('c17');fp()"></div>
+    <div class="field hidden" id="ff-c18"><span class="fl"><span class="fn">C18</span>Condición Víctima<span class="cnd">●</span></span><select id="c18"><option value="">Sel...</option><option value="1">1-Conductor</option><option value="2">2-Peatón</option><option value="3">3-Ocupante</option><option value="4">4-Ciclista</option></select><span class="hint">Solo AT</span></div>
+  </div>
+</div>
+<div class="fsec" id="s3"><div class="ft">IV. Datos del Evento</div>
+  <div class="g3">
+    <div class="field" id="ff-c19"><span class="fl"><span class="fn">C19</span>Naturaleza del Evento<span class="req">*</span></span><select id="c19" onchange="onNat();fv('c19');fp()"><option value="">Sel...</option><option value="01">01-Accidente de tránsito</option><option value="02">02-Sismo</option><option value="03">03-Maremoto</option><option value="04">04-Erupción volcánica</option><option value="05">05-Deslizamiento</option><option value="06">06-Inundación</option><option value="07">07-Avalancha</option><option value="08">08-Incendio natural</option><option value="09">09-Explosión terrorista</option><option value="10">10-Incendio terrorista</option><option value="11">11-Combate</option><option value="12">12-Ataques municipios</option><option value="13">13-Masacre</option><option value="14">14-Desplazados</option><option value="15">15-Mina antipersonal</option><option value="16">16-Huracán</option><option value="17">17-Otro</option><option value="25">25-Rayo</option><option value="26">26-Vendaval</option><option value="27">27-Tornado</option></select></div>
+    <div class="field hidden" id="ff-c20"><span class="fl"><span class="fn">C20</span>Desc. Otro Evento<span class="cnd">●</span></span><input id="c20" maxlength="25" oninput="fv('c20');fp()"></div>
+    <div class="field s2" id="ff-c21"><span class="fl"><span class="fn">C21</span>Dirección Ocurrencia<span class="req">*</span></span><input id="c21" maxlength="100" oninput="fv('c21');fp()"></div>
+    <div class="field" id="ff-c22"><span class="fl"><span class="fn">C22</span>Fecha Ocurrencia<span class="req">*</span></span><input id="c22" type="date" onchange="fv('c22');fp()"></div>
+    <div class="field" id="ff-c23"><span class="fl"><span class="fn">C23</span>Hora Ocurrencia<span class="req">*</span></span><input id="c23" type="time" onchange="fv('c23');fp()"></div>
+    <div class="field" id="ff-c24"><span class="fl"><span class="fn">C24</span>Cód.Depto.Ocurr.<span class="req">*</span></span><input id="c24" maxlength="2" oninput="fv('c24');fp()"></div>
+    <div class="field" id="ff-c25"><span class="fl"><span class="fn">C25</span>Cód.Mun.Ocurr.<span class="req">*</span></span><input id="c25" maxlength="3" oninput="fv('c25');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C26</span>Zona</span><select id="c26"><option value="">N/A</option><option value="U">U-Urbana</option><option value="R">R-Rural</option></select></div>
+  </div>
+  <div id="ev-info" class="hidden" style="margin-top:8px;"></div>
+</div>
+<div class="fsec" id="s4"><div class="ft">V. Vehículo (AT)</div>
+  <div id="vh-noat" class="alert ai">ℹ️ Selecciona la naturaleza del evento en la sección IV primero.</div>
+  <div id="vh-form" class="hidden">
+    <div class="g3">
+      <div class="field" id="ff-c27"><span class="fl"><span class="fn">C27</span>Estado Aseguramiento<span class="req">*</span></span><select id="c27" onchange="onAseg();fv('c27');fp()"><option value="">Sel...</option><option value="1">1-Asegurado</option><option value="2">2-No asegurado</option><option value="3">3-Veh. fantasma</option><option value="4">4-Póliza falsa</option><option value="6">6-Asegurado D.2497</option><option value="7">7-No aseg. Prop.indet.</option><option value="8">8-No aseg. Sin placa</option></select></div>
+      <div class="field" id="ff-c28"><span class="fl"><span class="fn">C28</span>Marca<span class="cnd">●</span></span><input id="c28" maxlength="15"><span class="hint">Oblig. excepto estado 3.</span></div>
+      <div class="field" id="ff-c29"><span class="fl"><span class="fn">C29</span>Placa<span class="cnd">●</span></span><input id="c29" maxlength="10"><span class="hint">Oblig. si 1,2,4,6,7.</span></div>
+      <div class="field" id="ff-c30"><span class="fl"><span class="fn">C30</span>Tipo Vehículo<span class="cnd">●</span></span><select id="c30"><option value="">Sel...</option><option value="1">1-Automóvil</option><option value="2">2-Bus</option><option value="3">3-Buseta</option><option value="4">4-Camión</option><option value="5">5-Camioneta</option><option value="6">6-Campero</option><option value="7">7-Microbús</option><option value="8">8-Tractocamión</option><option value="10">10-Motocicleta</option><option value="14">14-Motocarro</option><option value="17">17-Mototriciclo</option><option value="19">19-Cuatrimoto</option><option value="20">20-Moto Ext.</option><option value="21">21-Veh.Ext.</option><option value="22">22-Volqueta</option></select></div>
+      <div class="field hidden" id="ff-c31"><span class="fl"><span class="fn">C31</span>Cód. Aseguradora<span class="cnd">●</span></span><input id="c31" maxlength="6"></div>
+      <div class="field hidden" id="ff-c32"><span class="fl"><span class="fn">C32</span>Nro. Póliza SOAT<span class="cnd">●</span></span><input id="c32" maxlength="20"></div>
+      <div class="field hidden" id="ff-c33"><span class="fl"><span class="fn">C33</span>Inicio Vigencia<span class="cnd">●</span></span><input id="c33" type="date"></div>
+      <div class="field hidden" id="ff-c34"><span class="fl"><span class="fn">C34</span>Fin Vigencia<span class="cnd">●</span></span><input id="c34" type="date"></div>
+      <div class="field" id="ff-c35"><span class="fl"><span class="fn">C35</span>Radicado SIRAS<span class="req">*</span></span><input id="c35" maxlength="20" oninput="fv('c35');fp()"></div>
+      <div class="field"><span class="fl"><span class="fn">C36</span>Cobro Agotamiento</span><select id="c36"><option value="0">0-No</option><option value="1">1-Sí</option></select></div>
+    </div>
+    <div class="sh" id="prop-hdr" style="margin-top:12px;">VII. Propietario</div>
+    <div class="sb" id="prop-body"><div class="g4">
+      <div class="field" id="ff-c43"><span class="fl"><span class="fn">C43</span>Tipo Doc.<span class="cnd">●</span></span><select id="c43"><option value="">Sel...</option><option>CC</option><option>CE</option><option>CD</option><option>DE</option><option>SC</option><option>PE</option><option>PT</option><option>NI</option><option>TI</option></select></div>
+      <div class="field" id="ff-c44"><span class="fl"><span class="fn">C44</span>Nro.Doc.<span class="cnd">●</span></span><input id="c44" maxlength="16"></div>
+      <div class="field" id="ff-c45"><span class="fl"><span class="fn">C45</span>Apellido/Razón Social<span class="cnd">●</span></span><input id="c45" maxlength="40"></div>
+      <div class="field"><span class="fl"><span class="fn">C46</span>2do Apellido</span><input id="c46" maxlength="30"></div>
+      <div class="field" id="ff-c47"><span class="fl"><span class="fn">C47</span>Primer Nombre<span class="cnd">●</span></span><input id="c47" maxlength="30"></div>
+      <div class="field"><span class="fl"><span class="fn">C48</span>2do Nombre</span><input id="c48" maxlength="30"></div>
+      <div class="field s2" id="ff-c49"><span class="fl"><span class="fn">C49</span>Dirección<span class="cnd">●</span></span><input id="c49" maxlength="200"></div>
+      <div class="field"><span class="fl"><span class="fn">C50</span>Teléfono</span><input id="c50" maxlength="10"></div>
+      <div class="field" id="ff-c51"><span class="fl"><span class="fn">C51</span>Cód.Depto.<span class="cnd">●</span></span><input id="c51" maxlength="2"></div>
+      <div class="field" id="ff-c52"><span class="fl"><span class="fn">C52</span>Cód.Mun.<span class="cnd">●</span></span><input id="c52" maxlength="3"></div>
+    </div></div>
+    <div class="sh" id="cond-hdr" style="margin-top:12px;">VIII. Conductor</div>
+    <div class="sb" id="cond-body"><div class="g4">
+      <div class="field" id="ff-c53"><span class="fl"><span class="fn">C53</span>Primer Apellido<span class="cnd">●</span></span><input id="c53" maxlength="30"></div>
+      <div class="field"><span class="fl"><span class="fn">C54</span>2do Apellido</span><input id="c54" maxlength="20"></div>
+      <div class="field" id="ff-c55"><span class="fl"><span class="fn">C55</span>Primer Nombre<span class="cnd">●</span></span><input id="c55" maxlength="30"></div>
+      <div class="field"><span class="fl"><span class="fn">C56</span>2do Nombre</span><input id="c56" maxlength="30"></div>
+      <div class="field" id="ff-c57"><span class="fl"><span class="fn">C57</span>Tipo Doc.<span class="cnd">●</span></span><select id="c57"><option value="">Sel...</option><option>CC</option><option>CE</option><option>PA</option><option>RC</option><option>TI</option><option>MS</option><option>AS</option><option>CD</option><option>SC</option><option>DE</option><option>PE</option><option>PT</option></select></div>
+      <div class="field" id="ff-c58"><span class="fl"><span class="fn">C58</span>Nro.Doc.<span class="cnd">●</span></span><input id="c58" maxlength="16"></div>
+      <div class="field s2" id="ff-c59"><span class="fl"><span class="fn">C59</span>Dirección<span class="cnd">●</span></span><input id="c59" maxlength="200"></div>
+      <div class="field" id="ff-c60"><span class="fl"><span class="fn">C60</span>Cód.Depto.<span class="cnd">●</span></span><input id="c60" maxlength="2"></div>
+      <div class="field" id="ff-c61"><span class="fl"><span class="fn">C61</span>Cód.Mun.<span class="cnd">●</span></span><input id="c61" maxlength="3"></div>
+      <div class="field"><span class="fl"><span class="fn">C62</span>Teléfono</span><input id="c62" maxlength="10"></div>
+    </div></div>
+  </div>
+</div>
+<div class="fsec" id="s5"><div class="ft">VI. Atención de la Víctima</div>
+  <div class="tq"><span class="tqi">🏥</span><span class="tqt"><strong>¿Se factura estancia?</strong></span><label style="cursor:pointer;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="hay-est" onchange="rules();fp()"> Sí</label></div>
+  <div class="g4"><div class="field hidden" id="ff-c37"><span class="fl"><span class="fn">C37</span>CUPS Hospitalización<span class="cnd">●</span></span><input id="c37" maxlength="6"></div></div>
+  <div class="tq" style="margin-top:10px;"><span class="tqi">🔬</span><span class="tqt"><strong>¿Se facturan procedimientos quirúrgicos?</strong></span><label style="cursor:pointer;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="hay-qx" onchange="rules();fp()"> Sí</label></div>
+  <div id="qx-f" class="hidden g4">
+    <div class="field" id="ff-c38"><span class="fl"><span class="fn">C38</span>Complejidad Qx.<span class="cnd">●</span></span><select id="c38"><option value="">Sel...</option><option value="1">1-Alta</option><option value="2">2-Media</option><option value="3">3-Baja</option></select></div>
+    <div class="field" id="ff-c39"><span class="fl"><span class="fn">C39</span>CUPS Qx. Principal<span class="cnd">●</span></span><input id="c39" maxlength="6"></div>
+    <div class="field" id="ff-c40"><span class="fl"><span class="fn">C40</span>CUPS Qx. Secundario<span class="cnd">●</span></span><input id="c40" maxlength="6"></div>
+  </div>
+  <div class="tq" style="margin-top:10px;"><span class="tqi">🫀</span><span class="tqt"><strong>¿Se prestó UCI?</strong></span><select id="c41" onchange="rules();fp()" style="min-width:80px;"><option value="0">0-No</option><option value="1">1-Sí</option></select></div>
+  <div class="g4"><div class="field hidden" id="ff-c42"><span class="fl"><span class="fn">C42</span>Días UCI<span class="cnd">●</span></span><input id="c42" type="number" min="1" max="99"></div></div>
+</div>
+<div class="fsec" id="s6"><div class="ft">IX. Remisión</div>
+  <div class="tq"><span class="tqi">🚑</span><span class="tqt"><strong>¿Existe remisión de la víctima?</strong></span><label style="cursor:pointer;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="hay-rem" onchange="rules();fp()"> Sí</label></div>
+  <div id="rem-f" class="hidden g3">
+    <div class="field" id="ff-c63"><span class="fl"><span class="fn">C63</span>Tipo Referencia<span class="cnd">●</span></span><select id="c63"><option value="">Sel...</option><option value="1">1-Remite</option><option value="2">2-Orden</option><option value="3">3-Recibe</option></select></div>
+    <div class="field" id="ff-c64"><span class="fl"><span class="fn">C64</span>Fecha Remisión<span class="cnd">●</span></span><input id="c64" type="date"></div>
+    <div class="field" id="ff-c65"><span class="fl"><span class="fn">C65</span>Hora Salida<span class="cnd">●</span></span><input id="c65" type="time"></div>
+    <div class="field" id="ff-c66"><span class="fl"><span class="fn">C66</span>Cód. IPS Remitente<span class="cnd">●</span></span><input id="c66" maxlength="12"></div>
+    <div class="field s2" id="ff-c67"><span class="fl"><span class="fn">C67</span>Profesional Remite<span class="cnd">●</span></span><input id="c67" maxlength="60"></div>
+    <div class="field" id="ff-c68"><span class="fl"><span class="fn">C68</span>Cargo<span class="cnd">●</span></span><input id="c68" maxlength="30"></div>
+    <div class="field" id="ff-c69"><span class="fl"><span class="fn">C69</span>Fecha Aceptación<span class="cnd">●</span></span><input id="c69" type="date"></div>
+    <div class="field" id="ff-c70"><span class="fl"><span class="fn">C70</span>Hora Aceptación<span class="cnd">●</span></span><input id="c70" type="time"></div>
+    <div class="field" id="ff-c71"><span class="fl"><span class="fn">C71</span>Cód. IPS Recibe<span class="cnd">●</span></span><input id="c71" maxlength="12"></div>
+    <div class="field s2" id="ff-c72"><span class="fl"><span class="fn">C72</span>Prof. Recibe<span class="cnd">●</span></span><input id="c72" maxlength="60"></div>
+    <div class="field" id="ff-c73"><span class="fl"><span class="fn">C73</span>Placa Ambulancia<span class="cnd">●</span></span><input id="c73" maxlength="6"></div>
+  </div>
+</div>
+<div class="fsec" id="s7"><div class="ft">X. Transporte Primario</div>
+  <div class="tq"><span class="tqi">🚐</span><span class="tqt"><strong>¿Se cobra traslado primario?</strong><br><span style="font-size:11px;">Del sitio del evento al primer punto de atención, realizado por la misma IPS.</span></span><label style="cursor:pointer;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="hay-trp" onchange="rules();fp()"> Sí</label></div>
+  <div id="trp-f" class="hidden g3">
+    <div class="field" id="ff-c74"><span class="fl"><span class="fn">C74</span>Placa Ambulancia<span class="cnd">●</span></span><input id="c74" maxlength="6"></div>
+    <div class="field s2" id="ff-c75"><span class="fl"><span class="fn">C75</span>Desde<span class="cnd">●</span></span><input id="c75" maxlength="40"></div>
+    <div class="field s2" id="ff-c76"><span class="fl"><span class="fn">C76</span>Hasta<span class="cnd">●</span></span><input id="c76" maxlength="40"></div>
+    <div class="field" id="ff-c77"><span class="fl"><span class="fn">C77</span>Tipo Servicio<span class="cnd">●</span></span><select id="c77"><option value="">Sel...</option><option value="1">1-Básico</option><option value="2">2-Medicalizado</option></select></div>
+    <div class="field"><span class="fl"><span class="fn">C78</span>Zona</span><select id="c78"><option value="">N/A</option><option value="U">U-Urbana</option><option value="R">R-Rural</option></select></div>
+  </div>
+</div>
+<div class="fsec" id="s8"><div class="ft">XI. Certificación Atención</div>
+  <div class="g4">
+    <div class="field" id="ff-c79"><span class="fl"><span class="fn">C79</span>Fecha Ingreso<span class="req">*</span></span><input id="c79" type="date" onchange="fv('c79');fp()"></div>
+    <div class="field" id="ff-c80"><span class="fl"><span class="fn">C80</span>Hora Ingreso<span class="req">*</span></span><input id="c80" type="time" onchange="fv('c80');fp()"></div>
+    <div class="field" id="ff-c81"><span class="fl"><span class="fn">C81</span>Fecha Egreso<span class="req">*</span></span><input id="c81" type="date" onchange="fv('c81');fp()"></div>
+    <div class="field" id="ff-c82"><span class="fl"><span class="fn">C82</span>Hora Egreso<span class="req">*</span></span><input id="c82" type="time" onchange="fv('c82');fp()"></div>
+    <div class="field" id="ff-c83"><span class="fl"><span class="fn">C83</span>Dx.Principal Ingreso CIE-10<span class="req">*</span></span><input id="c83" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();fv('c83');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C84</span>Dx.Asoc.1 Ing.</span><input id="c84" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="field"><span class="fl"><span class="fn">C85</span>Dx.Asoc.2 Ing.</span><input id="c85" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="field" id="ff-c86"><span class="fl"><span class="fn">C86</span>Dx.Principal Egreso CIE-10<span class="req">*</span></span><input id="c86" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();fv('c86');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C87</span>Dx.Asoc.1 Egr.</span><input id="c87" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="field"><span class="fl"><span class="fn">C88</span>Dx.Asoc.2 Egr.</span><input id="c88" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+  </div>
+</div>
+<div class="fsec" id="s9"><div class="ft">XII. Médico Tratante</div>
+  <div class="g4">
+    <div class="field" id="ff-c89"><span class="fl"><span class="fn">C89</span>Primer Apellido<span class="req">*</span></span><input id="c89" maxlength="20" oninput="fv('c89');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C90</span>2do Apellido</span><input id="c90" maxlength="30"></div>
+    <div class="field" id="ff-c91"><span class="fl"><span class="fn">C91</span>Primer Nombre<span class="req">*</span></span><input id="c91" maxlength="20" oninput="fv('c91');fp()"></div>
+    <div class="field"><span class="fl"><span class="fn">C92</span>2do Nombre</span><input id="c92" maxlength="30"></div>
+    <div class="field" id="ff-c93"><span class="fl"><span class="fn">C93</span>Tipo Doc.<span class="req">*</span></span><select id="c93" onchange="fv('c93');fp()"><option value="">Sel...</option><option>CC</option><option>CE</option><option>PA</option><option>PE</option><option>PT</option></select></div>
+    <div class="field" id="ff-c94"><span class="fl"><span class="fn">C94</span>Número Doc.<span class="req">*</span></span><input id="c94" maxlength="16" oninput="fv('c94');fp()"></div>
+    <div class="field" id="ff-c95"><span class="fl"><span class="fn">C95</span>Registro RETHUS<span class="req">*</span></span><input id="c95" maxlength="16" oninput="fv('c95');fp()"></div>
+  </div>
+</div>
+<div class="fsec" id="s10"><div class="ft">XIII–XIV. Amparos y Declaración</div>
+  <div class="g4">
+    <div class="field" id="ff-c96"><span class="fl"><span class="fn">C96</span>Total Fact.Méd-Qx.<span class="req">*</span></span><input id="c96" type="number" min="0" oninput="fv('c96');amp();fp()"><span class="hint">Suma FURIPS2 excl. transporte.</span></div>
+    <div class="field" id="ff-c97"><span class="fl"><span class="fn">C97</span>Total Rec.Méd-Qx.<span class="req">*</span></span><input id="c97" type="number" min="0" oninput="fv('c97');amp();fp()"></div>
+    <div class="field" id="ff-c98"><span class="fl"><span class="fn">C98</span>Total Fact.Transp.<span class="req">*</span></span><input id="c98" type="number" min="0" oninput="fv('c98');amp();fp()"><span class="hint">Ítems tipo 3 del FURIPS 2.</span></div>
+    <div class="field" id="ff-c99"><span class="fl"><span class="fn">C99</span>Total Rec.Transp.<span class="req">*</span></span><input id="c99" type="number" min="0" oninput="fv('c99');amp();fp()"></div>
+  </div>
+  <div id="amp-box" style="background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:9px 12px;margin:10px 0;font-family:var(--mono);font-size:12px;color:var(--tx2);"></div>
+  <div class="divider"></div>
+  <div class="g2">
+    <div class="field" id="ff-c100"><span class="fl"><span class="fn">C100</span>Serv. Habilitados<span class="req">*</span></span><select id="c100" onchange="fv('c100');fp()"><option value="1">1-Sí certifica</option><option value="0">0-No</option></select></div>
+    <div class="field s2"><span class="fl"><span class="fn">C101</span>Descripción Evento</span><textarea id="c101" maxlength="1000" placeholder="Breve. NO usar coma (,)."></textarea></div>
+  </div>
+</div>
+<div class="fsec" id="s11"><div class="ft">✅ Resumen y Validación Final</div>
+  <div id="f1-val"></div>
+  <div id="f1-prev-box" class="hidden" style="margin-top:12px;">
+    <div style="font-size:11px;font-family:var(--mono);color:var(--tx2);margin-bottom:4px;">▶ Línea archivo plano FURIPS 1:</div>
+    <div class="outpanel" id="f1-prev-line"></div>
+  </div>
+</div>`;
+}
+
+// ── F1 CAMPOS ──
+const F1K=['c1','c1t','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19','c20','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','c31','c32','c33','c34','c35','c36','c37','c38','c39','c40','c41','c42','c43','c44','c45','c46','c47','c48','c49','c50','c51','c52','c53','c54','c55','c56','c57','c58','c59','c60','c61','c62','c63','c64','c65','c66','c67','c68','c69','c70','c71','c72','c73','c74','c75','c76','c77','c78','c79','c80','c81','c82','c83','c84','c85','c86','c87','c88','c89','c90','c91','c92','c93','c94','c95','c96','c97','c98','c99','c100','c101'];
+
+function loadF1Data(){
+  const d=REC.furips1||{}, fl=REC.furips1_flags||{};
+  F1K.forEach(k=>{ const e=g(k); if(e&&d[k]!==undefined) e.value=d[k]; });
+  if(fl.esRgo){ const e=g('es-rgo'); if(e) e.checked=true; }
+  if(fl.hayEst){ const e=g('hay-est'); if(e) e.checked=true; }
+  if(fl.hayQx){ const e=g('hay-qx'); if(e) e.checked=true; }
+  if(fl.hayRem){ const e=g('hay-rem'); if(e) e.checked=true; }
+  if(fl.hayTrp){ const e=g('hay-trp'); if(e) e.checked=true; }
+  onNat(); onAseg(); rules(); fp();
+}
+
+// ── REGLAS CONDICIONALES ──
+function onNat(){
+  const nat=gv2('c19'),esAT=nat==='01';
+  tf('ff-c18',esAT); tf('ff-c20',nat==='17');
+  g('vh-noat')?.classList.toggle('hidden',esAT); g('vh-form')?.classList.toggle('hidden',!esAT);
+  const info=g('ev-info');
+  if(info){ if(esAT){info.innerHTML='<div class="alert aw">⚠️ AT: Complete V (Vehículo), propietario y conductor.</div>';info.classList.remove('hidden');}else if(nat){info.innerHTML='<div class="alert ai">ℹ️ Evento catastrófico: Vehículo/propietario/conductor no aplican.</div>';info.classList.remove('hidden');}else info.classList.add('hidden'); }
+  upSteps();
+}
+function onAseg(){
+  const e=parseInt(gv2('c27'))||0;
+  ['ff-c31','ff-c32','ff-c33','ff-c34'].forEach(f=>tf(f,[1,4,6].includes(e)));
+  const pObl=[1,2,4,6,7].includes(e),cObl=[1,2,4,6,8].includes(e);
+  const ph=g('prop-hdr'),pb=g('prop-body'),ch=g('cond-hdr'),cb=g('cond-body');
+  if(ph){ph.style.background=pObl?'rgba(218,54,51,.1)':'';ph.textContent=(pObl?'⚠️ ':'')+'VII. Propietario'+(pObl?' — OBLIGATORIO':'');}
+  if(pb) pb.style.display=pObl?'block':'none';
+  if(ch){ch.style.background=cObl?'rgba(218,54,51,.1)':'';ch.textContent=(cObl?'⚠️ ':'')+'VIII. Conductor'+(cObl?' — OBLIGATORIO':'');}
+  if(cb) cb.style.display=cObl?'block':'none';
+  upSteps();
+}
+function rules(){
+  const rgo=chkd('es-rgo'); g('rgo-f')?.classList.toggle('hidden',!rgo);
+  tf('ff-c37',chkd('hay-est'));
+  const qx=chkd('hay-qx'); const qf=g('qx-f'); if(qf){qf.classList.toggle('hidden',!qx);qf.style.display=qx?'grid':'none';}
+  tf('ff-c42',gv2('c41')==='1');
+  const rem=chkd('hay-rem'); const rf=g('rem-f'); if(rf){rf.classList.toggle('hidden',!rem);rf.style.display=rem?'grid':'none';}
+  const trp=chkd('hay-trp'); const tf2=g('trp-f'); if(tf2){tf2.classList.toggle('hidden',!trp);tf2.style.display=trp?'grid':'none';}
+  upSteps();
+}
+function amp(){
+  const v96=parseInt(gv2('c96'))||0,v97=parseInt(gv2('c97'))||0,v98=parseInt(gv2('c98'))||0,v99=parseInt(gv2('c99'))||0;
+  const b=g('amp-box'); if(b) b.innerHTML=`Total Fact: <strong style="color:var(--tx)">$${(v96+v98).toLocaleString('es-CO')}</strong> · Total Rec: <strong style="color:var(--tx)">$${(v97+v99).toLocaleString('es-CO')}</strong>`;
+}
+
+// ── NAVEGAR ──
+window.showS=(n)=>{
+  CUR_S=Math.max(0,Math.min(n,SECS.length-1));
+  document.querySelectorAll('.fsec').forEach(e=>e.classList.remove('on'));
+  g('s'+CUR_S)?.classList.add('on');
+  document.querySelectorAll('.si').forEach(e=>e.classList.remove('active'));
+  g('si'+CUR_S)?.classList.add('active');
+  const prev=g('btn-prev'),next=g('btn-next');
+  if(prev) prev.disabled=CUR_S<=0;
+  if(next) next.textContent=CUR_S>=SECS.length-1?'✔ Finalizar':'Siguiente →';
+  if(CUR_S===SECS.length-1){valAll();genPrev();}
+};
+window.navS=(d)=>showS(CUR_S+d);
+
+// ── VALIDATE ──
+function fv(id){ const e=g(id),f=e?.closest('.field'); if(!e||!f) return; e.value.trim()?f.classList.add('ok'):f.classList.remove('ok'); }
+function fp(){
+  const req=[],fil=[];
+  document.querySelectorAll('#f1-body .field:not(.hidden)').forEach(f=>{ const i=f.querySelector('input,select,textarea'); if(!i) return; if(i.required||f.querySelector('.req')||f.querySelector('.cnd')){req.push(i);if(i.value.trim())fil.push(i);} });
+  const pct=req.length?Math.round(fil.length/req.length*100):0;
+  const pf=g('pfl'),pc=g('ppc'),pl=g('plb');
+  if(pf) pf.style.width=pct+'%'; if(pc) pc.textContent=pct+'%'; if(pl) pl.textContent=`${fil.length}/${req.length} campos`;
+  upSteps();
+}
+
+function valAll(){
+  const errs=[], nat=gv2('c19'),est=parseInt(gv2('c27'))||0,esAT=nat==='01';
+  const chk=(id,lbl,cond=true)=>{
+    if(!cond) return;
+    const e=g(id),f=e?.closest('.field');
+    if(!e||f?.classList.contains('hidden')) return;
+    if(!e.value.trim()){errs.push(`[${id.toUpperCase()}] ${lbl}`);f?.classList.add('err');}
+    else{f?.classList.remove('err');f?.classList.add('ok');}
+  };
+  chk('c2','Número Factura');chk('c3','Consecutivo');chk('c4','Cód.Habilitación');
+  chk('c5','Primer Apellido');chk('c7','Primer Nombre');chk('c9','Tipo Doc.');chk('c10','Nro.Doc.');chk('c13','Sexo');chk('c14','Dirección');chk('c15','Cód.Depto.');chk('c16','Cód.Mun.');chk('c17','Teléfono');
+  chk('c19','Naturaleza Evento');chk('c21','Dir.Ocurrencia');chk('c22','Fecha Ocurrencia');chk('c23','Hora Ocurrencia');chk('c24','Cód.Depto.Ocurr.');chk('c25','Cód.Mun.Ocurr.');
+  chk('c18','Condición Víctima',esAT);chk('c27','Estado Aseguramiento',esAT);chk('c35','Radicado SIRAS',esAT);chk('c20','Desc.Otro Evento',nat==='17');
+  if(esAT&&est!==3){chk('c28','Marca');chk('c30','Tipo Vehículo');}
+  if(esAT&&[1,2,4,6,7].includes(est))chk('c29','Placa');
+  if(esAT&&[1,4,6].includes(est)){chk('c31','Cód.Aseg.');chk('c32','Póliza SOAT');chk('c33','Inicio Vig.');chk('c34','Fin Vig.');}
+  if(esAT&&[1,2,4,6,7].includes(est)){chk('c43','Tipo Doc.Prop.');chk('c44','Nro.Doc.Prop.');chk('c45','Apellido Prop.');chk('c47','Nombre Prop.');chk('c49','Dir.Prop.');chk('c51','Depto.Prop.');chk('c52','Mun.Prop.');}
+  if(esAT&&[1,2,4,6,8].includes(est)){chk('c53','Apellido Cond.');chk('c55','Nombre Cond.');chk('c57','Tipo Doc.Cond.');chk('c58','Nro.Doc.Cond.');chk('c59','Dir.Cond.');chk('c60','Depto.Cond.');chk('c61','Mun.Cond.');}
+  chk('c37','CUPS Hosp.',chkd('hay-est'));
+  if(chkd('hay-qx')){chk('c38','Complejidad Qx.');chk('c39','CUPS Qx.Ppal.');chk('c40','CUPS Qx.Sec.');}
+  chk('c42','Días UCI',gv2('c41')==='1');
+  if(chkd('hay-rem')){chk('c63','Tipo Ref.');chk('c64','Fecha Rem.');chk('c65','Hora Salida');chk('c66','Cód.IPS Rem.');chk('c67','Prof.Remite');chk('c68','Cargo');chk('c69','Fecha Acept.');chk('c70','Hora Acept.');chk('c71','Cód.IPS Recibe');chk('c72','Prof.Recibe');chk('c73','Placa Amb.');}
+  if(chkd('hay-trp')){chk('c74','Placa Amb.Prim.');chk('c75','Desde');chk('c76','Hasta');chk('c77','Tipo Serv.Transp.');}
+  chk('c79','Fecha Ingreso');chk('c80','Hora Ingreso');chk('c81','Fecha Egreso');chk('c82','Hora Egreso');chk('c83','Dx.Ppal.Ingreso');chk('c86','Dx.Ppal.Egreso');
+  chk('c89','Apellido Médico');chk('c91','Nombre Médico');chk('c93','Tipo Doc.Med.');chk('c94','Nro.Doc.Med.');chk('c95','Reg.RETHUS');
+  chk('c96','Total Fact.Méd-Qx.');chk('c97','Total Rec.Méd-Qx.');chk('c98','Total Fact.Transp.');chk('c99','Total Rec.Transp.');chk('c100','Serv.Habilitados');
+  const box=g('f1-val');
+  if(box) box.innerHTML=errs.length?`<div style="font-size:12px;font-weight:600;color:#f85149;margin-bottom:6px;">❌ Errores (${errs.length})</div>${errs.map(e=>`<div class="vi ver">✕ ${e}</div>`).join('')}`:'<div class="vi vok">✔ Todos los campos obligatorios completos. Listo para guardar.</div>';
+  upSteps(); return errs.length===0;
+}
+
+function genPrev(){
+  const fd2=s=>{if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;};
+  const DATEF2=['c11','c12','c22','c33','c34','c64','c69','c79','c81'];
+  const line=F1K.map(k=>{const e=g(k);if(!e)return'';const v=e.value.replace(/,/g,' ');return DATEF2.includes(k)?fd2(v):v;}).join(',');
+  const pb=g('f1-prev-box'),pl=g('f1-prev-line');
+  if(pb) pb.classList.remove('hidden'); if(pl) pl.textContent=line;
+}
+
+function upSteps(){
+  SECS.forEach((_,i)=>{
+    const si=g('si'+i),sd=g('sd'+i),ss=g('ss'+i); if(!si) return;
+    const sec=g('s'+i); if(!sec) return;
+    const inps=sec.querySelectorAll('.field:not(.hidden) input,.field:not(.hidden) select,.field:not(.hidden) textarea');
+    let req=0,fil=0,err=0;
+    inps.forEach(inp=>{const f=inp.closest('.field');if(inp.required||f?.querySelector('.req')||f?.querySelector('.cnd')){req++;inp.value.trim()?fil++:err++;}});
+    si.classList.remove('done','herr');
+    if(req&&fil===req){si.classList.add('done');sd.textContent='✓';}
+    else if(err&&i!==CUR_S){si.classList.add('herr');sd.textContent='!';}
+    else sd.textContent=i+1;
+    if(ss) ss.textContent=req?`${fil}/${req}`:'';
+  });
+}
+
+// ── GUARDAR F1 ──
+window.guardarF1=async()=>{
+  if(!REC){toast('No hay reclamación activa.','e');return;}
+  const ok=valAll();
+  if(!ok){toast('Hay campos obligatorios pendientes. Revisa el Resumen.','w');return;}
+  const d={};
+  F1K.forEach(k=>{const e=g(k);if(e) d[k]=e.value;});
+  const flags={esRgo:chkd('es-rgo'),hayEst:chkd('hay-est'),hayQx:chkd('hay-qx'),hayRem:chkd('hay-rem'),hayTrp:chkd('hay-trp')};
+  loader(true);
+  const ok2=await saveToFB({furips1:d,furips1_flags:flags});
+  loader(false);
+  if(ok2){toast('✔ FURIPS 1 guardado en Firebase','ok'); REC.furips1=d; REC.furips1_flags=flags; localStorage.setItem('furips_p2_rec',JSON.stringify(REC));}
+};
+
+// ════ FURIPS 2 ════
+const TIPOS={'1':'Medicamentos','2':'Procedimientos','3':'Transporte Primario','4':'Transporte Secundario','5':'Insumos','6':'Dispositivos Médicos','7':'Material de Osteosíntesis','8':'Proc. no manual'};
+
+function loadF2(){
+  if(!REC) return;
+  g('f2-sumbox').innerHTML=`<div class="sum-item"><span class="sl">FACTURA</span><span class="sv">${REC.factura}</span></div><div class="sum-item"><span class="sl">CONSECUTIVO</span><span class="sv">${REC.consec}</span></div><div class="sum-item"><span class="sl">IPS</span><span class="sv">${REC.codHab}</span></div><div class="sum-item"><span class="sl">ÍTEMS</span><span class="sv">${(REC.furips2||[]).length}</span></div>`;
+  renderF2();
+}
+
+function renderF2(){
+  const tb=g('f2-tbody'); tb.innerHTML='';
+  (REC.furips2||[]).forEach((row,i)=>tb.innerHTML+=f2Row(i,row));
+  if(!(REC.furips2||[]).length) f2AddRow();
+  f2Tots();
+}
+
+function f2Row(i,r={}){
+  const opts=Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${r.tipo===k?'selected':''}>${k}-${v}</option>`).join('');
+  return `<tr id="r2${i}"><td style="color:var(--tx3);font-family:var(--mono);font-size:9px;">${i+1}</td>
+    <td><input value="${r.factura||''}" onchange="u2(${i},'factura',this.value)" maxlength="20"></td>
+    <td><input value="${r.consec||''}" onchange="u2(${i},'consec',this.value)" maxlength="20"></td>
+    <td><select onchange="u2(${i},'tipo',this.value)" style="min-width:125px"><option value="">Tipo...</option>${opts}</select></td>
+    <td><input value="${r.codigo||''}" onchange="u2(${i},'codigo',this.value)" maxlength="15" placeholder="CUM/CUPS"></td>
+    <td><input value="${r.descripcion||''}" onchange="u2(${i},'descripcion',this.value)" maxlength="100" style="min-width:110px"></td>
+    <td><input type="number" value="${r.cantidad||''}" oninput="u2c(${i},'cantidad',this.value)" min="0" style="min-width:55px"></td>
+    <td><input type="number" value="${r.vrUnitario||''}" oninput="u2c(${i},'vrUnitario',this.value)" min="0" style="min-width:80px"></td>
+    <td><input type="number" id="tf${i}" value="${r.totalFact||''}" onchange="u2(${i},'totalFact',this.value)" min="0" style="min-width:85px"></td>
+    <td><input type="number" value="${r.totalRec||''}" onchange="u2(${i},'totalRec',this.value)" min="0" style="min-width:85px"></td>
+    <td><button class="btn btn-sm bd" onclick="delR2(${i})">✕</button></td></tr>`;
+}
+
+function f2AddRow(){ if(!REC.furips2) REC.furips2=[]; REC.furips2.push({factura:REC.factura,consec:REC.consec}); renderF2(); }
+function delR2(i){ REC.furips2.splice(i,1); renderF2(); }
+function u2(i,f,v){ if(REC?.furips2?.[i]) REC.furips2[i][f]=v; }
+function u2c(i,f,v){
+  if(!REC?.furips2?.[i]) return;
+  REC.furips2[i][f]=v;
+  const q=parseFloat(REC.furips2[i].cantidad)||0,u=parseFloat(REC.furips2[i].vrUnitario)||0;
+  REC.furips2[i].totalFact=(q*u).toString();
+  const e=g('tf'+i); if(e) e.value=REC.furips2[i].totalFact;
+  f2Tots();
+}
+function f2Tots(){
+  const tf=(REC.furips2||[]).reduce((a,r)=>a+(parseFloat(r.totalFact)||0),0),tr=(REC.furips2||[]).reduce((a,r)=>a+(parseFloat(r.totalRec)||0),0);
+  const e=g('f2-tots'); if(e) e.textContent=`Subtotal Fact: $${tf.toLocaleString('es-CO')} · Subtotal Rec: $${tr.toLocaleString('es-CO')}`;
+}
+
+window.f2Add=()=>f2AddRow();
+window.guardarF2=async()=>{
+  if(!REC){toast('No hay reclamación activa.','e');return;}
+  loader(true);
+  const ok=await saveToFB({furips2:REC.furips2});
+  loader(false);
+  if(ok){ toast('✔ FURIPS 2 guardado en Firebase','ok'); ialert('f2-alr','as','✔ Guardado en la nube.'); localStorage.setItem('furips_p2_rec',JSON.stringify(REC)); }
+};
+
+// ── SWITCH TABS ──
+window.switchTab=(t)=>{
+  ['f1','f2'].forEach(x=>{ g('tc-'+x)?.classList.remove('on'); g('tab-'+x)?.classList.remove('active'); });
+  g('tc-'+t)?.classList.add('on'); g('tab-'+t)?.classList.add('active');
+  g('pbar').style.display=t==='f1'?'flex':'none';
+  g('btn-prev').style.display=t==='f1'?'inline-flex':'none';
+  g('btn-next').style.display=t==='f1'?'inline-flex':'none';
+};
+
+// ── HELPERS ──
+const g=id=>document.getElementById(id);
+const gv=id=>(g(id)||{}).value?.trim()||'';
+const gv2=id=>(g(id)||{}).value||'';
+const chkd=id=>g(id)?.checked||false;
+const tf=(id,vis)=>g(id)?.classList.toggle('hidden',!vis);
+function ialert(id,cls,msg){ const e=g(id); if(!e) return; e.className='alert '+cls; e.textContent=msg; e.classList.remove('hidden'); setTimeout(()=>e.classList.add('hidden'),4000); }
+function toast(msg,t='ok'){ const m={'ok':'tok','w':'twn','e':'ter'}; const e=document.createElement('div'); e.className='tm '+(m[t]||'tok'); e.textContent=msg; g('toast').appendChild(e); setTimeout(()=>e.remove(),3200); }
+function loader(v){ g('loader')?.classList.toggle('hidden',!v); }
+</script>
+</body>
+</html>

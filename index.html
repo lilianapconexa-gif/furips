@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FURIPS Fase 3 — Parte 1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#0d1117;--sur:#161b22;--sur2:#1f2937;--brd:#30363d;--brd2:#3d444d;
+  --acc:#1a7f64;--acc2:#238636;--blue:#1f6feb;--red:#da3633;--warn:#d29922;
+  --tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;}
+
+/* LOGIN */
+.lscr{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 30%,rgba(26,127,100,.15),transparent 60%),var(--bg);}
+.lbox{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:36px 32px;width:390px;max-width:93vw;}
+.llogo{display:flex;align-items:center;gap:10px;margin-bottom:22px;}
+.lbadge{background:var(--acc);color:#fff;font-family:var(--mono);font-size:14px;font-weight:600;padding:4px 12px;border-radius:6px;}
+.ltitle{font-size:18px;font-weight:600;}
+.lsub{font-size:12px;color:var(--tx2);margin-bottom:18px;}
+
+/* HEADER */
+.hdr{background:var(--sur);border-bottom:1px solid var(--brd);padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:50px;position:sticky;top:0;z-index:200;}
+.hbrand{display:flex;align-items:center;gap:9px;}
+.hbadge{background:var(--acc);color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;}
+.hright{display:flex;align-items:center;gap:9px;}
+
+/* LAYOUT */
+.appl{display:flex;height:calc(100vh - 50px);}
+.sidebar{width:205px;min-width:205px;background:var(--sur);border-right:1px solid var(--brd);overflow-y:auto;padding:8px 0;}
+.main{flex:1;overflow-y:auto;padding:20px 22px 80px;}
+
+/* NAV */
+.ng{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:1.5px;color:var(--tx3);text-transform:uppercase;padding:10px 14px 3px;margin-top:6px;}
+.ni{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;color:var(--tx2);font-size:12px;transition:all .15s;border-left:2px solid transparent;}
+.ni:hover{background:var(--sur2);color:var(--tx);}
+.ni.active{background:rgba(26,127,100,.12);color:var(--acc);border-left-color:var(--acc);font-weight:500;}
+.ndot{width:6px;height:6px;border-radius:50%;background:var(--brd2);flex-shrink:0;}
+.ni.active .ndot{background:var(--acc);}
+
+/* PAGES */
+.page{display:none;}.page.on{display:block;}
+.ptitle{font-size:17px;font-weight:600;margin-bottom:3px;}
+.psub{font-size:12px;color:var(--tx2);margin-bottom:16px;}
+
+/* STATS */
+.stats{display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap;}
+.stat{background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:11px 14px;min-width:115px;}
+.sv{font-family:var(--mono);font-size:20px;font-weight:600;}
+.sl{font-size:11px;color:var(--tx2);margin-top:1px;}
+
+/* SECTIONS */
+.sh{background:var(--sur2);border:1px solid var(--brd);border-radius:6px 6px 0 0;padding:7px 13px;font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--tx2);letter-spacing:.8px;text-transform:uppercase;margin-top:14px;}
+.sh:first-of-type{margin-top:0;}
+.sb{border:1px solid var(--brd);border-top:none;border-radius:0 0 6px 6px;padding:13px;background:var(--sur);}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:9px;}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:3px;}
+.fl{font-size:11px;font-weight:500;color:var(--tx2);display:flex;align-items:center;gap:4px;}
+.req{color:var(--red);font-size:10px;}
+.hint{font-size:10px;color:var(--tx3);}
+input,select,textarea{background:var(--sur2);border:1px solid var(--brd);border-radius:5px;color:var(--tx);font-family:var(--sans);font-size:12.5px;padding:6px 8px;transition:all .15s;width:100%;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 2px rgba(26,127,100,.16);}
+input::placeholder{color:var(--tx3);}
+select option{background:var(--sur2);}
+
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:5px;transition:all .15s;font-family:var(--sans);}
+.btn-sm{padding:4px 9px;font-size:11px;}
+.bp{background:var(--acc2);border-color:#2ea043;color:#fff;}.bp:hover{background:#2ea043;}
+.bs{background:var(--sur2);border-color:var(--brd2);color:var(--tx);}.bs:hover{background:var(--sur);}
+.bd{background:rgba(218,54,51,.1);border-color:var(--red);color:#f85149;}.bd:hover{background:rgba(218,54,51,.18);}
+.bb{background:var(--blue);border-color:#388bfd;color:#fff;}.bb:hover{background:#388bfd;}
+.br{background:rgba(218,54,51,.12);border-color:var(--red);color:#f85149;}
+
+/* ALERTS */
+.alert{padding:9px 13px;border-radius:6px;font-size:12px;margin-bottom:10px;}
+.ai{background:rgba(31,111,235,.1);border:1px solid rgba(31,111,235,.3);color:#79c0ff;}
+.as{background:rgba(26,127,100,.1);border:1px solid rgba(26,127,100,.3);color:#3fb950;}
+.aw{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);color:#e3b341;}
+.ae{background:rgba(218,54,51,.1);border:1px solid rgba(218,54,51,.3);color:#f85149;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:10px;font-weight:600;}
+.bg{background:rgba(26,127,100,.2);color:#3fb950;}
+.bb2{background:rgba(31,111,235,.2);color:#79c0ff;}
+.bw{background:rgba(210,153,34,.2);color:#e3b341;}
+
+/* CARDS */
+.rcard{background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:10px 13px;margin-bottom:6px;display:flex;align-items:center;gap:11px;transition:border-color .15s;}
+.rcard:hover{border-color:var(--acc);}
+.rcard.sel{border-color:var(--acc);background:rgba(26,127,100,.05);}
+
+/* MISC */
+.divider{height:1px;background:var(--brd);margin:12px 0;}
+.hidden{display:none!important;}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:5px;pointer-events:none;}
+.tm{background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:9px 14px;font-size:12px;max-width:320px;animation:fin .2s ease;box-shadow:0 4px 18px rgba(0,0,0,.4);}
+.tok{border-color:var(--acc);color:#3fb950;}
+.twn{border-color:var(--warn);color:#e3b341;}
+.ter{border-color:var(--red);color:#f85149;}
+@keyframes fin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* MODAL */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;}
+.mbox{background:var(--sur);border:1px solid var(--brd2);border-radius:10px;padding:22px;width:360px;max-width:90vw;}
+.mbox h3{font-size:14px;margin-bottom:7px;}
+.mbox p{font-size:12px;color:var(--tx2);margin-bottom:18px;}
+.mbtns{display:flex;gap:8px;justify-content:flex-end;}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center;}
+.ldr{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:24px 32px;display:flex;align-items:center;gap:14px;font-size:13px;}
+.spin{width:22px;height:22px;border:3px solid var(--brd2);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* LINK */
+.link-btn{background:rgba(31,111,235,.12);border:1px solid rgba(31,111,235,.4);color:#79c0ff;border-radius:6px;padding:10px 14px;font-size:12px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:16px;text-decoration:none;}
+.link-btn:hover{background:rgba(31,111,235,.2);}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="loader" class="hidden"><div class="ldr"><div class="spin"></div>Procesando…</div></div>
+<div id="modal" class="mov hidden">
+  <div class="mbox">
+    <h3 id="m-t">Confirmar</h3><p id="m-m"></p>
+    <div class="mbtns">
+      <button class="btn bs" onclick="mCan()">Cancelar</button>
+      <button class="btn bd" onclick="mOk()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGIN ══ -->
+<div id="scr-login" class="lscr">
+  <div class="lbox">
+    <div class="llogo"><span class="lbadge">ADRES</span><span class="ltitle">Sistema FURIPS</span></div>
+    <div class="lsub">Circular 022/2023 · Fase 3 · Firebase · Multiusuario</div>
+    <div class="field" style="margin-bottom:10px;">
+      <label class="fl">Correo electrónico</label>
+      <input id="l-email" type="email" placeholder="correo@ips.com" onkeydown="if(event.key==='Enter')g('l-pass').focus()">
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label class="fl">Contraseña</label>
+      <input id="l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div id="l-err" class="alert ae hidden"></div>
+    <button class="btn bp" style="width:100%;justify-content:center;" onclick="login()">Ingresar →</button>
+    <div id="l-spin" class="hidden" style="text-align:center;margin-top:10px;font-size:12px;color:var(--tx2);">Verificando…</div>
+    <div style="margin-top:14px;font-size:11px;color:var(--tx3);text-align:center;">El administrador crea las cuentas desde el Panel Admin.</div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="scr-app" class="hidden">
+  <div class="hdr">
+    <div class="hbrand">
+      <span class="hbadge">ADRES</span>
+      <span style="font-size:14px;font-weight:600;">Sistema FURIPS</span>
+      <span style="font-size:11px;color:var(--tx2);margin-left:6px;">Circular 022 · 2023</span>
+      <span class="badge bb2" style="margin-left:6px;font-size:9px;">FASE 3 · FIREBASE</span>
+    </div>
+    <div class="hright">
+      <span class="badge bw" id="rec-badge">0 reclamaciones</span>
+      <span id="hdr-nom" style="font-size:12px;"></span>
+      <span id="hdr-rol" class="badge"></span>
+      <span style="font-size:11px;color:var(--tx3);font-family:var(--mono);" id="clk"></span>
+      <button class="btn btn-sm br" onclick="logout()">⎋ Salir</button>
+    </div>
+  </div>
+
+  <div class="appl">
+    <nav class="sidebar">
+      <div class="ng">Principal</div>
+      <div class="ni" id="n-dash"  onclick="go('dash')"> <span class="ndot"></span>Dashboard</div>
+      <div class="ni" id="n-nueva" onclick="go('nueva')"><span class="ndot"></span>Nueva Reclamación</div>
+      <div class="ni" id="n-lista" onclick="go('lista')"><span class="ndot"></span>Reclamaciones</div>
+      <div class="ng">Formularios</div>
+      <div class="ni" id="n-f1"    onclick="abrirF1()">  <span class="ndot"></span>FURIPS 1 — Detalle</div>
+      <div class="ni" id="n-f2"    onclick="abrirF2()">  <span class="ndot"></span>FURIPS 2 — Factura</div>
+      <div class="ng">Exportar</div>
+      <div class="ni" id="n-txt"   onclick="go('txt')">  <span class="ndot"></span>Archivos Planos .txt</div>
+      <div class="ni" id="n-xl"    onclick="go('xl')">   <span class="ndot"></span>Exportar Excel</div>
+      <div id="nav-adm" style="display:none;">
+        <div class="ng">Administración</div>
+        <div class="ni" id="n-adm" onclick="go('adm')"> <span class="ndot"></span>Gestión Usuarios</div>
+      </div>
+    </nav>
+
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div class="page on" id="p-dash">
+        <div class="ptitle">Dashboard</div>
+        <div class="psub">Datos en tiempo real desde Firebase · <span id="dash-rol"></span></div>
+        <div class="stats">
+          <div class="stat"><div class="sv" id="sd-tot">0</div><div class="sl">Reclamaciones</div></div>
+          <div class="stat"><div class="sv" id="sd-f1">0</div><div class="sl">FURIPS 1 completos</div></div>
+          <div class="stat"><div class="sv" id="sd-it">0</div><div class="sl">Ítems FURIPS 2</div></div>
+          <div class="stat"><div class="sv" id="sd-vl">$0</div><div class="sl">Total Facturado</div></div>
+        </div>
+        <div class="alert ai">☁️ Los datos se sincronizan automáticamente. Todos los usuarios ven los cambios en tiempo real.</div>
+        <div class="alert as">✔ <strong>Fase 3 activa:</strong> Multiusuario · Login seguro · Nube · Roles Admin/Digitador</div>
+        <div style="margin-top:16px;">
+          <a class="link-btn" onclick="abrirParte2()">
+            <span style="font-size:20px;">📋</span>
+            <div><strong>Abrir FURIPS 1 y FURIPS 2</strong><br><span style="font-size:11px;opacity:.8;">Haz clic para abrir el formulario completo con validaciones condicionales (Parte 2)</span></div>
+          </a>
+        </div>
+      </div>
+
+      <!-- NUEVA -->
+      <div class="page hidden" id="p-nueva">
+        <div class="ptitle">Nueva Reclamación</div>
+        <div class="psub">Se guarda en Firestore y es visible según tu rol.</div>
+        <div class="g2">
+          <div class="field"><label class="fl">Número de Factura <span class="req">*</span></label><input id="n-fac" maxlength="20" placeholder="Según DIAN"></div>
+          <div class="field"><label class="fl">Consecutivo <span class="req">*</span></label><input id="n-con" maxlength="12"></div>
+          <div class="field"><label class="fl">Radicado Anterior (RGO)</label><input id="n-rgo" maxlength="10" placeholder="Vacío = nueva"><span class="hint">Solo RGO: 0=total · 1=parcial · 6=transversal</span></div>
+          <div class="field"><label class="fl">Código Habilitación IPS <span class="req">*</span></label><input id="n-cod" maxlength="12" placeholder="12 dígitos REPS"></div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn bp" onclick="crearRec()">✚ Crear en la nube</button>
+          <button class="btn bs" onclick="go('lista')">Ver lista</button>
+        </div>
+        <div id="n-alr" class="hidden" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- LISTA -->
+      <div class="page hidden" id="p-lista">
+        <div class="ptitle">Reclamaciones</div>
+        <div class="psub">Tiempo real desde Firebase. <span id="lista-info"></span></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <button class="btn bp" onclick="go('nueva')">✚ Nueva</button>
+          <div style="flex:1;"></div>
+          <button class="btn bs" onclick="go('txt')">📄 .txt</button>
+          <button class="btn" style="background:#1d6f42;border-color:#217346;color:#fff;" onclick="go('xl')">📊 Excel</button>
+        </div>
+        <div id="lista-wrap"></div>
+      </div>
+
+      <!-- TXT -->
+      <div class="page hidden" id="p-txt">
+        <div class="ptitle">Archivos Planos (.txt)</div>
+        <div class="psub">Circular 022/2023 · Separador coma · DD/MM/AAAA</div>
+        <div id="txt-no" class="alert aw">⚠️ No hay reclamaciones.</div>
+        <div id="txt-fm" class="hidden">
+          <div class="g2" style="margin-bottom:14px;">
+            <div class="field"><label class="fl">Código Habilitación IPS <span class="req">*</span></label><input id="tx-cod" maxlength="12"></div>
+            <div class="field"><label class="fl">Fecha Generación <span class="req">*</span></label><input id="tx-fec" type="date"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <button class="btn bp" onclick="expTxt('FURIPS1')">⬇ FURIPS 1 .txt</button>
+            <button class="btn bb" onclick="expTxt('FURIPS2')">⬇ FURIPS 2 .txt</button>
+            <button class="btn bs" onclick="prevTxt()">👁 Previsualizar</button>
+          </div>
+          <div id="prev-w" class="hidden">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--tx2);margin-bottom:4px;">▶ FURIPS 1</div>
+            <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:#3fb950;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="pv-f1"></div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--tx2);margin:10px 0 4px;">▶ FURIPS 2</div>
+            <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:#3fb950;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="pv-f2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXCEL -->
+      <div class="page hidden" id="p-xl">
+        <div class="ptitle">Exportar Excel</div>
+        <div class="psub">Genera .xlsx con hojas FURIPS_1 y FURIPS_2</div>
+        <div id="xl-no" class="alert aw">⚠️ No hay reclamaciones.</div>
+        <div id="xl-fm" class="hidden">
+          <div class="alert ai">ℹ️ El Excel incluye todos los campos + columna de usuario creador.</div>
+          <div id="xl-inf" style="font-size:12px;color:var(--tx2);margin:12px 0;"></div>
+          <button class="btn" style="background:#1d6f42;border-color:#217346;color:#fff;" onclick="expXL()">📊 Descargar Excel</button>
+        </div>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="page hidden" id="p-adm">
+        <div class="ptitle">Gestión de Usuarios</div>
+        <div class="psub">Solo administradores. Los usuarios acceden con correo y contraseña.</div>
+        <div class="sh" style="margin-top:0;">✚ Crear Nuevo Usuario</div>
+        <div class="sb">
+          <div class="g2">
+            <div class="field"><label class="fl">Nombre completo <span class="req">*</span></label><input id="u-nom" maxlength="60" placeholder="Ej: María García"></div>
+            <div class="field"><label class="fl">Correo electrónico <span class="req">*</span></label><input id="u-eml" type="email" placeholder="correo@ips.com"></div>
+            <div class="field"><label class="fl">Contraseña inicial <span class="req">*</span></label><input id="u-pas" type="password" placeholder="Mínimo 6 caracteres"></div>
+            <div class="field"><label class="fl">Rol <span class="req">*</span></label>
+              <select id="u-rol">
+                <option value="digitador">Digitador — Solo sus reclamaciones</option>
+                <option value="admin">Admin — Todo + crear usuarios</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;"><button class="btn bp" onclick="crearUser()">✚ Crear Usuario</button></div>
+          <div id="u-alr" style="margin-top:10px;"></div>
+        </div>
+        <div class="sh" style="margin-top:14px;">👥 Usuarios Registrados</div>
+        <div class="sb"><div id="users-list"><div style="color:var(--tx3);font-size:12px;">Cargando…</div></div></div>
+        <div class="alert aw" style="margin-top:12px;">⚠️ Comparte el correo y contraseña con el usuario tras crearlo.</div>
+        <div class="sh" style="margin-top:14px;">🔧 Reglas de Firestore requeridas</div>
+        <div class="sb">
+          <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;">Si el panel no carga usuarios o no puedes crear reclamaciones, ve a <strong>Firebase Console → Firestore Database → Reglas</strong> y publica esto:</p>
+          <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:12px;font-family:var(--mono);font-size:11px;color:#3fb950;white-space:pre-wrap;">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── CONFIG ──
+const FB = { apiKey:"AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g", authDomain:"conexa-soat.firebaseapp.com", projectId:"conexa-soat", storageBucket:"conexa-soat.firebasestorage.app", messagingSenderId:"410323697377", appId:"1:410323697377:web:f76e88fe905b8c265e41a0" };
+const app  = initializeApp(FB);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── ESTADO ──
+let USER=null, RECS=[], CUR_ID=null, unsub=null;
+window.FURIPS_STATE = { getRecs:()=>RECS, getCur:()=>CUR_ID, setCur:(id)=>CUR_ID=id, getUser:()=>USER, db, saveRec, serverTimestamp, doc, updateDoc, collection };
+
+// ── AUTH ──
+onAuthStateChanged(auth, async (fu)=>{
+  if(fu){
+    const snap=await getDoc(doc(db,'usuarios',fu.uid));
+    USER = snap.exists() ? {uid:fu.uid,email:fu.email,...snap.data()} : {uid:fu.uid,email:fu.email,nombre:fu.email,rol:'digitador'};
+    if(!snap.exists()) await setDoc(doc(db,'usuarios',fu.uid),{nombre:USER.nombre,email:USER.email,rol:USER.rol,creado:serverTimestamp()});
+    showApp();
+  } else { USER=null; RECS=[]; if(unsub){unsub();unsub=null;} showLogin(); }
+});
+
+window.login = async ()=>{
+  const em=gv('l-email'),ps=gv('l-pass');
+  if(!em||!ps){lerr('Complete correo y contraseña.');return;}
+  g('l-spin').classList.remove('hidden');
+  try{ await signInWithEmailAndPassword(auth,em,ps); }
+  catch(e){ const m={'auth/user-not-found':'Usuario no encontrado.','auth/wrong-password':'Contraseña incorrecta.','auth/invalid-credential':'Credenciales inválidas.','auth/too-many-requests':'Demasiados intentos. Espera unos minutos.'}; lerr(m[e.code]||'Error: '+e.message); g('l-spin').classList.add('hidden'); }
+};
+window.logout = async ()=>{ if(unsub){unsub();unsub=null;} await signOut(auth); };
+function lerr(m){ const e=g('l-err'); e.textContent=m; e.classList.remove('hidden'); }
+
+function showLogin(){ g('scr-login').classList.remove('hidden'); g('scr-app').classList.add('hidden'); }
+function showApp(){
+  g('scr-login').classList.add('hidden'); g('scr-app').classList.remove('hidden');
+  _s('hdr-nom',USER.nombre); const hr=g('hdr-rol'); if(hr){hr.textContent=USER.rol;hr.className='badge '+(USER.rol==='admin'?'bg':'bb2');}
+  const na=g('nav-adm'); if(na) na.style.display=USER.rol==='admin'?'block':'none';
+  _s('dash-rol',USER.rol==='admin'?'Vista: todas las reclamaciones':'Vista: solo mis reclamaciones');
+  initSnap(); go('dash');
+}
+
+// ── FIRESTORE LISTENER ──
+function initSnap(){
+  if(unsub) unsub();
+  const q2 = USER.rol==='admin'
+    ? query(collection(db,'reclamaciones'),orderBy('creado','desc'))
+    : query(collection(db,'reclamaciones'),where('creadoPor','==',USER.uid),orderBy('creado','desc'));
+  unsub = onSnapshot(q2, snap=>{
+    RECS=snap.docs.map(d=>({id:d.id,...d.data()}));
+    updStats();
+    if(g('p-lista')?.classList.contains('on')) renderLista();
+  }, err=>toast('Error Firestore: '+err.message,'e'));
+}
+
+async function saveRec(id,data){
+  try{ await updateDoc(doc(db,'reclamaciones',id),{...data,actualizado:serverTimestamp()}); return true; }
+  catch(e){ toast('Error al guardar: '+e.message,'e'); return false; }
+}
+
+// ── RECLAMACIONES ──
+window.crearRec = async ()=>{
+  const fac=gv('n-fac'),con=gv('n-con'),cod=gv('n-cod'),rgo=gv('n-rgo');
+  if(!fac||!con||!cod){ialert('n-alr','aw','Complete Factura, Consecutivo y Código Habilitación.');return;}
+  loader(true);
+  try{
+    const data={factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre,creado:serverTimestamp(),actualizado:serverTimestamp()};
+    const ref=await addDoc(collection(db,'reclamaciones'),data);
+    CUR_ID=ref.id;
+    // Guardar inmediatamente en localStorage para Parte 2 sin esperar el snapshot
+    const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre};
+    localStorage.setItem('furips_p2_rec',JSON.stringify(recLocal));
+    localStorage.setItem('furips_p2_rol',USER.rol);
+    loader(false);
+    ialert('n-alr','as','✔ Reclamación creada correctamente.');
+    setTimeout(()=>{ window.open('FURIPS_Fase3_Parte2.html','_blank'); },1000);
+  } catch(e){loader(false);toast('Error al crear: '+e.message,'e');}
+};
+
+window.selRec=(id)=>{
+  CUR_ID=id;
+  const rec=RECS.find(r=>r.id===id);
+  if(rec){
+    localStorage.setItem('furips_p2_rec',JSON.stringify(rec));
+    localStorage.setItem('furips_p2_rol',USER.rol);
+    window.open('FURIPS_Fase3_Parte2.html','_blank');
+  } else {
+    toast('Reclamación no encontrada. Espera un momento y reintenta.','w');
+  }
+};
+
+window.delRec=(id)=>{
+  const r=RECS.find(x=>x.id===id); if(!r) return;
+  if(USER.rol!=='admin'&&r.creadoPor!==USER.uid){toast('Sin permisos.','e');return;}
+  confirm2('¿Eliminar reclamación?','No se puede deshacer.',async()=>{ await deleteDoc(doc(db,'reclamaciones',id)); if(CUR_ID===id)CUR_ID=null; toast('Eliminada','w'); });
+};
+
+function renderLista(){
+  const w=g('lista-wrap');
+  _s('lista-info',USER.rol==='admin'?`Admin: ${RECS.length} total`:`Tus reclamaciones: ${RECS.length}`);
+  if(!RECS.length){w.innerHTML='<div style="color:var(--tx3);font-size:12px;text-align:center;padding:32px 0;">No hay reclamaciones.</div>';return;}
+  w.innerHTML=RECS.map(r=>{
+    const f1ok=r.furips1?.c83, items=(r.furips2||[]).length;
+    const ts=r.creado?.toDate?r.creado.toDate().toLocaleDateString('es-CO'):'—';
+    const canEdit=USER.rol==='admin'||r.creadoPor===USER.uid;
+    return `<div class="rcard${r.id===CUR_ID?' sel':''}">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:26px;">#${r.id.slice(-4)}</div>
+      <div style="flex:1;cursor:pointer;" onclick="selRec('${r.id}')">
+        <div style="font-weight:500;font-size:13px;">${r.factura} <span class="badge bb2">${r.consec}</span></div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px;">IPS:${r.codHab} · ${items} ítems · ${f1ok?'<span style="color:#3fb950">F1✔</span>':'<span style="color:#e3b341">F1 pendiente</span>'} · ${ts}${USER.rol==='admin'?' · <span style="color:var(--tx3)">👤'+( r.creadoPorNombre||'?')+'</span>':''}</div>
+      </div>
+      <div style="display:flex;gap:5px;">
+        ${canEdit?`<button class="btn btn-sm bs" onclick="selRec('${r.id}')">Editar</button><button class="btn btn-sm bd" onclick="delRec('${r.id}')">✕</button>`:'<span style="font-size:10px;color:var(--tx3);">Solo lectura</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── STATS ──
+function updStats(){
+  const n=RECS.length,f1=RECS.filter(r=>r.furips1?.c83).length,it=RECS.reduce((a,r)=>a+(r.furips2||[]).length,0),vl=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
+  _s('sd-tot',n);_s('sd-f1',f1);_s('sd-it',it);_s('sd-vl','$'+vl.toLocaleString('es-CO'));_s('rec-badge',n+' reclamaciones');
+}
+
+// ── TXT ──
+const fd=s=>{if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;};
+const F1K=['c1','c1t','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19','c20','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','c31','c32','c33','c34','c35','c36','c37','c38','c39','c40','c41','c42','c43','c44','c45','c46','c47','c48','c49','c50','c51','c52','c53','c54','c55','c56','c57','c58','c59','c60','c61','c62','c63','c64','c65','c66','c67','c68','c69','c70','c71','c72','c73','c74','c75','c76','c77','c78','c79','c80','c81','c82','c83','c84','c85','c86','c87','c88','c89','c90','c91','c92','c93','c94','c95','c96','c97','c98','c99','c100','c101'];
+const DATEF=['c11','c12','c22','c33','c34','c64','c69','c79','c81'];
+function bF1(){ return RECS.map(rec=>{ const d=rec.furips1||{}; return F1K.map(k=>{ const v=(d[k]||'').toString().replace(/,/g,' '); return DATEF.includes(k)?fd(v):v; }).join(','); }).join('\n'); }
+function bF2(){ const ls=[]; RECS.forEach(rec=>(rec.furips2||[]).forEach(r=>ls.push([r.factura||'',r.consec||'',r.tipo||'',r.codigo||'',(r.descripcion||'').replace(/,/g,' '),r.cantidad||'0',r.vrUnitario||'0',r.totalFact||'0',r.totalRec||'0'].join(',')))); return ls.join('\n'); }
+function nom(t,c,f){ const p=f.split('-'); const d=p.length===3?`${p[2]}${p[1]}${p[0]}`:f.replace(/-/g,''); return `${t}${c}${d}.txt`; }
+
+window.expTxt=(t)=>{
+  const c=gv('tx-cod'),f=gv('tx-fec'); if(!c||!f){toast('Complete Código y Fecha','w');return;}
+  dl(t==='FURIPS1'?bF1():bF2(),nom(t,c,f),'text/plain'); toast(t+' descargado ✔','ok');
+};
+window.prevTxt=()=>{ show('prev-w'); _s2('pv-f1',bF1()||'(sin datos)'); _s2('pv-f2',bF2()||'(sin datos)'); };
+
+function loadTxt(){ if(!RECS.length){show('txt-no');hide('txt-fm');}else{hide('txt-no');show('txt-fm');const tf=g('tx-fec');if(tf&&!tf.value)tf.value=new Date().toISOString().split('T')[0];const tc=g('tx-cod');if(tc&&!tc.value&&RECS[0])tc.value=RECS[0].codHab||'';} }
+
+// ── EXCEL ──
+function loadXL(){
+  if(!RECS.length){show('xl-no');hide('xl-fm');}else{hide('xl-no');show('xl-fm');const it=RECS.reduce((a,r)=>a+(r.furips2||[]).length,0);_s('xl-inf',`${RECS.length} filas en FURIPS_1 · ${it} filas en FURIPS_2`);}
+}
+const TIPOS={'1':'Medicamentos','2':'Procedimientos','3':'Transporte Primario','4':'Transporte Secundario','5':'Insumos','6':'Dispositivos Médicos','7':'Material de Osteosíntesis','8':'Proc. no manual'};
+window.expXL=()=>{
+  if(typeof XLSX==='undefined'){toast('Cargando librería Excel…','w');setTimeout(()=>expXL(),1500);return;}
+  const wb=XLSX.utils.book_new();
+  const h1=['Rad_Ant','Factura','Consec','Cod_Hab','Apel1','Apel2','Nom1','Nom2','TipoDoc','NumDoc','FecNac','FecFall','Sexo','Dir','Depto','Mun','Tel','Condicion','Naturaleza','OtroEv','DirOcurr','FecOcurr','HoraOcurr','DeptoOcurr','MunOcurr','Zona','EstAseg','Marca','Placa','TipoVeh','CodAseg','Poliza','IniVig','FinVig','SIRAS','CobroTope','CUPS_H','CompQx','CUPSQx1','CUPSQx2','UCI','DiasUCI','FecIng','HoraIng','FecEgr','HoraEgr','DxPI','DxA1I','DxA2I','DxPE','DxA1E','DxA2E','Ap1Med','Ap2Med','Nm1Med','Nm2Med','TDocMed','NDocMed','RegMed','TotFMQ','TotRMQ','TotFT','TotRT','ServH','DescEv','Creado','CreadoPor'];
+  const r1=RECS.map(rec=>{ const d=rec.furips1||{}; const f=k=>d[k]||''; const ts=rec.creado?.toDate?rec.creado.toDate().toLocaleDateString('es-CO'):'—'; return [f('c1'),f('c2'),f('c3'),f('c4'),f('c5'),f('c6'),f('c7'),f('c8'),f('c9'),f('c10'),fd(f('c11')),fd(f('c12')),f('c13'),f('c14'),f('c15'),f('c16'),f('c17'),f('c18'),f('c19'),f('c20'),f('c21'),fd(f('c22')),f('c23'),f('c24'),f('c25'),f('c26'),f('c27'),f('c28'),f('c29'),f('c30'),f('c31'),f('c32'),fd(f('c33')),fd(f('c34')),f('c35'),f('c36'),f('c37'),f('c38'),f('c39'),f('c40'),f('c41'),f('c42'),fd(f('c79')),f('c80'),fd(f('c81')),f('c82'),f('c83'),f('c84'),f('c85'),f('c86'),f('c87'),f('c88'),f('c89'),f('c90'),f('c91'),f('c92'),f('c93'),f('c94'),f('c95'),f('c96'),f('c97'),f('c98'),f('c99'),f('c100'),f('c101'),ts,rec.creadoPorNombre||'']; });
+  const ws1=XLSX.utils.aoa_to_sheet([h1,...r1]); ws1['!cols']=h1.map(()=>({wch:14}));
+  XLSX.utils.book_append_sheet(wb,ws1,'FURIPS_1');
+  const h2=['Factura','Consec','TipoServ','Codigo','Descripcion','Cantidad','VrUnit','TotFact','TotRec','TipoDesc'];
+  const r2=[]; RECS.forEach(rec=>(rec.furips2||[]).forEach(r=>r2.push([r.factura,r.consec,r.tipo,r.codigo,r.descripcion,r.cantidad,r.vrUnitario,r.totalFact,r.totalRec,TIPOS[r.tipo]||''])));
+  const ws2=XLSX.utils.aoa_to_sheet([h2,...r2]); ws2['!cols']=h2.map(()=>({wch:16}));
+  XLSX.utils.book_append_sheet(wb,ws2,'FURIPS_2');
+  XLSX.writeFile(wb,`FURIPS_${new Date().toISOString().split('T')[0].replace(/-/g,'')}.xlsx`);
+  toast('Excel descargado ✔','ok');
+};
+
+// ── ADMIN ──
+window.crearUser=async()=>{
+  const n=gv('u-nom'),e=gv('u-eml'),p=gv('u-pas'),r=gv('u-rol');
+  if(!n||!e||!p){ialert('u-alr','aw','Complete todos los campos.');return;}
+  loader(true);
+  try{
+    const c=await createUserWithEmailAndPassword(auth,e,p);
+    await updateProfile(c.user,{displayName:n});
+    await setDoc(doc(db,'usuarios',c.user.uid),{nombre:n,email:e,rol:r||'digitador',creado:serverTimestamp(),creadoPor:USER.uid});
+    loader(false); ialert('u-alr','as',`✔ Usuario "${n}" creado como ${r}.`);
+    g('u-nom').value=''; g('u-eml').value=''; g('u-pas').value='';
+    cargarUsers();
+  } catch(e2){loader(false);const m={'auth/email-already-in-use':'Correo ya registrado.','auth/weak-password':'Contraseña muy débil.'};ialert('u-alr','ae',m[e2.code]||'Error: '+e2.message);}
+};
+
+async function cargarUsers(){
+  const w=g('users-list');
+  if(w) w.innerHTML='<div style="color:var(--tx3);font-size:12px;">Cargando usuarios…</div>';
+  try{
+    const snap=await getDocs(collection(db,'usuarios'));
+    if(snap.empty){ if(w) w.innerHTML='<div style="color:var(--tx3);font-size:12px;">No hay usuarios registrados aún.</div>'; return; }
+    const users=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!w) return;
+    w.innerHTML=users.map(u=>`
+      <div class="rcard">
+        <div style="width:32px;height:32px;border-radius:50%;background:${u.rol==='admin'?'var(--acc)':'var(--blue)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;">${(u.nombre||'?')[0].toUpperCase()}</div>
+        <div style="flex:1;"><div style="font-weight:500;font-size:13px;">${u.nombre||'Sin nombre'}</div>
+          <div style="font-size:11px;color:var(--tx2);">${u.email||''} · <span class="badge ${u.rol==='admin'?'bg':'bb2'}">${u.rol||'digitador'}</span></div></div>
+        <div style="display:flex;gap:5px;">
+          <button class="btn btn-sm bs" onclick="cambRol('${u.id}','${u.rol||'digitador'}','${u.nombre||''}')">
+            ${(u.rol||'digitador')==='admin'?'→ Digitador':'→ Admin'}
+          </button>
+          ${u.id!==USER.uid?`<button class="btn btn-sm bd" onclick="elimUser('${u.id}','${u.nombre||''}')">✕</button>`:'<span style="font-size:10px;color:var(--tx3);padding:4px 6px;">Tú</span>'}
+        </div>
+      </div>`).join('');
+  } catch(err){
+    if(w) w.innerHTML=`<div class="alert ae">❌ Error al cargar usuarios: ${err.message}<br><br><strong>Solución:</strong> Ve a Firebase Console → Firestore → Reglas y publica las reglas indicadas abajo.</div>`;
+    toast('Error cargando usuarios: '+err.message,'e');
+  }
+}
+
+window.cambRol=async(uid,rol,nom)=>{
+  const nr=rol==='admin'?'digitador':'admin';
+  confirm2(`¿Cambiar rol de ${nom}?`,`De ${rol} a ${nr}.`,async()=>{ await updateDoc(doc(db,'usuarios',uid),{rol:nr}); toast(`Rol cambiado a ${nr}`,'ok'); cargarUsers(); });
+};
+window.elimUser=(uid,nom)=>{
+  confirm2(`¿Eliminar a ${nom}?`,'Se elimina su perfil de la base de datos.',async()=>{ await deleteDoc(doc(db,'usuarios',uid)); toast(`${nom} eliminado`,'w'); cargarUsers(); });
+};
+
+// ── NAVEGACIÓN ──
+window.go=(id)=>{
+  document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display='none'; });
+  const pg=g('p-'+id); if(pg){pg.classList.add('on');pg.style.display='block';}
+  document.querySelectorAll('.ni').forEach(e=>e.classList.remove('active'));
+  const ni=g('n-'+id); if(ni) ni.classList.add('active');
+  if(id==='lista') renderLista();
+  if(id==='txt')   loadTxt();
+  if(id==='xl')    loadXL();
+  if(id==='adm')   cargarUsers();
+};
+
+window.abrirF1=()=>{
+  if(!CUR_ID){ toast('Selecciona una reclamación desde la lista primero.','w'); go('lista'); return; }
+  const rec=RECS.find(r=>r.id===CUR_ID);
+  if(rec){
+    localStorage.setItem('furips_p2_rec',JSON.stringify(rec));
+    localStorage.setItem('furips_p2_rol',USER.rol);
+    window.open('FURIPS_Fase3_Parte2.html','_blank');
+  } else {
+    toast('Reclamación no cargada aún. Ve a la lista y selecciónala desde allí.','w');
+    go('lista');
+  }
+};
+
+window.abrirF2=()=>abrirF1();
+window.abrirParte2=()=>{ toast('Selecciona una reclamación de la lista para editarla.','w'); go('lista'); };
+
+// ── HELPERS ──
+const g=id=>document.getElementById(id);
+const gv=id=>(g(id)||{}).value?.trim()||'';
+const _s=(id,v)=>{ const e=g(id); if(e) e.textContent=v; };
+const _s2=(id,v)=>{ const e=g(id); if(e) e.textContent=v; };
+const show=id=>g(id)?.classList.remove('hidden');
+const hide=id=>g(id)?.classList.add('hidden');
+const loader=v=>g('loader')?.classList.toggle('hidden',!v);
+function ialert(id,cls,msg){ const e=g(id); if(!e) return; e.className='alert '+cls; e.textContent=msg; e.classList.remove('hidden'); setTimeout(()=>e.classList.add('hidden'),4000); }
+function dl(c,n,m){ const b=new Blob([c],{type:m}),a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=n; a.click(); URL.revokeObjectURL(a.href); }
+function toast(msg,t='ok'){ const m={'ok':'tok','w':'twn','e':'ter'}; const e=document.createElement('div'); e.className='tm '+(m[t]||'tok'); e.textContent=msg; g('toast').appendChild(e); setTimeout(()=>e.remove(),3200); }
+let _cb=null;
+window.mOk=()=>{ g('modal').classList.add('hidden'); if(_cb)_cb(); _cb=null; };
+window.mCan=()=>{ g('modal').classList.add('hidden'); _cb=null; };
+function confirm2(t,m,cb){ _s('m-t',t); _s('m-m',m); _cb=cb; g('modal').classList.remove('hidden'); }
+setInterval(()=>{ const e=g('clk'); if(e) e.textContent=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); },1000);
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>
