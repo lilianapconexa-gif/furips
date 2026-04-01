@@ -157,9 +157,13 @@ select option{background:var(--sur2);}
       <input id="l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()">
     </div>
     <div id="l-err" class="alert ae hidden"></div>
+    <div id="l-ok" class="alert as hidden"></div>
     <button class="btn bp" style="width:100%;justify-content:center;" onclick="login()">Ingresar →</button>
     <div id="l-spin" class="hidden" style="text-align:center;margin-top:10px;font-size:12px;color:var(--tx2);">Verificando…</div>
-    <div style="margin-top:14px;font-size:11px;color:var(--tx3);text-align:center;">El administrador crea las cuentas desde el Panel Admin.</div>
+    <div style="margin-top:14px;text-align:center;">
+      <span style="font-size:12px;color:#79c0ff;cursor:pointer;text-decoration:underline;" onclick="resetPass()">¿Olvidaste tu contraseña?</span>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--tx3);text-align:center;">El administrador crea las cuentas desde el Panel Admin.</div>
   </div>
 </div>
 
@@ -332,7 +336,7 @@ service cloud.firestore {
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── CONFIG ──
@@ -364,6 +368,24 @@ window.login = async ()=>{
 };
 window.logout = async ()=>{ if(unsub){unsub();unsub=null;} await signOut(auth); };
 function lerr(m){ const e=g('l-err'); e.textContent=m; e.classList.remove('hidden'); }
+
+window.resetPass = async ()=>{
+  const em = gv('l-email');
+  if(!em){ lerr('Escribe tu correo primero para restablecer la contraseña.'); return; }
+  try{
+    await sendPasswordResetEmail(auth, em);
+    const ok=g('l-ok');
+    if(ok){ ok.textContent=`✔ Correo de restablecimiento enviado a ${em}. Revisa tu bandeja de entrada y spam.`; ok.classList.remove('hidden'); }
+    const err=g('l-err'); if(err) err.classList.add('hidden');
+  } catch(e){
+    const msgs={
+      'auth/user-not-found':'No existe una cuenta con ese correo.',
+      'auth/invalid-email':'El correo no es válido.',
+      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.'
+    };
+    lerr(msgs[e.code]||'Error: '+e.message);
+  }
+};
 
 function showLogin(){ g('scr-login').classList.remove('hidden'); g('scr-app').classList.add('hidden'); }
 function showApp(){
