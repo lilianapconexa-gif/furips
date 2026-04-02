@@ -353,7 +353,7 @@ window.FURIPS_STATE = { getRecs:()=>RECS, getCur:()=>CUR_ID, setCur:(id)=>CUR_ID
 onAuthStateChanged(auth, async (fu)=>{
   if(fu){
     const snap=await getDoc(doc(db,'usuarios',fu.uid));
-    USER = snap.exists() ? {uid:fu.uid,email:fu.email,...snap.data()} : {uid:fu.uid,email:fu.email,nombre:fu.email,rol:'digitador'};
+    USER = snap.exists() ? {uid:fu.uid,email:fu.email,...snap.data()} : {uid:fu.uid,email:fu.email,nombre:fu.displayName||fu.email||'Usuario',rol:'digitador'};
     if(!snap.exists()) await setDoc(doc(db,'usuarios',fu.uid),{nombre:USER.nombre,email:USER.email,rol:USER.rol,creado:serverTimestamp()});
     showApp();
   } else { USER=null; RECS=[]; if(unsub){unsub();unsub=null;} showLogin(); }
@@ -427,11 +427,11 @@ window.crearRec = async ()=>{
   if(!fac||!con||!cod){ialert('n-alr','aw','Complete Factura, Consecutivo y Código Habilitación.');return;}
   loader(true);
   try{
-    const data={factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre,creado:serverTimestamp(),actualizado:serverTimestamp()};
+    const data={factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre',creado:serverTimestamp(),actualizado:serverTimestamp()};
     const ref=await addDoc(collection(db,'reclamaciones'),data);
     CUR_ID=ref.id;
     // Guardar inmediatamente en localStorage para Parte 2 sin esperar el snapshot
-    const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre};
+    const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
     localStorage.setItem('furips_p2_rec',JSON.stringify(recLocal));
     localStorage.setItem('furips_p2_rol',USER.rol);
     loader(false);
