@@ -197,25 +197,49 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
 <!-- Firebase -->
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const FB={apiKey:"AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g",authDomain:"conexa-soat.firebaseapp.com",projectId:"conexa-soat",storageBucket:"conexa-soat.firebasestorage.app",messagingSenderId:"410323697377",appId:"1:410323697377:web:f76e88fe905b8c265e41a0"};
 const appFB=initializeApp(FB); const db=getFirestore(appFB);
 
-// ── CARGAR DATOS DESDE PARTE 1 ──
+// ── CARGAR DATOS — primero URL params, luego localStorage, luego Firebase ──
 let REC=null, ROL='digitador';
-try{ const raw=localStorage.getItem('furips_p2_rec'); if(raw) REC=JSON.parse(raw); ROL=localStorage.getItem('furips_p2_rol')||'digitador'; }catch(e){}
 
-if(REC){
-  g('hdr-fac').textContent='Factura: '+REC.factura+' · '+REC.consec;
-  g('hdr-rol2').textContent=ROL; g('hdr-rol2').className='badge '+(ROL==='admin'?'bg':'bb2');
-  g('f1-norec').classList.add('hidden'); g('f1-body').classList.remove('hidden');
-  g('f2-norec').classList.add('hidden'); g('f2-body').classList.remove('hidden');
-  buildSteps(); buildF1(); loadF1Data(); showS(0);
-  loadF2();
-} else {
-  g('f2-norec').classList.remove('hidden'); g('f2-body').classList.add('hidden');
+async function inicializar(){
+  // 1. Intentar obtener ID desde URL: ?id=xxx&rol=admin
+  const params = new URLSearchParams(window.location.search);
+  const recId  = params.get('id');
+  ROL = params.get('rol') || localStorage.getItem('furips_p2_rol') || 'digitador';
+
+  if(recId){
+    // Cargar directamente desde Firebase
+    try{
+      const snap = await getDoc(doc(db,'reclamaciones',recId));
+      if(snap.exists()){ REC = {id:snap.id,...snap.data()}; }
+    }catch(e){ console.error('Error cargando desde Firebase:',e); }
+  }
+
+  // 2. Fallback: localStorage
+  if(!REC){
+    try{
+      const raw=localStorage.getItem('furips_p2_rec');
+      if(raw) REC=JSON.parse(raw);
+    }catch(e){}
+  }
+
+  if(REC){
+    g('hdr-fac').textContent='Factura: '+REC.factura+' · '+REC.consec;
+    g('hdr-rol2').textContent=ROL; g('hdr-rol2').className='badge '+(ROL==='admin'?'bg':'bb2');
+    g('f1-norec').classList.add('hidden'); g('f1-body').classList.remove('hidden');
+    g('f2-norec').classList.add('hidden'); g('f2-body').classList.remove('hidden');
+    buildSteps(); buildF1(); loadF1Data(); showS(0);
+    loadF2();
+  } else {
+    g('f2-norec').classList.remove('hidden'); g('f2-body').classList.add('hidden');
+    g('f1-norec').classList.remove('hidden'); g('f1-body').classList.add('hidden');
+  }
 }
+inicializar();
 
 async function saveToFB(data){
   if(!REC) return false;
