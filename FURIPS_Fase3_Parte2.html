@@ -169,7 +169,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
     <button class="btn bs" id="btn-prev" onclick="navS(-1)" disabled>← Anterior</button>
     <button class="btn bp" id="btn-next" onclick="navS(1)">Siguiente →</button>
     <div style="flex:1;"></div>
-    <button class="btn bb" onclick="valAll();showS(SECS.length-1)">🔍 Validar</button>
+    <button class="btn bb" onclick="showS(SECS.length-1)">🔍 Ver Resumen</button>
     <button class="btn bp" onclick="guardarF1()">💾 Guardar F1 en nube</button>
   </div>
 </div>
@@ -567,15 +567,26 @@ function upSteps(){
 // ── GUARDAR F1 ──
 window.guardarF1=async()=>{
   if(!REC){toast('No hay reclamación activa.','e');return;}
-  const ok=valAll();
-  if(!ok){toast('Hay campos obligatorios pendientes. Revisa el Resumen.','w');return;}
+  // Recopilar TODOS los datos del formulario
   const d={};
   F1K.forEach(k=>{const e=g(k);if(e) d[k]=e.value;});
   const flags={esRgo:chkd('es-rgo'),hayEst:chkd('hay-est'),hayQx:chkd('hay-qx'),hayRem:chkd('hay-rem'),hayTrp:chkd('hay-trp')};
+  // Validar campos mínimos obligatorios
+  const camposMin=['c2','c3','c4','c5','c7','c9','c10','c13'];
+  const faltantes=camposMin.filter(k=>!d[k]||d[k].trim()==='');
+  if(faltantes.length>0){
+    toast(`Faltan campos obligatorios: ${faltantes.map(k=>k.toUpperCase()).join(', ')}. Revisa secciones I, II y III.`,'w');
+    return;
+  }
   loader(true);
   const ok2=await saveToFB({furips1:d,furips1_flags:flags});
   loader(false);
-  if(ok2){toast('✔ FURIPS 1 guardado en Firebase','ok'); REC.furips1=d; REC.furips1_flags=flags; localStorage.setItem('furips_p2_rec',JSON.stringify(REC));}
+  if(ok2){
+    REC.furips1=d; REC.furips1_flags=flags;
+    toast('✔ FURIPS 1 guardado en Firebase','ok');
+    // Actualizar validación visual
+    setTimeout(()=>valAll(),300);
+  }
 };
 
 // ════ FURIPS 2 ════
