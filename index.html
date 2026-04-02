@@ -436,7 +436,7 @@ window.crearRec = async ()=>{
     localStorage.setItem('furips_p2_rol',USER.rol);
     loader(false);
     ialert('n-alr','as','✔ Reclamación creada correctamente.');
-    setTimeout(()=>{ window.open('FURIPS_Fase3_Parte2.html','_blank'); },1000);
+    setTimeout(()=>{ window.open(`FURIPS_Fase3_Parte2.html?id=${ref.id}&rol=${USER.rol}`,'_blank'); },1000);
   } catch(e){loader(false);toast('Error al crear: '+e.message,'e');}
 };
 
@@ -446,7 +446,7 @@ window.selRec=(id)=>{
   if(rec){
     localStorage.setItem('furips_p2_rec',JSON.stringify(rec));
     localStorage.setItem('furips_p2_rol',USER.rol);
-    window.open('FURIPS_Fase3_Parte2.html','_blank');
+    window.open(`FURIPS_Fase3_Parte2.html?id=${id}&rol=${USER.rol}`,'_blank');
   } else {
     toast('Reclamación no encontrada. Espera un momento y reintenta.','w');
   }
