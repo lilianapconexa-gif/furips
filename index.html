@@ -390,10 +390,17 @@ window.resetPass = async ()=>{
 function showLogin(){ g('scr-login').classList.remove('hidden'); g('scr-app').classList.add('hidden'); }
 function showApp(){
   g('scr-login').classList.add('hidden'); g('scr-app').classList.remove('hidden');
-  _s('hdr-nom',USER.nombre); const hr=g('hdr-rol'); if(hr){hr.textContent=USER.rol;hr.className='badge '+(USER.rol==='admin'?'bg':'bb2');}
+  _s('hdr-nom',USER.nombre);
+  const hr=g('hdr-rol'); if(hr){hr.textContent=USER.rol;hr.className='badge '+(USER.rol==='admin'?'bg':'bb2');}
   const na=g('nav-adm'); if(na) na.style.display=USER.rol==='admin'?'block':'none';
   _s('dash-rol',USER.rol==='admin'?'Vista: todas las reclamaciones':'Vista: solo mis reclamaciones');
-  initSnap(); go('dash');
+  // Asegurar que todas las páginas estén ocultas primero
+  document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display=''; });
+  initSnap();
+  // Mostrar dashboard explícitamente
+  const dash=g('p-dash');
+  if(dash){ dash.classList.add('on'); dash.style.display='block'; }
+  const ni=g('n-dash'); if(ni) ni.classList.add('active');
 }
 
 // ── FIRESTORE LISTENER ──
@@ -565,15 +572,28 @@ window.elimUser=(uid,nom)=>{
 
 // ── NAVEGACIÓN ──
 window.go=(id)=>{
-  document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display='none'; });
-  const pg=g('p-'+id); if(pg){pg.classList.add('on');pg.style.display='block';}
+  document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display=''; });
+  const pg=g('p-'+id);
+  if(pg){ pg.classList.add('on'); pg.style.display='block'; }
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('active'));
   const ni=g('n-'+id); if(ni) ni.classList.add('active');
+  if(id==='nueva') prepNueva();
   if(id==='lista') renderLista();
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
   if(id==='adm')   cargarUsers();
 };
+
+// ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
+function prepNueva(){
+  // Calcular próximo consecutivo automáticamente
+  const consecs = RECS.map(r => parseInt(r.consec)||0);
+  const nextConsec = consecs.length > 0 ? Math.max(...consecs) + 1 : 1;
+  const elCon = g('n-con');
+  if(elCon && !elCon.value) elCon.value = String(nextConsec).padStart(4,'0');
+  // Poner foco en factura
+  setTimeout(()=>{ const el=g('n-fac'); if(el) el.focus(); }, 100);
+}
 
 window.abrirF1=()=>{
   if(!CUR_ID){ toast('Selecciona una reclamación desde la lista primero.','w'); go('lista'); return; }
