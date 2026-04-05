@@ -188,18 +188,19 @@ select option{background:var(--sur2);}
   <div class="appl">
     <nav class="sidebar">
       <div class="ng">Principal</div>
-      <div class="ni" id="n-dash"  onclick="go('dash')"> <span class="ndot"></span>Dashboard</div>
-      <div class="ni" id="n-nueva" onclick="go('nueva')"><span class="ndot"></span>Nueva Reclamación</div>
-      <div class="ni" id="n-lista" onclick="go('lista')"><span class="ndot"></span>Reclamaciones</div>
+      <div class="ni" id="n-dash"   onclick="go('dash')">  <span class="ndot"></span>Dashboard</div>
+      <div class="ni" id="n-nueva"  onclick="go('nueva')"> <span class="ndot"></span>Nueva Reclamación</div>
+      <div class="ni" id="n-lista"  onclick="go('lista')"> <span class="ndot"></span>Reclamaciones</div>
+      <div class="ni" id="n-inf"    onclick="go('inf')">   <span class="ndot"></span>Informes</div>
       <div class="ng">Formularios</div>
-      <div class="ni" id="n-f1"    onclick="abrirF1()">  <span class="ndot"></span>FURIPS 1 — Detalle</div>
-      <div class="ni" id="n-f2"    onclick="abrirF2()">  <span class="ndot"></span>FURIPS 2 — Factura</div>
+      <div class="ni" id="n-f1"     onclick="abrirF1()">   <span class="ndot"></span>FURIPS 1 — Detalle</div>
+      <div class="ni" id="n-f2"     onclick="abrirF2()">   <span class="ndot"></span>FURIPS 2 — Factura</div>
       <div class="ng">Exportar</div>
-      <div class="ni" id="n-txt"   onclick="go('txt')">  <span class="ndot"></span>Archivos Planos .txt</div>
-      <div class="ni" id="n-xl"    onclick="go('xl')">   <span class="ndot"></span>Exportar Excel</div>
+      <div class="ni" id="n-txt"    onclick="go('txt')">   <span class="ndot"></span>Archivos Planos .txt</div>
+      <div class="ni" id="n-xl"     onclick="go('xl')">    <span class="ndot"></span>Exportar Excel</div>
       <div id="nav-adm" style="display:none;">
         <div class="ng">Administración</div>
-        <div class="ni" id="n-adm" onclick="go('adm')"> <span class="ndot"></span>Gestión Usuarios</div>
+        <div class="ni" id="n-adm"  onclick="go('adm')">  <span class="ndot"></span>Gestión Usuarios</div>
       </div>
     </nav>
 
@@ -333,13 +334,108 @@ select option{background:var(--sur2);}
       <div class="page hidden" id="p-lista">
         <div class="ptitle">Reclamaciones</div>
         <div class="psub">Tiempo real desde Firebase. <span id="lista-info"></span></div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
           <button class="btn bp" onclick="go('nueva')">✚ Nueva</button>
-          <div style="flex:1;"></div>
+          <!-- BÚSQUEDA -->
+          <div style="position:relative;flex:1;min-width:200px;">
+            <input id="buscar-fac" placeholder="🔍 Buscar por factura, consecutivo o IPS..."
+              oninput="filtrarLista(this.value)"
+              style="width:100%;padding:7px 32px 7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+            <span onclick="g('buscar-fac').value='';filtrarLista('')"
+              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tx3);font-size:14px;">✕</span>
+          </div>
           <button class="btn bs" onclick="go('txt')">📄 .txt</button>
           <button class="btn" style="background:#1d6f42;border-color:#217346;color:#fff;" onclick="go('xl')">📊 Excel</button>
         </div>
+        <!-- Filtro estado -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--tx3);padding-top:3px;">Filtrar:</span>
+          <button class="btn btn-sm" id="f-todas" onclick="setFiltro('todas')" style="background:var(--acc2);color:#fff;border-color:var(--acc2);">Todas</button>
+          <button class="btn btn-sm bs" id="f-pend"   onclick="setFiltro('pend')">F1 Pendiente</button>
+          <button class="btn btn-sm bs" id="f-comp"   onclick="setFiltro('comp')">F1 Completo</button>
+          <button class="btn btn-sm bs" id="f-rad"    onclick="setFiltro('rad')">Radicadas</button>
+          <button class="btn btn-sm bs" id="f-sinrad" onclick="setFiltro('sinrad')">Sin Radicar</button>
+        </div>
         <div id="lista-wrap"></div>
+      </div>
+
+      <!-- MODAL RADICADO -->
+      <div id="modal-rad" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;">
+        <div style="background:var(--sur);border:1px solid var(--brd2);border-radius:10px;padding:24px;width:420px;max-width:92vw;">
+          <h3 style="font-size:15px;margin-bottom:4px;">📬 Registrar Radicado</h3>
+          <p style="font-size:12px;color:var(--tx2);margin-bottom:16px;">Factura: <strong id="rad-fac-lbl"></strong></p>
+          <div class="field" style="margin-bottom:10px;">
+            <label class="fl">Número de Radicado ADRES <span class="req">*</span></label>
+            <input id="rad-num" maxlength="30" placeholder="Ej: RAD-2024-001234">
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label class="fl">Fecha de Radicación <span class="req">*</span></label>
+            <input id="rad-fecha" type="date">
+          </div>
+          <div class="field" style="margin-bottom:16px;">
+            <label class="fl">Observaciones</label>
+            <input id="rad-obs" maxlength="100" placeholder="Opcional">
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn bs" onclick="cerrarRadicado()">Cancelar</button>
+            <button class="btn bp" onclick="guardarRadicado()">💾 Guardar Radicado</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- INFORMES -->
+      <div class="page hidden" id="p-inf">
+        <div class="ptitle">Informes</div>
+        <div class="psub">Estadísticas de reclamaciones · Actualización en tiempo real</div>
+
+        <!-- Selector tipo informe -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn btn-sm" id="inf-int-btn" onclick="verInforme('interno')" style="background:var(--blue);color:#fff;border-color:var(--blue);">📊 Interno</button>
+          <button class="btn btn-sm bs" id="inf-cli-btn" onclick="verInforme('cliente')">📋 Para Cliente</button>
+          <div style="flex:1;"></div>
+          <button class="btn btn-sm bs" onclick="expInforme()">⬇ Exportar PDF</button>
+        </div>
+
+        <!-- INFORME INTERNO -->
+        <div id="inf-interno">
+          <!-- KPIs -->
+          <div class="stats" id="inf-kpis" style="margin-bottom:16px;"></div>
+          <!-- Gráficas -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
+              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">ESTADO DE RECLAMACIONES</div>
+              <canvas id="chart-estado" height="180"></canvas>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
+              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">RECLAMACIONES POR MES</div>
+              <canvas id="chart-mes" height="180"></canvas>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
+              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">VALORES FACTURADOS VS RECLAMADOS</div>
+              <canvas id="chart-valores" height="180"></canvas>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
+              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">RECLAMACIONES POR IPS</div>
+              <canvas id="chart-ips" height="180"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- INFORME CLIENTE -->
+        <div id="inf-cliente" class="hidden">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:20px;max-width:700px;" id="inf-cli-body">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--brd);padding-bottom:14px;">
+              <div>
+                <div style="font-size:16px;font-weight:700;">INFORME DE RECLAMACIONES ADRES</div>
+                <div style="font-size:11px;color:var(--tx2);">Circular 022/2023 · <span id="inf-cli-fecha"></span></div>
+              </div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--acc);background:rgba(26,127,100,.1);padding:6px 12px;border-radius:6px;border:1px solid var(--acc);">CONFIDENCIAL</div>
+            </div>
+            <div id="inf-cli-tabla"></div>
+          </div>
+        </div>
       </div>
 
       <!-- TXT -->
@@ -544,26 +640,202 @@ window.delRec=(id)=>{
   confirm2('¿Eliminar reclamación?','No se puede deshacer.',async()=>{ await deleteDoc(doc(db,'reclamaciones',id)); if(CUR_ID===id)CUR_ID=null; toast('Eliminada','w'); });
 };
 
+let FILTRO_ESTADO='todas', BUSQUEDA='';
+
+window.filtrarLista=(q)=>{ BUSQUEDA=q.toLowerCase().trim(); renderLista(); };
+window.setFiltro=(f)=>{
+  FILTRO_ESTADO=f;
+  ['todas','pend','comp','rad','sinrad'].forEach(x=>{ const b=g('f-'+x); if(b){b.style.background='';b.style.color='';b.style.borderColor='';b.className='btn btn-sm bs';} });
+  const act=g('f-'+f); if(act){act.style.background='var(--acc2)';act.style.color='#fff';act.style.borderColor='var(--acc2)';}
+  renderLista();
+};
+
 function renderLista(){
   const w=g('lista-wrap');
-  _s('lista-info',USER.rol==='admin'?`Admin: ${RECS.length} total`:`Tus reclamaciones: ${RECS.length}`);
-  if(!RECS.length){w.innerHTML='<div style="color:var(--tx3);font-size:12px;text-align:center;padding:32px 0;">No hay reclamaciones.</div>';return;}
-  w.innerHTML=RECS.map(r=>{
+  let recs=[...RECS];
+  // Filtro búsqueda
+  if(BUSQUEDA) recs=recs.filter(r=>(r.factura||'').toLowerCase().includes(BUSQUEDA)||(r.consec||'').toLowerCase().includes(BUSQUEDA)||(r.codHab||'').toLowerCase().includes(BUSQUEDA));
+  // Filtro estado
+  if(FILTRO_ESTADO==='pend') recs=recs.filter(r=>!r.furips1?.c83);
+  else if(FILTRO_ESTADO==='comp') recs=recs.filter(r=>!!r.furips1?.c83);
+  else if(FILTRO_ESTADO==='rad') recs=recs.filter(r=>!!r.radicado?.numero);
+  else if(FILTRO_ESTADO==='sinrad') recs=recs.filter(r=>!r.radicado?.numero);
+
+  _s('lista-info',USER.rol==='admin'?`Admin: ${RECS.length} total · ${recs.length} mostradas`:`Tus reclamaciones: ${recs.length}`);
+  if(!recs.length){ w.innerHTML=`<div style="color:var(--tx3);font-size:12px;text-align:center;padding:32px 0;">${BUSQUEDA?'No hay resultados para "'+BUSQUEDA+'"':'No hay reclamaciones.'}</div>`; return; }
+  w.innerHTML=recs.map(r=>{
     const f1ok=r.furips1?.c83, items=(r.furips2||[]).length;
     const ts=r.creado?.toDate?r.creado.toDate().toLocaleDateString('es-CO'):'—';
     const canEdit=USER.rol==='admin'||r.creadoPor===USER.uid;
+    const rad=r.radicado;
+    const radBadge=rad?.numero
+      ?`<span style="background:rgba(26,127,100,.2);color:#3fb950;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600;">📬 ${rad.numero} · ${rad.fecha||''}</span>`
+      :`<span style="background:rgba(210,153,34,.15);color:#e3b341;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:4px;">Sin radicar</span>`;
     return `<div class="rcard${r.id===CUR_ID?' sel':''}">
       <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:26px;">#${r.id.slice(-4)}</div>
       <div style="flex:1;cursor:pointer;" onclick="selRec('${r.id}')">
-        <div style="font-weight:500;font-size:13px;">${r.factura} <span class="badge bb2">${r.consec}</span></div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px;">IPS:${r.codHab} · ${items} ítems · ${f1ok?'<span style="color:#3fb950">F1✔</span>':'<span style="color:#e3b341">F1 pendiente</span>'} · ${ts}${USER.rol==='admin'?' · <span style="color:var(--tx3)">👤'+( r.creadoPorNombre||'?')+'</span>':''}</div>
+        <div style="font-weight:500;font-size:13px;">${r.factura} <span class="badge bb2">${r.consec}</span> ${radBadge}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px;">IPS:${r.codHab} · ${items} ítems · ${f1ok?'<span style="color:#3fb950">F1✔</span>':'<span style="color:#e3b341">F1 pendiente</span>'} · ${ts}${USER.rol==='admin'?' · <span style="color:var(--tx3)">👤'+(r.creadoPorNombre||'?')+'</span>':''}</div>
       </div>
-      <div style="display:flex;gap:5px;">
-        ${canEdit?`<button class="btn btn-sm bs" onclick="selRec('${r.id}')">Editar</button><button class="btn btn-sm bd" onclick="delRec('${r.id}')">✕</button>`:'<span style="font-size:10px;color:var(--tx3);">Solo lectura</span>'}
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        ${canEdit?`
+          <button class="btn btn-sm bs" onclick="selRec('${r.id}')">Editar</button>
+          <button class="btn btn-sm" style="background:rgba(31,111,235,.15);border-color:var(--blue);color:#79c0ff;padding:4px 9px;font-size:11px;" onclick="abrirRadicado('${r.id}','${r.factura}')">📬 Radicar</button>
+          <button class="btn btn-sm bd" onclick="delRec('${r.id}')">✕</button>
+        `:'<span style="font-size:10px;color:var(--tx3);">Solo lectura</span>'}
       </div>
     </div>`;
   }).join('');
 }
+
+// ── RADICADO ──
+let RAD_ID=null;
+window.abrirRadicado=(id,fac)=>{
+  RAD_ID=id;
+  _s('rad-fac-lbl',fac);
+  const rec=RECS.find(r=>r.id===id);
+  if(rec?.radicado){ g('rad-num').value=rec.radicado.numero||''; g('rad-fecha').value=rec.radicado.fecha||''; g('rad-obs').value=rec.radicado.obs||''; }
+  else { g('rad-num').value=''; g('rad-fecha').value=new Date().toISOString().split('T')[0]; g('rad-obs').value=''; }
+  const m=g('modal-rad'); if(m){ m.style.display='flex'; }
+};
+window.cerrarRadicado=()=>{ const m=g('modal-rad'); if(m) m.style.display='none'; RAD_ID=null; };
+window.guardarRadicado=async()=>{
+  const num=gv('rad-num'), fecha=gv('rad-fecha');
+  if(!num||!fecha){ toast('Complete número y fecha de radicado.','w'); return; }
+  if(!RAD_ID) return;
+  loader(true);
+  try{
+    await updateDoc(doc(db,'reclamaciones',RAD_ID),{
+      radicado:{numero:num,fecha:fecha,obs:gv('rad-obs'),registradoPor:USER.uid,registradoEn:serverTimestamp()},
+      actualizado:serverTimestamp()
+    });
+    loader(false); cerrarRadicado(); toast('✔ Radicado registrado correctamente.','ok');
+  } catch(e){ loader(false); toast('Error: '+e.message,'e'); }
+};
+
+// ── INFORMES ──
+let CHART_ESTADO=null, CHART_MES=null, CHART_VAL=null, CHART_IPS=null;
+window.verInforme=(tipo)=>{
+  g('inf-interno').classList.toggle('hidden',tipo!=='interno');
+  g('inf-cliente').classList.toggle('hidden',tipo!=='cliente');
+  g('inf-int-btn').style.background=tipo==='interno'?'var(--blue)':'';
+  g('inf-int-btn').style.color=tipo==='interno'?'#fff':'';
+  g('inf-cli-btn').style.background=tipo==='cliente'?'var(--blue)':'';
+  g('inf-cli-btn').style.color=tipo==='cliente'?'#fff':'';
+  if(tipo==='interno') buildChartsInterno();
+  else buildInformeCliente();
+};
+
+function buildChartsInterno(){
+  const tot=RECS.length, comp=RECS.filter(r=>r.furips1?.c83).length, pend=tot-comp;
+  const radN=RECS.filter(r=>r.radicado?.numero).length, sinRad=tot-radN;
+  const totFact=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
+  const totRec=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c97||0)||0),0);
+
+  // KPIs
+  const kp=g('inf-kpis');
+  if(kp) kp.innerHTML=`
+    <div class="stat"><div class="sv">${tot}</div><div class="sl">Total Reclamaciones</div></div>
+    <div class="stat"><div class="sv" style="color:#3fb950">${comp}</div><div class="sl">F1 Completos</div></div>
+    <div class="stat"><div class="sv" style="color:#e3b341">${pend}</div><div class="sl">F1 Pendientes</div></div>
+    <div class="stat"><div class="sv" style="color:#3fb950">${radN}</div><div class="sl">Radicadas</div></div>
+    <div class="stat"><div class="sv" style="color:#e3b341">${sinRad}</div><div class="sl">Sin Radicar</div></div>
+    <div class="stat"><div class="sv" style="font-size:14px;">$${(totFact/1000000).toFixed(1)}M</div><div class="sl">Total Facturado</div></div>
+    <div class="stat"><div class="sv" style="font-size:14px;color:#3fb950;">$${(totRec/1000000).toFixed(1)}M</div><div class="sl">Total Reclamado</div></div>`;
+
+  if(typeof Chart==='undefined'){ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onload=()=>dibujarGraficas(comp,pend,radN,sinRad,totFact,totRec); document.head.appendChild(s); }
+  else dibujarGraficas(comp,pend,radN,sinRad,totFact,totRec);
+}
+
+function dibujarGraficas(comp,pend,radN,sinRad,totFact,totRec){
+  const C=Chart, opts={responsive:true,plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}}};
+
+  // Grafica 1 — Estado F1
+  if(CHART_ESTADO) CHART_ESTADO.destroy();
+  const ctx1=g('chart-estado'); if(ctx1){
+    CHART_ESTADO=new C(ctx1,{type:'doughnut',data:{labels:['F1 Completo','F1 Pendiente'],datasets:[{data:[comp,pend],backgroundColor:['#238636','#d29922'],borderWidth:0}]},options:{...opts,cutout:'65%'}});
+  }
+
+  // Grafica 2 — Por mes
+  if(CHART_MES) CHART_MES.destroy();
+  const porMes={};
+  RECS.forEach(r=>{ const f=r.creado?.toDate?.(); if(!f) return; const k=`${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}`; porMes[k]=(porMes[k]||0)+1; });
+  const meses=Object.keys(porMes).sort().slice(-6);
+  const ctx2=g('chart-mes'); if(ctx2){
+    CHART_MES=new C(ctx2,{type:'bar',data:{labels:meses,datasets:[{label:'Reclamaciones',data:meses.map(m=>porMes[m]||0),backgroundColor:'rgba(31,111,235,.7)',borderRadius:4}]},options:{...opts,scales:{x:{ticks:{color:'#8b949e'}},y:{ticks:{color:'#8b949e'},beginAtZero:true}}}});
+  }
+
+  // Grafica 3 — Valores
+  if(CHART_VAL) CHART_VAL.destroy();
+  const ctx3=g('chart-valores'); if(ctx3){
+    CHART_VAL=new C(ctx3,{type:'bar',data:{labels:['Facturado','Reclamado'],datasets:[{data:[totFact,totRec],backgroundColor:['rgba(31,111,235,.7)','rgba(26,127,100,.7)'],borderRadius:4}]},options:{...opts,scales:{x:{ticks:{color:'#8b949e'}},y:{ticks:{color:'#8b949e',callback:(v)=>'$'+v.toLocaleString('es-CO')},beginAtZero:true}}}});
+  }
+
+  // Grafica 4 — Por IPS
+  if(CHART_IPS) CHART_IPS.destroy();
+  const porIPS={};
+  RECS.forEach(r=>{ const k=r.codHab||'Sin código'; porIPS[k]=(porIPS[k]||0)+1; });
+  const ctx4=g('chart-ips'); if(ctx4){
+    CHART_IPS=new C(ctx4,{type:'pie',data:{labels:Object.keys(porIPS),datasets:[{data:Object.values(porIPS),backgroundColor:['#238636','#1f6feb','#d29922','#da3633','#8b949e'],borderWidth:0}]},options:{...opts}});
+  }
+}
+
+function buildInformeCliente(){
+  const fh=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  _s('inf-cli-fecha',fh);
+  const tot=RECS.length,comp=RECS.filter(r=>r.furips1?.c83).length;
+  const totFact=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
+  const totRec=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c97||0)||0),0);
+  const radN=RECS.filter(r=>r.radicado?.numero).length;
+  const tb=g('inf-cli-tabla');
+  if(!tb) return;
+  tb.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div style="background:var(--sur2);border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);">${tot}</div>
+        <div style="font-size:11px;color:var(--tx2);">Reclamaciones Total</div>
+      </div>
+      <div style="background:var(--sur2);border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:#3fb950;">${radN}</div>
+        <div style="font-size:11px;color:var(--tx2);">Radicadas ante ADRES</div>
+      </div>
+      <div style="background:var(--sur2);border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);">${comp}</div>
+        <div style="font-size:11px;color:var(--tx2);">FURIPS 1 Completos</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">
+      <thead><tr style="background:var(--sur2);">
+        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">FACTURA</th>
+        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">CONSEC.</th>
+        <th style="padding:8px 10px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">VR. FACTURADO</th>
+        <th style="padding:8px 10px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">VR. RECLAMADO</th>
+        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">RADICADO</th>
+        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">FECHA RAD.</th>
+      </tr></thead>
+      <tbody>
+        ${RECS.map(r=>`<tr style="border-bottom:1px solid var(--brd);">
+          <td style="padding:7px 10px;font-weight:500;">${r.factura}</td>
+          <td style="padding:7px 10px;font-family:var(--mono);">${r.consec}</td>
+          <td style="padding:7px 10px;text-align:right;font-family:var(--mono);">$${(parseInt(r.furips1?.c96||0)||0).toLocaleString('es-CO')}</td>
+          <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:#3fb950;">$${(parseInt(r.furips1?.c97||0)||0).toLocaleString('es-CO')}</td>
+          <td style="padding:7px 10px;font-family:var(--mono);font-size:11px;">${r.radicado?.numero||'<span style="color:#e3b341">Pendiente</span>'}</td>
+          <td style="padding:7px 10px;font-size:11px;">${r.radicado?.fecha||'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr style="background:var(--sur2);font-weight:700;">
+        <td colspan="2" style="padding:8px 10px;font-family:var(--mono);">TOTALES</td>
+        <td style="padding:8px 10px;text-align:right;font-family:var(--mono);">$${totFact.toLocaleString('es-CO')}</td>
+        <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:#3fb950;">$${totRec.toLocaleString('es-CO')}</td>
+        <td colspan="2"></td>
+      </tr></tfoot>
+    </table>
+    <div style="font-size:10px;color:var(--tx3);border-top:1px solid var(--brd);padding-top:10px;">
+      Documento generado el ${fh} · Sistema FURIPS Circular 022/2023 · ADRES Colombia
+    </div>`;
+}
+
+window.expInforme=()=>{ toast('Para exportar: usa Ctrl+P → Guardar como PDF','w'); window.print(); };
 
 // ── STATS ──
 function updStats(){
@@ -668,6 +940,7 @@ window.go=(id)=>{
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
   if(id==='adm')   cargarUsers();
+  if(id==='inf')   { verInforme('interno'); }
 };
 
 // ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
