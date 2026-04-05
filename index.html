@@ -817,7 +817,18 @@ select option{background:var(--sur2);}
       <div class="page hidden" id="p-adm">
         <div class="ptitle">Gestión de Usuarios</div>
         <div class="psub">Solo Admin y Super Admin. El Super Admin tiene acceso completo.</div>
-        <div class="sh" style="margin-top:0;">✚ Crear Nuevo Usuario</div>
+
+        <!-- MI PERFIL -->
+        <div class="sh" style="margin-top:0;">👤 Mi Perfil</div>
+        <div class="sb" style="margin-bottom:14px;">
+          <div class="g2" style="align-items:end;">
+            <div class="field">
+              <label class="fl">Mi nombre completo <span class="req">*</span></label>
+              <input id="mi-nombre" maxlength="60" placeholder="Escribe tu nombre">
+            </div>
+            <button class="btn bp" onclick="actualizarMiNombre()" style="height:34px;">💾 Actualizar nombre</button>
+          </div>
+        </div>
         <div class="sb">
           <div class="g2">
             <div class="field"><label class="fl">Nombre completo <span class="req">*</span></label><input id="u-nom" maxlength="60" placeholder="Ej: María García"></div>
@@ -2215,25 +2226,51 @@ async function cargarUsers(){
     if(snap.empty){ if(w) w.innerHTML='<div style="color:var(--tx3);font-size:12px;">No hay usuarios registrados aún.</div>'; return; }
     const users=snap.docs.map(d=>({id:d.id,...d.data()}));
     if(!w) return;
+
+    const isSA = USER.rol==='superadmin';
+    const isAdm = USER.rol==='admin';
+
     w.innerHTML=users.map(u=>{
       const rolColor=u.rol==='superadmin'?'linear-gradient(135deg,#f57c00,#ff6b35)':u.rol==='admin'?'var(--acc)':'var(--blue)';
       const rolBadge=u.rol==='superadmin'?'⭐ Super Admin':u.rol==='admin'?'Admin':'Digitador';
       const badgeCls=u.rol==='superadmin'||u.rol==='admin'?'bg':'bb2';
+      const esSelf = u.id===USER.uid;
+
+      // Reglas de qué puede hacer quien:
+      // - superadmin: puede cambiar cualquier rol (incluido superadmin) a cualquiera excepto a sí mismo
+      // - admin: puede cambiar entre digitador y admin (NO superadmin) a otros usuarios, NO a sí mismo
+      // - digitador: no puede cambiar roles
+      const puedeEditar = isSA ? !esSelf : isAdm ? (!esSelf && u.rol!=='superadmin') : false;
+
+      // Opciones de rol disponibles según quien edita
+      const opcionesSA = `
+        <option value="digitador" ${(u.rol||'digitador')==='digitador'?'selected':''}>Digitador</option>
+        <option value="admin"     ${u.rol==='admin'?'selected':''}>Admin</option>
+        <option value="superadmin" ${u.rol==='superadmin'?'selected':''}>⭐ Super Admin</option>`;
+      const opcionesAdm = `
+        <option value="digitador" ${(u.rol||'digitador')==='digitador'?'selected':''}>Digitador</option>
+        <option value="admin"     ${u.rol==='admin'?'selected':''}>Admin</option>`;
+
       return `<div class="rcard">
         <div style="width:36px;height:36px;border-radius:50%;background:${rolColor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;color:#fff;">${(u.nombre||'?')[0].toUpperCase()}</div>
         <div style="flex:1;">
           <div style="font-weight:600;font-size:13px;">${u.nombre||'Sin nombre'}</div>
-          <div style="font-size:11px;color:var(--tx2);">${u.email||''} · <span class="badge ${badgeCls}" style="${u.rol==='superadmin'?'background:linear-gradient(135deg,#f57c00,#ff6b35);color:#fff;':''}">${rolBadge}</span></div>
+          <div style="font-size:11px;color:var(--tx2);">${u.email||''}
+            · <span class="badge ${badgeCls}" style="${u.rol==='superadmin'?'background:linear-gradient(135deg,#f57c00,#ff6b35);color:#fff;':''}">${rolBadge}</span>
+          </div>
         </div>
-        <div style="display:flex;gap:5px;align-items:center;">
-          ${u.id!==USER.uid?`
-            <select onchange="cambRolSelect('${u.id}','${u.nombre||''}',this.value)" style="padding:4px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;">
-              <option value="digitador" ${(u.rol||'digitador')==='digitador'?'selected':''}>Digitador</option>
-              <option value="admin"     ${u.rol==='admin'?'selected':''}>Admin</option>
-              <option value="superadmin" ${u.rol==='superadmin'?'selected':''}>⭐ Super Admin</option>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${puedeEditar ? `
+            <select onchange="cambRolSelect('${u.id}','${u.nombre||''}',this.value)"
+              style="padding:4px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;">
+              ${isSA ? opcionesSA : opcionesAdm}
             </select>
             <button class="btn btn-sm bd" onclick="elimUser('${u.id}','${u.nombre||''}')">✕</button>
-          `:'<span style="font-size:10px;color:var(--tx3);padding:4px 8px;background:var(--sur2);border-radius:4px;">Tú</span>'}
+          ` : esSelf ? `
+            <span style="font-size:10px;color:var(--acc);padding:4px 8px;background:rgba(0,178,226,.1);border-radius:4px;border:1px solid rgba(0,178,226,.3);">Tú</span>
+          ` : `
+            <span style="font-size:10px;color:var(--tx3);padding:4px 8px;background:var(--sur2);border-radius:4px;">Solo lectura</span>
+          `}
         </div>
       </div>`;
     }).join('');
@@ -2243,8 +2280,24 @@ async function cargarUsers(){
   }
 }
 
+window.actualizarMiNombre=async()=>{
+  const nom=gv('mi-nombre');
+  if(!nom){ toast('Escribe tu nombre primero.','w'); return; }
+  try{
+    await updateDoc(doc(db,'usuarios',USER.uid),{nombre:nom});
+    USER.nombre=nom;
+    _s('hdr-nom',nom);
+    toast('✔ Nombre actualizado correctamente.','ok');
+    cargarUsers();
+  } catch(e){ toast('Error: '+e.message,'e'); }
+};
+
 window.cambRolSelect=async(uid,nom,nuevoRol)=>{
   const rolLbl={'digitador':'Digitador','admin':'Admin','superadmin':'⭐ Super Admin'};
+  // Validar permisos
+  if(USER.rol==='digitador'){ toast('No tienes permiso para cambiar roles.','e'); cargarUsers(); return; }
+  if(USER.rol==='admin' && nuevoRol==='superadmin'){ toast('Solo el Super Admin puede asignar ese rol.','e'); cargarUsers(); return; }
+  if(uid===USER.uid){ toast('No puedes cambiar tu propio rol.','w'); cargarUsers(); return; }
   confirm2(`¿Cambiar rol de ${nom}?`,`Nuevo rol: ${rolLbl[nuevoRol]||nuevoRol}`,async()=>{
     await updateDoc(doc(db,'usuarios',uid),{rol:nuevoRol});
     toast(`✔ Rol de ${nom} cambiado a ${rolLbl[nuevoRol]}`,'ok');
@@ -2266,7 +2319,10 @@ window.go=(id)=>{
   if(id==='lista') renderLista();
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
-  if(id==='adm')   cargarUsers();
+  if(id==='adm'){
+    const mn=g('mi-nombre'); if(mn) mn.value=USER.nombre||'';
+    cargarUsers();
+  }
   if(id==='inf'){
     if(USER.rol!=='superadmin'){ toast('Solo el Super Admin puede acceder a Informes.','w'); return; }
     verInforme('interno');
