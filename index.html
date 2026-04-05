@@ -228,29 +228,105 @@ select option{background:var(--sur2);}
       <!-- NUEVA -->
       <div class="page hidden" id="p-nueva">
         <div class="ptitle">Nueva Reclamación</div>
-        <div class="psub">Se guarda en Firestore y es visible según tu rol.</div>
-        <div class="g2">
-          <div class="field"><label class="fl">Número de Factura <span class="req">*</span></label><input id="n-fac" maxlength="20" placeholder="Según DIAN"></div>
-          <div class="field"><label class="fl">Consecutivo <span class="req">*</span></label><input id="n-con" maxlength="12"></div>
-          <div class="field"><label class="fl">Radicado Anterior (RGO)</label><input id="n-rgo" maxlength="10" placeholder="Vacío = nueva"><span class="hint">Solo RGO: 0=total · 1=parcial · 6=transversal</span></div>
-          <div class="field">
-            <label class="fl">IPS Prestadora <span class="req">*</span></label>
-            <select id="n-cod-sel" onchange="selIPSp1(this.value)" style="margin-bottom:4px;">
-              <option value="">Seleccione IPS...</option>
-              <option value="760011259501">760011259501 — OCCIDENTAL DE SALUD SAS</option>
-              <option value="157590080301">157590080301 — CLÍNICA EL LAGUITO S.A</option>
-              <option value="otro">Otra IPS (escribir código)</option>
-            </select>
-            <input id="n-cod" maxlength="12" placeholder="Código habilitación 12 dígitos">
-            <span class="hint">Se completa al seleccionar la IPS.</span>
+        <div class="psub">Crea una reclamación individual o carga varias desde Excel.</div>
+
+        <!-- TABS INDIVIDUAL / MASIVA -->
+        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--brd);">
+          <div id="nt-ind" onclick="switchNueva('ind')" style="padding:8px 20px;cursor:pointer;font-size:12px;font-weight:600;color:var(--acc);border-bottom:2px solid var(--acc);font-family:var(--mono);">✚ Individual</div>
+          <div id="nt-mas" onclick="switchNueva('mas')" style="padding:8px 20px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx2);border-bottom:2px solid transparent;font-family:var(--mono);">📊 Carga Masiva Excel</div>
+        </div>
+
+        <!-- INDIVIDUAL -->
+        <div id="n-ind">
+          <div class="g2">
+            <div class="field"><label class="fl">Número de Factura <span class="req">*</span></label><input id="n-fac" maxlength="20" placeholder="Según DIAN"></div>
+            <div class="field"><label class="fl">Consecutivo <span class="req">*</span></label><input id="n-con" maxlength="12"></div>
+            <div class="field"><label class="fl">Radicado Anterior (RGO)</label><input id="n-rgo" maxlength="10" placeholder="Vacío = nueva"><span class="hint">Solo RGO: 0=total · 1=parcial · 6=transversal</span></div>
+            <div class="field">
+              <label class="fl">IPS Prestadora <span class="req">*</span></label>
+              <select id="n-cod-sel" onchange="selIPSp1(this.value)" style="margin-bottom:4px;">
+                <option value="">Seleccione IPS...</option>
+                <option value="760011259501">760011259501 — OCCIDENTAL DE SALUD SAS</option>
+                <option value="157590080301">157590080301 — CLÍNICA EL LAGUITO S.A</option>
+                <option value="otro">Otra IPS (escribir código)</option>
+              </select>
+              <input id="n-cod" maxlength="12" placeholder="Código habilitación 12 dígitos">
+              <span class="hint">Se completa al seleccionar la IPS.</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn bp" onclick="crearRec()">✚ Crear en la nube</button>
+            <button class="btn bs" onclick="go('lista')">Ver lista</button>
+          </div>
+          <div id="n-alr" class="hidden" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- CARGA MASIVA -->
+        <div id="n-mas" class="hidden">
+          <div class="alert ai" style="margin-bottom:12px;">
+            📊 Sube un archivo Excel (.xlsx) con las reclamaciones. El sistema las creará todas en Firebase automáticamente.
+          </div>
+
+          <!-- Plantilla -->
+          <div style="margin-bottom:14px;">
+            <button class="btn bs" onclick="descargarPlantilla()" style="font-size:12px;">⬇ Descargar Plantilla Excel</button>
+            <span style="font-size:11px;color:var(--tx3);margin-left:10px;">Descarga la plantilla, llénala y vuelve a subirla.</span>
+          </div>
+
+          <!-- Columnas requeridas -->
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--tx2);">
+            <div style="font-family:var(--mono);font-weight:600;color:var(--tx);margin-bottom:6px;font-size:11px;">COLUMNAS REQUERIDAS EN EL EXCEL:</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              <span>• <strong>factura</strong> — Número de factura DIAN</span>
+              <span>• <strong>consecutivo</strong> — Consecutivo reclamación</span>
+              <span>• <strong>codHab</strong> — Código habilitación IPS</span>
+              <span>• <strong>rgo</strong> — Radicado anterior (opcional)</span>
+            </div>
+          </div>
+
+          <!-- Zona de carga -->
+          <div id="drop-zone" onclick="document.getElementById('excel-input').click()"
+            style="border:2px dashed var(--brd2);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;"
+            ondragover="event.preventDefault();this.style.borderColor='var(--acc)';this.style.background='rgba(26,127,100,.05)'"
+            ondragleave="this.style.borderColor='var(--brd2)';this.style.background=''"
+            ondrop="event.preventDefault();this.style.borderColor='var(--brd2)';this.style.background='';procesarExcel(event.dataTransfer.files[0])">
+            <div style="font-size:32px;margin-bottom:8px;">📊</div>
+            <div style="font-size:13px;font-weight:600;color:var(--tx);">Haz clic o arrastra el archivo Excel aquí</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;">Formatos aceptados: .xlsx, .xls</div>
+          </div>
+          <input type="file" id="excel-input" accept=".xlsx,.xls" style="display:none" onchange="procesarExcel(this.files[0])">
+
+          <!-- Preview -->
+          <div id="excel-preview" class="hidden" style="margin-top:14px;">
+            <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:8px;" id="excel-count"></div>
+            <div style="overflow-x:auto;border:1px solid var(--brd);border-radius:6px;max-height:250px;overflow-y:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                <thead style="background:var(--sur2);position:sticky;top:0;">
+                  <tr>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">#</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">FACTURA</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">CONSECUTIVO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">COD. HABILITACIÓN</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">RGO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">ESTADO</th>
+                  </tr>
+                </thead>
+                <tbody id="excel-tbody"></tbody>
+              </table>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="btn bp" id="btn-cargar-mas" onclick="cargarMasiva()">☁ Crear todas en Firebase</button>
+              <button class="btn bs" onclick="limpiarExcel()">✕ Cancelar</button>
+            </div>
+            <div id="mas-prog" class="hidden" style="margin-top:10px;">
+              <div style="background:var(--sur2);border-radius:4px;height:8px;overflow:hidden;">
+                <div id="mas-barra" style="height:100%;background:var(--acc);border-radius:4px;width:0%;transition:width .3s;"></div>
+              </div>
+              <div id="mas-txt" style="font-size:11px;color:var(--tx2);margin-top:4px;text-align:center;"></div>
+            </div>
           </div>
         </div>
-        <div class="divider"></div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn bp" onclick="crearRec()">✚ Crear en la nube</button>
-          <button class="btn bs" onclick="go('lista')">Ver lista</button>
-        </div>
-        <div id="n-alr" class="hidden" style="margin-top:10px;"></div>
       </div>
 
       <!-- LISTA -->
@@ -625,8 +701,142 @@ window.abrirParte2=()=>{ toast('Selecciona una reclamación de la lista para edi
 const g=id=>document.getElementById(id);
 const gv=id=>(g(id)||{}).value?.trim()||'';
 
-// ── IPS PRESTADORA ──
-window.selIPSp1=(val)=>{
+// ── CARGA MASIVA EXCEL ──
+let FILAS_EXCEL = [];
+
+window.switchNueva=(tab)=>{
+  const ind=g('n-ind'), mas=g('n-mas');
+  const ti=g('nt-ind'), tm=g('nt-mas');
+  if(tab==='ind'){
+    ind.classList.remove('hidden'); mas.classList.add('hidden');
+    ti.style.color='var(--acc)'; ti.style.borderBottom='2px solid var(--acc)';
+    tm.style.color='var(--tx2)'; tm.style.borderBottom='2px solid transparent';
+  } else {
+    ind.classList.add('hidden'); mas.classList.remove('hidden');
+    tm.style.color='var(--acc)'; tm.style.borderBottom='2px solid var(--acc)';
+    ti.style.color='var(--tx2)'; ti.style.borderBottom='2px solid transparent';
+  }
+};
+
+window.descargarPlantilla=()=>{
+  if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); setTimeout(descargarPlantilla,1500); return; }
+  const wb=XLSX.utils.book_new();
+  const data=[
+    ['factura','consecutivo','codHab','rgo'],
+    ['FE-001','0001','760011259501',''],
+    ['FE-002','0002','760011259501',''],
+    ['FE-003','0003','157590080301',''],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:15},{wch:12},{wch:18},{wch:12}];
+  // Estilo encabezado
+  ['A1','B1','C1','D1'].forEach(cell=>{ if(ws[cell]) ws[cell].s={font:{bold:true},fill:{fgColor:{rgb:'1A7F64'}}}; });
+  XLSX.utils.book_append_sheet(wb,ws,'Reclamaciones');
+  XLSX.writeFile(wb,'Plantilla_FURIPS_Reclamaciones.xlsx');
+  toast('Plantilla descargada ✔','ok');
+};
+
+window.procesarExcel=(file)=>{
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(()=>procesarExcel(file),1500); return; }
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){ toast('El archivo está vacío.','w'); return; }
+
+      // Normalizar columnas (mayúsculas/minúsculas)
+      FILAS_EXCEL=rows.map((r,i)=>({
+        num: i+1,
+        factura: (r.factura||r.Factura||r.FACTURA||'').toString().trim(),
+        consec:  (r.consecutivo||r.Consecutivo||r.CONSECUTIVO||r.consec||'').toString().trim(),
+        codHab:  (r.codHab||r.CodHab||r.CODHAB||r.cod_hab||r.codigo||'').toString().trim(),
+        rgo:     (r.rgo||r.RGO||r.radicado||'').toString().trim(),
+        estado:  'pendiente',
+      }));
+
+      // Validar filas
+      FILAS_EXCEL=FILAS_EXCEL.map(f=>({
+        ...f,
+        estado: !f.factura?'error:Sin factura':!f.consec?'error:Sin consecutivo':!f.codHab?'error:Sin código IPS':'listo'
+      }));
+
+      const errores=FILAS_EXCEL.filter(f=>f.estado.startsWith('error')).length;
+      const listos=FILAS_EXCEL.filter(f=>f.estado==='listo').length;
+
+      g('excel-count').innerHTML=`<span style="color:#3fb950">✔ ${listos} reclamaciones listas</span>${errores>0?` · <span style="color:#f85149">❌ ${errores} con errores</span>`:''}`;
+      renderPreview();
+      g('excel-preview').classList.remove('hidden');
+      const btn=g('btn-cargar-mas');
+      if(btn) btn.disabled=listos===0;
+    } catch(err){ toast('Error leyendo el archivo: '+err.message,'e'); }
+  };
+  reader.readAsBinaryString(file);
+};
+
+function renderPreview(){
+  const tb=g('excel-tbody'); if(!tb) return;
+  tb.innerHTML=FILAS_EXCEL.map(f=>{
+    const esError=f.estado.startsWith('error');
+    const color=esError?'#f85149':f.estado==='ok'?'#3fb950':'var(--tx)';
+    const ico=esError?'❌':f.estado==='ok'?'✔':'⏳';
+    const lbl=esError?f.estado.replace('error:',''):f.estado==='ok'?'Creada':f.estado==='cargando'?'Creando...':'Lista';
+    return `<tr style="border-bottom:1px solid var(--brd);">
+      <td style="padding:5px 10px;color:var(--tx3);font-family:var(--mono);">${f.num}</td>
+      <td style="padding:5px 10px;font-weight:500;">${f.factura||'—'}</td>
+      <td style="padding:5px 10px;font-family:var(--mono);">${f.consec||'—'}</td>
+      <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${f.codHab||'—'}</td>
+      <td style="padding:5px 10px;color:var(--tx3);">${f.rgo||'—'}</td>
+      <td style="padding:5px 10px;color:${color};font-weight:500;">${ico} ${lbl}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.cargarMasiva=async()=>{
+  const listos=FILAS_EXCEL.filter(f=>f.estado==='listo');
+  if(!listos.length){ toast('No hay filas válidas para cargar.','w'); return; }
+
+  const prog=g('mas-prog'), barra=g('mas-barra'), txt=g('mas-txt');
+  if(prog) prog.classList.remove('hidden');
+  const btn=g('btn-cargar-mas'); if(btn) btn.disabled=true;
+
+  let ok=0, err=0;
+  for(let i=0;i<FILAS_EXCEL.length;i++){
+    const f=FILAS_EXCEL[i];
+    if(f.estado!=='listo') continue;
+    FILAS_EXCEL[i].estado='cargando'; renderPreview();
+    const pct=Math.round((i+1)/FILAS_EXCEL.length*100);
+    if(barra) barra.style.width=pct+'%';
+    if(txt) txt.textContent=`Creando ${i+1} de ${FILAS_EXCEL.length}...`;
+    try{
+      await addDoc(collection(db,'reclamaciones'),{
+        factura:f.factura, consec:f.consec, codHab:f.codHab,
+        furips1:{c1:f.rgo,c2:f.factura,c3:f.consec,c4:f.codHab},
+        furips2:[], creadoPor:USER.uid,
+        creadoPorNombre:USER.nombre||USER.email||'Sin nombre',
+        creado:serverTimestamp(), actualizado:serverTimestamp()
+      });
+      FILAS_EXCEL[i].estado='ok'; ok++;
+    } catch(e){ FILAS_EXCEL[i].estado='error:'+e.message; err++; }
+    renderPreview();
+    await new Promise(r=>setTimeout(r,150)); // pausa para no saturar Firebase
+  }
+
+  if(barra) barra.style.width='100%';
+  if(txt) txt.textContent=`Completado: ${ok} creadas${err>0?`, ${err} errores`:''}`;
+  toast(`✔ ${ok} reclamaciones creadas${err>0?` · ${err} errores`:''}`, ok>0?'ok':'e');
+  if(btn){ btn.disabled=false; btn.textContent='✔ Finalizado'; }
+};
+
+window.limpiarExcel=()=>{
+  FILAS_EXCEL=[];
+  g('excel-preview').classList.add('hidden');
+  g('excel-input').value='';
+  const prog=g('mas-prog'); if(prog) prog.classList.add('hidden');
+  const btn=g('btn-cargar-mas'); if(btn){ btn.disabled=false; btn.textContent='☁ Crear todas en Firebase'; }
+};
   const el=g('n-cod'); if(!el) return;
   if(val==='otro'){ el.value=''; el.readOnly=false; el.placeholder='Escriba el código (12 dígitos)'; el.focus(); }
   else if(val){ el.value=val; el.readOnly=true; }
