@@ -420,38 +420,51 @@ select option{background:var(--sur2);}
       <!-- INFORMES -->
       <div class="page hidden" id="p-inf">
         <div class="ptitle">Informes</div>
-        <div class="psub">Estadísticas de reclamaciones · Actualización en tiempo real</div>
+        <div class="psub">Estadísticas por cliente · Actualización en tiempo real</div>
 
-        <!-- Selector tipo informe -->
-        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
-          <button class="btn btn-sm" id="inf-int-btn" onclick="verInforme('interno')" style="background:var(--blue);color:#fff;border-color:var(--blue);">📊 Interno</button>
-          <button class="btn btn-sm bs" id="inf-cli-btn" onclick="verInforme('cliente')">📋 Para Cliente</button>
+        <!-- Tipo de informe + selector de cliente -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-sm" id="inf-int-btn" onclick="verInforme('interno')" style="background:var(--blue);color:#fff;border-color:var(--blue);">📊 Interno (todos)</button>
+          <button class="btn btn-sm bs" id="inf-cli-btn" onclick="verInforme('cliente')">📋 Informe por Cliente</button>
           <div style="flex:1;"></div>
-          <button class="btn btn-sm bs" onclick="expInforme()">⬇ Exportar PDF</button>
+          <select id="inf-cli-sel" onchange="cambiarCliente(this.value)"
+            style="padding:6px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;display:none;">
+            <option value="">— Todos los clientes —</option>
+            <option value="760011259501">OCCIDENTAL DE SALUD SAS</option>
+            <option value="157590080301">CLÍNICA EL LAGUITO S.A</option>
+          </select>
+          <button class="btn btn-sm bs" onclick="window.print()">🖨 Imprimir / PDF</button>
         </div>
 
         <!-- INFORME INTERNO -->
         <div id="inf-interno">
+          <!-- Selector de cliente para interno -->
+          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:12px;color:var(--tx2);">Filtrar por cliente:</span>
+            <button class="btn btn-sm" id="ic-todos" onclick="setClienteInt('')" style="background:var(--acc2);color:#fff;border-color:var(--acc2);">Todos</button>
+            <button class="btn btn-sm bs" id="ic-occ" onclick="setClienteInt('760011259501')">OCCIDENTAL DE SALUD</button>
+            <button class="btn btn-sm bs" id="ic-lag" onclick="setClienteInt('157590080301')">CLÍNICA EL LAGUITO</button>
+          </div>
           <!-- KPIs -->
           <div class="stats" id="inf-kpis" style="margin-bottom:16px;"></div>
           <!-- Gráficas -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
             <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
-              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">ESTADO DE RECLAMACIONES</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:10px;font-family:var(--mono);color:var(--tx2);">ESTADO DE RADICADOS</div>
               <canvas id="chart-estado" height="180"></canvas>
             </div>
             <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
-              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">RECLAMACIONES POR MES</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:10px;font-family:var(--mono);color:var(--tx2);">RECLAMACIONES POR MES</div>
               <canvas id="chart-mes" height="180"></canvas>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
-              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">VALORES FACTURADOS VS RECLAMADOS</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:10px;font-family:var(--mono);color:var(--tx2);">FACTURADO VS RECLAMADO ($)</div>
               <canvas id="chart-valores" height="180"></canvas>
             </div>
             <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
-              <div style="font-size:12px;font-weight:600;margin-bottom:10px;font-family:var(--mono);">RECLAMACIONES POR IPS</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:10px;font-family:var(--mono);color:var(--tx2);">COMPARATIVO POR CLIENTE</div>
               <canvas id="chart-ips" height="180"></canvas>
             </div>
           </div>
@@ -459,15 +472,32 @@ select option{background:var(--sur2);}
 
         <!-- INFORME CLIENTE -->
         <div id="inf-cliente" class="hidden">
-          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:20px;max-width:700px;" id="inf-cli-body">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--brd);padding-bottom:14px;">
+          <!-- Selector cliente -->
+          <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--tx2);">Cliente:</span>
+            <button class="btn btn-sm bs" id="ib-occ" onclick="cambiarCliente('760011259501')">OCCIDENTAL DE SALUD SAS</button>
+            <button class="btn btn-sm bs" id="ib-lag" onclick="cambiarCliente('157590080301')">CLÍNICA EL LAGUITO S.A</button>
+          </div>
+          <!-- Documento informe -->
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:24px;max-width:760px;" id="inf-cli-body">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;border-bottom:1px solid var(--brd);padding-bottom:16px;">
               <div>
-                <div style="font-size:16px;font-weight:700;">INFORME DE RECLAMACIONES ADRES</div>
-                <div style="font-size:11px;color:var(--tx2);">Circular 022/2023 · <span id="inf-cli-fecha"></span></div>
+                <div style="font-size:17px;font-weight:700;margin-bottom:4px;">INFORME DE RECLAMACIONES ADRES</div>
+                <div style="font-size:12px;color:var(--tx2);">Circular 022/2023 · Generado: <span id="inf-cli-fecha"></span></div>
+                <div style="font-size:13px;font-weight:600;color:var(--acc);margin-top:6px;" id="inf-cli-nombre"></div>
+                <div style="font-size:11px;color:var(--tx3);" id="inf-cli-cod"></div>
               </div>
-              <div style="font-family:var(--mono);font-size:11px;color:var(--acc);background:rgba(26,127,100,.1);padding:6px 12px;border-radius:6px;border:1px solid var(--acc);">CONFIDENCIAL</div>
+              <div style="text-align:right;">
+                <div style="font-family:var(--mono);font-size:11px;color:var(--acc);background:rgba(26,127,100,.1);padding:6px 12px;border-radius:6px;border:1px solid var(--acc);margin-bottom:6px;">CONFIDENCIAL</div>
+                <div style="font-size:10px;color:var(--tx3);" id="inf-cli-periodo"></div>
+              </div>
             </div>
+            <!-- KPIs cliente -->
+            <div id="inf-cli-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;"></div>
+            <!-- Tabla -->
             <div id="inf-cli-tabla"></div>
+            <!-- Totales y firma -->
+            <div id="inf-cli-totales" style="margin-top:16px;"></div>
           </div>
         </div>
       </div>
@@ -881,128 +911,206 @@ window.expXLSel=()=>{
 };
 
 // ── INFORMES ──
-let CHART_ESTADO=null, CHART_MES=null, CHART_VAL=null, CHART_IPS=null;
+const IPS_NOMBRES={
+  '760011259501':'OCCIDENTAL DE SALUD SAS',
+  '157590080301':'CLÍNICA EL LAGUITO S.A',
+};
+let CHART_ESTADO=null,CHART_MES=null,CHART_VAL=null,CHART_IPS=null;
+let CLIENTE_INT=''; // filtro cliente informe interno
+
 window.verInforme=(tipo)=>{
   g('inf-interno').classList.toggle('hidden',tipo!=='interno');
   g('inf-cliente').classList.toggle('hidden',tipo!=='cliente');
-  g('inf-int-btn').style.background=tipo==='interno'?'var(--blue)':'';
-  g('inf-int-btn').style.color=tipo==='interno'?'#fff':'';
-  g('inf-cli-btn').style.background=tipo==='cliente'?'var(--blue)':'';
-  g('inf-cli-btn').style.color=tipo==='cliente'?'#fff':'';
-  if(tipo==='interno') buildChartsInterno();
-  else buildInformeCliente();
+  ['inf-int-btn','inf-cli-btn'].forEach(id=>{ const b=g(id); if(b){b.style.background='';b.style.color='';b.className='btn btn-sm bs';} });
+  const act=g(tipo==='interno'?'inf-int-btn':'inf-cli-btn');
+  if(act){act.style.background='var(--blue)';act.style.color='#fff';act.className='btn btn-sm';}
+  if(tipo==='interno') buildChartsInterno(CLIENTE_INT);
+  else { cambiarCliente('760011259501'); } // default primer cliente
 };
 
-function buildChartsInterno(){
-  const tot=RECS.length, comp=RECS.filter(r=>r.furips1?.c83).length, pend=tot-comp;
-  const radN=RECS.filter(r=>r.radicado?.numero).length, sinRad=tot-radN;
-  const totFact=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
-  const totRec=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c97||0)||0),0);
+window.setClienteInt=(cod)=>{
+  CLIENTE_INT=cod;
+  ['ic-todos','ic-occ','ic-lag'].forEach(id=>{ const b=g(id); if(b){b.style.background='';b.style.color='';b.className='btn btn-sm bs';} });
+  const ids={'':'ic-todos','760011259501':'ic-occ','157590080301':'ic-lag'};
+  const act=g(ids[cod]); if(act){act.style.background='var(--acc2)';act.style.color='#fff';}
+  buildChartsInterno(cod);
+};
 
-  // KPIs
+window.cambiarCliente=(cod)=>{
+  ['ib-occ','ib-lag'].forEach(id=>{ const b=g(id); if(b){b.style.background='';b.style.color='';b.className='btn btn-sm bs';} });
+  const ids={'760011259501':'ib-occ','157590080301':'ib-lag'};
+  const act=g(ids[cod]); if(act){act.style.background='var(--blue)';act.style.color='#fff';}
+  buildInformeCliente(cod);
+};
+
+function recsCliente(cod){ return cod?RECS.filter(r=>r.codHab===cod):RECS; }
+
+function buildChartsInterno(cod=''){
+  const recs=recsCliente(cod);
+  const tot=recs.length;
+  const comp=recs.filter(r=>r.furips1?.c83).length, pend=tot-comp;
+  const eRad={sinradicar:0,radicada:0,devuelta_parcial:0,devuelta_total:0,pagada:0};
+  recs.forEach(r=>{ const e=estadoRad(r); eRad[e]=(eRad[e]||0)+1; });
+  const totFact=recs.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
+  const totRec=recs.reduce((a,r)=>a+(parseInt(r.furips1?.c97||0)||0),0);
+  const nomCli=cod?IPS_NOMBRES[cod]||cod:'Todos los clientes';
+
   const kp=g('inf-kpis');
   if(kp) kp.innerHTML=`
-    <div class="stat"><div class="sv">${tot}</div><div class="sl">Total Reclamaciones</div></div>
+    <div class="stat"><div class="sv">${tot}</div><div class="sl">${nomCli}</div></div>
     <div class="stat"><div class="sv" style="color:#3fb950">${comp}</div><div class="sl">F1 Completos</div></div>
     <div class="stat"><div class="sv" style="color:#e3b341">${pend}</div><div class="sl">F1 Pendientes</div></div>
-    <div class="stat"><div class="sv" style="color:#3fb950">${radN}</div><div class="sl">Radicadas</div></div>
-    <div class="stat"><div class="sv" style="color:#e3b341">${sinRad}</div><div class="sl">Sin Radicar</div></div>
-    <div class="stat"><div class="sv" style="font-size:14px;">$${(totFact/1000000).toFixed(1)}M</div><div class="sl">Total Facturado</div></div>
-    <div class="stat"><div class="sv" style="font-size:14px;color:#3fb950;">$${(totRec/1000000).toFixed(1)}M</div><div class="sl">Total Reclamado</div></div>`;
+    <div class="stat"><div class="sv" style="color:#79c0ff">${eRad.radicada}</div><div class="sl">Radicadas</div></div>
+    <div class="stat"><div class="sv" style="color:#f85149">${eRad.devuelta_parcial+eRad.devuelta_total}</div><div class="sl">Devueltas</div></div>
+    <div class="stat"><div class="sv" style="color:#3fb950">${eRad.pagada}</div><div class="sl">Pagadas</div></div>
+    <div class="stat"><div class="sv" style="font-size:13px;">$${(totFact/1000000).toFixed(1)}M</div><div class="sl">Facturado</div></div>
+    <div class="stat"><div class="sv" style="font-size:13px;color:#3fb950;">$${(totRec/1000000).toFixed(1)}M</div><div class="sl">Reclamado</div></div>`;
 
-  if(typeof Chart==='undefined'){ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onload=()=>dibujarGraficas(comp,pend,radN,sinRad,totFact,totRec); document.head.appendChild(s); }
-  else dibujarGraficas(comp,pend,radN,sinRad,totFact,totRec);
+  const cargar=()=>dibujarGraficas(recs,comp,pend,eRad,totFact,totRec,cod);
+  if(typeof Chart==='undefined'){
+    const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload=cargar; document.head.appendChild(s);
+  } else cargar();
 }
 
-function dibujarGraficas(comp,pend,radN,sinRad,totFact,totRec){
-  const C=Chart, opts={responsive:true,plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}}};
+function dibujarGraficas(recs,comp,pend,eRad,totFact,totRec,cod){
+  const C=Chart, co='#8b949e';
+  const opts={responsive:true,plugins:{legend:{labels:{color:co,font:{size:11}}}}};
 
-  // Grafica 1 — Estado F1
-  if(CHART_ESTADO) CHART_ESTADO.destroy();
+  // Gráfica 1 — Estado radicados
+  if(CHART_ESTADO){CHART_ESTADO.destroy();CHART_ESTADO=null;}
   const ctx1=g('chart-estado'); if(ctx1){
-    CHART_ESTADO=new C(ctx1,{type:'doughnut',data:{labels:['F1 Completo','F1 Pendiente'],datasets:[{data:[comp,pend],backgroundColor:['#238636','#d29922'],borderWidth:0}]},options:{...opts,cutout:'65%'}});
+    CHART_ESTADO=new C(ctx1,{type:'doughnut',data:{
+      labels:['Sin Radicar','Radicada','Dev.Parcial','Dev.Total','Pagada'],
+      datasets:[{data:[eRad.sinradicar,eRad.radicada,eRad.devuelta_parcial,eRad.devuelta_total,eRad.pagada],
+        backgroundColor:['#d29922','#1f6feb','#da3633','#8b1c1c','#238636'],borderWidth:0}]
+    },options:{...opts,cutout:'60%'}});
   }
 
-  // Grafica 2 — Por mes
-  if(CHART_MES) CHART_MES.destroy();
+  // Gráfica 2 — Por mes
+  if(CHART_MES){CHART_MES.destroy();CHART_MES=null;}
   const porMes={};
-  RECS.forEach(r=>{ const f=r.creado?.toDate?.(); if(!f) return; const k=`${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}`; porMes[k]=(porMes[k]||0)+1; });
-  const meses=Object.keys(porMes).sort().slice(-6);
+  recs.forEach(r=>{ const f=r.creado?.toDate?.(); if(!f) return; const k=`${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}`; porMes[k]=(porMes[k]||0)+1; });
+  const meses=Object.keys(porMes).sort().slice(-8);
   const ctx2=g('chart-mes'); if(ctx2){
-    CHART_MES=new C(ctx2,{type:'bar',data:{labels:meses,datasets:[{label:'Reclamaciones',data:meses.map(m=>porMes[m]||0),backgroundColor:'rgba(31,111,235,.7)',borderRadius:4}]},options:{...opts,scales:{x:{ticks:{color:'#8b949e'}},y:{ticks:{color:'#8b949e'},beginAtZero:true}}}});
+    CHART_MES=new C(ctx2,{type:'bar',data:{labels:meses,
+      datasets:[{label:'Reclamaciones',data:meses.map(m=>porMes[m]||0),backgroundColor:'rgba(31,111,235,.7)',borderRadius:4}]},
+      options:{...opts,scales:{x:{ticks:{color:co}},y:{ticks:{color:co},beginAtZero:true}}}});
   }
 
-  // Grafica 3 — Valores
-  if(CHART_VAL) CHART_VAL.destroy();
+  // Gráfica 3 — Facturado vs Reclamado
+  if(CHART_VAL){CHART_VAL.destroy();CHART_VAL=null;}
   const ctx3=g('chart-valores'); if(ctx3){
-    CHART_VAL=new C(ctx3,{type:'bar',data:{labels:['Facturado','Reclamado'],datasets:[{data:[totFact,totRec],backgroundColor:['rgba(31,111,235,.7)','rgba(26,127,100,.7)'],borderRadius:4}]},options:{...opts,scales:{x:{ticks:{color:'#8b949e'}},y:{ticks:{color:'#8b949e',callback:(v)=>'$'+v.toLocaleString('es-CO')},beginAtZero:true}}}});
+    CHART_VAL=new C(ctx3,{type:'bar',data:{labels:['Facturado','Reclamado'],
+      datasets:[{data:[totFact,totRec],backgroundColor:['rgba(31,111,235,.7)','rgba(26,127,100,.7)'],borderRadius:4}]},
+      options:{...opts,scales:{x:{ticks:{color:co}},y:{ticks:{color:co,callback:v=>'$'+(v/1000000).toFixed(1)+'M'},beginAtZero:true}}}});
   }
 
-  // Grafica 4 — Por IPS
-  if(CHART_IPS) CHART_IPS.destroy();
-  const porIPS={};
-  RECS.forEach(r=>{ const k=r.codHab||'Sin código'; porIPS[k]=(porIPS[k]||0)+1; });
+  // Gráfica 4 — Comparativo por cliente (siempre muestra ambos)
+  if(CHART_IPS){CHART_IPS.destroy();CHART_IPS=null;}
   const ctx4=g('chart-ips'); if(ctx4){
-    CHART_IPS=new C(ctx4,{type:'pie',data:{labels:Object.keys(porIPS),datasets:[{data:Object.values(porIPS),backgroundColor:['#238636','#1f6feb','#d29922','#da3633','#8b949e'],borderWidth:0}]},options:{...opts}});
+    const clientes=Object.entries(IPS_NOMBRES);
+    const datFact=clientes.map(([c])=>RECS.filter(r=>r.codHab===c).reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0));
+    const datRec=clientes.map(([c])=>RECS.filter(r=>r.codHab===c).reduce((a,r)=>a+(parseInt(r.furips1?.c97||0)||0),0));
+    CHART_IPS=new C(ctx4,{type:'bar',data:{
+      labels:clientes.map(([,n])=>n.split(' ').slice(0,2).join(' ')),
+      datasets:[
+        {label:'Facturado',data:datFact,backgroundColor:'rgba(31,111,235,.7)',borderRadius:4},
+        {label:'Reclamado',data:datRec,backgroundColor:'rgba(26,127,100,.7)',borderRadius:4},
+      ]},
+      options:{...opts,scales:{x:{ticks:{color:co}},y:{ticks:{color:co,callback:v=>'$'+(v/1000000).toFixed(1)+'M'},beginAtZero:true}}}});
   }
 }
 
-function buildInformeCliente(){
+function buildInformeCliente(cod){
+  if(!cod) return;
+  const recs=recsCliente(cod);
   const fh=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
   _s('inf-cli-fecha',fh);
-  const tot=RECS.length,comp=RECS.filter(r=>r.furips1?.c83).length;
-  const totFact=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
-  const totRec=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c97||0)||0),0);
-  const radN=RECS.filter(r=>r.radicado?.numero).length;
-  const tb=g('inf-cli-tabla');
-  if(!tb) return;
-  tb.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
-      <div style="background:var(--sur2);border-radius:6px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;font-family:var(--mono);">${tot}</div>
-        <div style="font-size:11px;color:var(--tx2);">Reclamaciones Total</div>
+  _s('inf-cli-nombre',IPS_NOMBRES[cod]||cod);
+  _s('inf-cli-cod','Código habilitación: '+cod);
+
+  // Rango de fechas
+  const fechas=recs.map(r=>r.creado?.toDate?.()).filter(Boolean).sort((a,b)=>a-b);
+  const periodo=fechas.length?`Período: ${fechas[0].toLocaleDateString('es-CO')} — ${fechas[fechas.length-1].toLocaleDateString('es-CO')}`:'';
+  _s('inf-cli-periodo',periodo);
+
+  const tot=recs.length, comp=recs.filter(r=>r.furips1?.c83).length;
+  const radN=recs.filter(r=>r.radicado?.numero).length;
+  const devN=recs.filter(r=>estadoRad(r).startsWith('devuelta')).length;
+  const pagN=recs.filter(r=>estadoRad(r)==='pagada').length;
+  const totFact=recs.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
+  const totRec=recs.reduce((a,r)=>a+(parseInt(r.furips1?.c97||0)||0),0);
+  const totTrp=recs.reduce((a,r)=>a+(parseInt(r.furips1?.c98||0)||0),0);
+
+  const kp=g('inf-cli-kpis');
+  if(kp) kp.innerHTML=[
+    [tot,'Total Reclamaciones','var(--tx)'],
+    [radN,'Radicadas','#79c0ff'],
+    [devN,'Devueltas','#f85149'],
+    [pagN,'Pagadas','#3fb950'],
+  ].map(([v,l,c])=>`<div style="background:var(--sur2);border-radius:6px;padding:12px;text-align:center;border:1px solid var(--brd);">
+    <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${c};">${v}</div>
+    <div style="font-size:11px;color:var(--tx2);">${l}</div>
+  </div>`).join('');
+
+  const ELAB={sinradicar:{t:'Sin Radicar',c:'#e3b341'},radicada:{t:'Radicada',c:'#79c0ff'},devuelta_parcial:{t:'Dev.Parcial',c:'#f85149'},devuelta_total:{t:'Dev.Total',c:'#f85149'},pagada:{t:'Pagada',c:'#3fb950'}};
+  const tb=g('inf-cli-tabla'); if(!tb) return;
+  tb.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:var(--sur2);">
+      <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">FACTURA</th>
+      <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">CONSEC.</th>
+      <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">VR. FACTURADO</th>
+      <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">VR. RECLAMADO</th>
+      <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">LOTE</th>
+      <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">RADICADO IND.</th>
+      <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">FECHA</th>
+      <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">ESTADO</th>
+    </tr></thead>
+    <tbody>
+      ${recs.map(r=>{
+        const est=estadoRad(r); const ei=ELAB[est]||ELAB.sinradicar;
+        const vf=parseInt(r.furips1?.c96||0)||0, vr=parseInt(r.furips1?.c97||0)||0;
+        return `<tr style="border-bottom:1px solid var(--brd);">
+          <td style="padding:7px 8px;font-weight:500;">${r.factura}</td>
+          <td style="padding:7px 8px;font-family:var(--mono);">${r.consec}</td>
+          <td style="padding:7px 8px;text-align:right;font-family:var(--mono);">$${vf.toLocaleString('es-CO')}</td>
+          <td style="padding:7px 8px;text-align:right;font-family:var(--mono);color:#3fb950;">$${vr.toLocaleString('es-CO')}</td>
+          <td style="padding:7px 8px;font-family:var(--mono);font-size:10px;">${r.radicado?.lote||'—'}</td>
+          <td style="padding:7px 8px;font-family:var(--mono);font-size:10px;">${r.radicado?.numero||'—'}</td>
+          <td style="padding:7px 8px;font-size:11px;">${r.radicado?.fecha||'—'}</td>
+          <td style="padding:7px 8px;"><span style="background:${ei.c}22;color:${ei.c};font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);font-weight:600;">${ei.t}</span></td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+    <tfoot><tr style="background:var(--sur2);font-weight:700;">
+      <td colspan="2" style="padding:8px;font-family:var(--mono);font-size:11px;">TOTALES (${tot} reclamaciones)</td>
+      <td style="padding:8px;text-align:right;font-family:var(--mono);">$${totFact.toLocaleString('es-CO')}</td>
+      <td style="padding:8px;text-align:right;font-family:var(--mono);color:#3fb950;">$${totRec.toLocaleString('es-CO')}</td>
+      <td colspan="4"></td>
+    </tr></tfoot>
+  </table>`;
+
+  const tot2=g('inf-cli-totales'); if(!tot2) return;
+  tot2.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px;">
+      <div style="background:var(--sur2);border-radius:6px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px;">Total Facturado Méd-Qx</div>
+        <div style="font-family:var(--mono);font-weight:700;">$${totFact.toLocaleString('es-CO')}</div>
       </div>
-      <div style="background:var(--sur2);border-radius:6px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:#3fb950;">${radN}</div>
-        <div style="font-size:11px;color:var(--tx2);">Radicadas ante ADRES</div>
+      <div style="background:var(--sur2);border-radius:6px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px;">Total Reclamado Méd-Qx</div>
+        <div style="font-family:var(--mono);font-weight:700;color:#3fb950;">$${totRec.toLocaleString('es-CO')}</div>
       </div>
-      <div style="background:var(--sur2);border-radius:6px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;font-family:var(--mono);">${comp}</div>
-        <div style="font-size:11px;color:var(--tx2);">FURIPS 1 Completos</div>
+      <div style="background:var(--sur2);border-radius:6px;padding:10px;text-align:center;">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:3px;">Total Transporte</div>
+        <div style="font-family:var(--mono);font-weight:700;">$${totTrp.toLocaleString('es-CO')}</div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">
-      <thead><tr style="background:var(--sur2);">
-        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">FACTURA</th>
-        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">CONSEC.</th>
-        <th style="padding:8px 10px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">VR. FACTURADO</th>
-        <th style="padding:8px 10px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">VR. RECLAMADO</th>
-        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">RADICADO</th>
-        <th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--tx2);border-bottom:1px solid var(--brd);">FECHA RAD.</th>
-      </tr></thead>
-      <tbody>
-        ${RECS.map(r=>`<tr style="border-bottom:1px solid var(--brd);">
-          <td style="padding:7px 10px;font-weight:500;">${r.factura}</td>
-          <td style="padding:7px 10px;font-family:var(--mono);">${r.consec}</td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--mono);">$${(parseInt(r.furips1?.c96||0)||0).toLocaleString('es-CO')}</td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:#3fb950;">$${(parseInt(r.furips1?.c97||0)||0).toLocaleString('es-CO')}</td>
-          <td style="padding:7px 10px;font-family:var(--mono);font-size:11px;">${r.radicado?.numero||'<span style="color:#e3b341">Pendiente</span>'}</td>
-          <td style="padding:7px 10px;font-size:11px;">${r.radicado?.fecha||'—'}</td>
-        </tr>`).join('')}
-      </tbody>
-      <tfoot><tr style="background:var(--sur2);font-weight:700;">
-        <td colspan="2" style="padding:8px 10px;font-family:var(--mono);">TOTALES</td>
-        <td style="padding:8px 10px;text-align:right;font-family:var(--mono);">$${totFact.toLocaleString('es-CO')}</td>
-        <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:#3fb950;">$${totRec.toLocaleString('es-CO')}</td>
-        <td colspan="2"></td>
-      </tr></tfoot>
-    </table>
-    <div style="font-size:10px;color:var(--tx3);border-top:1px solid var(--brd);padding-top:10px;">
-      Documento generado el ${fh} · Sistema FURIPS Circular 022/2023 · ADRES Colombia
+    <div style="font-size:10px;color:var(--tx3);border-top:1px solid var(--brd);padding-top:10px;margin-top:14px;text-align:center;">
+      Documento generado el ${fh} · Sistema FURIPS Circular 022/2023 · ADRES Colombia · Conexa
     </div>`;
 }
-
-window.expInforme=()=>{ toast('Para exportar: usa Ctrl+P → Guardar como PDF','w'); window.print(); };
 
 // ── STATS ──
 function updStats(){
