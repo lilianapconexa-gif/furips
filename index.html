@@ -837,6 +837,9 @@ window.limpiarExcel=()=>{
   const prog=g('mas-prog'); if(prog) prog.classList.add('hidden');
   const btn=g('btn-cargar-mas'); if(btn){ btn.disabled=false; btn.textContent='☁ Crear todas en Firebase'; }
 };
+
+// ── IPS PRESTADORA ──
+window.selIPSp1=(val)=>{
   const el=g('n-cod'); if(!el) return;
   if(val==='otro'){ el.value=''; el.readOnly=false; el.placeholder='Escriba el código (12 dígitos)'; el.focus(); }
   else if(val){ el.value=val; el.readOnly=true; }
