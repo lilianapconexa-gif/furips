@@ -741,16 +741,23 @@ select option{background:var(--sur2);}
 
         <!-- TAB: Responder -->
         <div id="gtab-resp-body" class="hidden">
-          <!-- Filtros -->
+          <!-- Barra de búsqueda y filtros -->
           <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-            <input id="glo-buscar" placeholder="🔍 Buscar por factura, radicado o documento..." oninput="renderGlosasResp()" style="flex:1;min-width:200px;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
-            <select id="glo-filtro-est" onchange="renderGlosasResp()" style="padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
-              <option value="">Todas</option>
-              <option value="pendiente">⏳ Pendientes</option>
-              <option value="aceptada">✔ Aceptadas</option>
-              <option value="no_aceptada">✕ No Aceptadas</option>
-              <option value="parcial">⚡ Parciales</option>
+            <div style="position:relative;flex:1;min-width:220px;">
+              <input id="glo-buscar"
+                placeholder="🔍 Buscar por factura, radicado o documento..."
+                oninput="window.renderGlosasResp()"
+                style="width:100%;padding:7px 32px 7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+              <span onclick="g('glo-buscar').value='';window.renderGlosasResp()"
+                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tx3);font-size:14px;">✕</span>
+            </div>
+            <select id="glo-filtro-est" onchange="window.renderGlosasResp()"
+              style="padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+              <option value="">Todas las facturas</option>
+              <option value="pendiente">⏳ Con pendientes</option>
+              <option value="respondida">✔ Completamente respondidas</option>
             </select>
+            <span id="glo-resp-count" style="font-size:11px;color:var(--tx3);white-space:nowrap;"></span>
           </div>
           <div id="glo-resp-lista"></div>
         </div>
@@ -1559,7 +1566,7 @@ window.switchGloTab = (tab) => {
     btn.style.fontWeight=act?'700':'600';
     body.classList.toggle('hidden',!act);
   });
-  if(tab==='resp') renderGlosasResp();
+  if(tab==='resp') window.renderGlosasResp();
   if(tab==='exp')  verResumenGlosas();
 };
 
@@ -1706,6 +1713,7 @@ window.guardarGlosas = async () => {
   g('glo-preview').classList.add('hidden');
   g('glo-file').value='';
   await loadGlosas();
+  window.renderGlosasResp();
   switchGloTab('resp');
 };
 
@@ -1715,87 +1723,160 @@ window.limpiarGlosas = () => {
   g('glo-file').value='';
 };
 
-function renderGlosasResp(){
-  const busq  = gv('glo-buscar').toLowerCase();
-  const filtEst = gv('glo-filtro-est');
-  let glos = [...GLOSAS_DB];
-  if(busq) glos=glos.filter(g=>(g.factura||'').toLowerCase().includes(busq)||(g.radicado||'').toLowerCase().includes(busq)||(g.docVictima||'').toLowerCase().includes(busq));
-  if(filtEst) glos=glos.filter(g=>(g.respuesta||'pendiente')===filtEst);
+window.renderGlosasResp = function(){
+  const busq = (g('glo-buscar')?.value||'').toLowerCase().trim();
+  const filtEst = g('glo-filtro-est')?.value||'';
+  const lista = g('glo-resp-lista'); if(!lista) return;
 
-  const lista=g('glo-resp-lista'); if(!lista) return;
-  if(!glos.length){ lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay glosas con este filtro.</div>'; return; }
+  if(!GLOSAS_DB.length){
+    lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay glosas cargadas. Ve a la pestaña "📥 Cargar Glosas ADRES" para subir el archivo.</div>';
+    return;
+  }
 
-  // Agrupar por factura
+  // Agrupar TODAS las glosas por factura primero
   const porFactura={};
-  glos.forEach(gl=>{ const k=gl.factura+'|'+gl.radicado; if(!porFactura[k]) porFactura[k]=[]; porFactura[k].push(gl); });
+  GLOSAS_DB.forEach(gl=>{
+    const k=gl.factura+'|||'+gl.radicado+'|||'+(gl.docVictima||'');
+    if(!porFactura[k]) porFactura[k]=[];
+    porFactura[k].push(gl);
+  });
 
-  lista.innerHTML=Object.entries(porFactura).map(([key,items])=>{
-    const [fac,rad]=key.split('|');
+  // Filtrar facturas según búsqueda y estado
+  let facturasFiltradas = Object.entries(porFactura).filter(([key, items])=>{
+    const [fac,rad,doc]=key.split('|||');
+    // Filtro búsqueda
+    if(busq){
+      const match = fac.toLowerCase().includes(busq)
+        || rad.toLowerCase().includes(busq)
+        || doc.toLowerCase().includes(busq)
+        || (items[0]?.codHab||'').toLowerCase().includes(busq);
+      if(!match) return false;
+    }
+    // Filtro estado
+    if(filtEst==='pendiente'){
+      const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+      if(pend===0) return false;
+    }
+    if(filtEst==='respondida'){
+      const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+      if(pend>0) return false;
+    }
+    return true;
+  });
+
+  // Actualizar contador
+  const cnt=g('glo-resp-count');
+  if(cnt) cnt.textContent=`${facturasFiltradas.length} factura${facturasFiltradas.length!==1?'s':''} · ${facturasFiltradas.reduce((a,[,items])=>a+items.length,0)} glosas`;
+
+  if(!facturasFiltradas.length){
+    lista.innerHTML=`<div style="color:var(--tx3);text-align:center;padding:32px;">No hay facturas con${busq?' "'+busq+'"':''} ese filtro.</div>`;
+    return;
+  }
+
+  lista.innerHTML=facturasFiltradas.map(([key,items])=>{
+    const [fac,rad,doc]=key.split('|||');
     const totGlo=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
     const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+    const respondidas=items.length-pend;
+    const pct=items.length?Math.round(respondidas/items.length*100):0;
+    const ipsNom=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—';
+
     return `
-    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;margin-bottom:12px;overflow:hidden;">
+    <div style="background:var(--sur);border:1px solid ${pend===0?'rgba(0,178,226,.3)':'var(--brd)'};border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
       <!-- Cabecera de factura -->
-      <div style="background:var(--sur2);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div style="font-family:var(--mono);font-weight:700;font-size:13px;color:var(--acc);">${fac}</div>
-        <div style="font-size:11px;color:var(--tx2);">Radicado: <strong>${rad}</strong></div>
-        <div style="font-size:11px;color:var(--tx2);">Doc: <strong>${items[0]?.docVictima||'—'}</strong></div>
-        <div style="font-size:11px;color:var(--tx2);">IPS: ${IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—'}</div>
-        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-          <span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">Glosado: ${fmt$(totGlo)}</span>
-          ${pend>0?`<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--mono);">${pend} pendientes</span>`:'<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--mono);">✔ Respondida</span>'}
+      <div style="background:var(--sur2);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;"
+        onclick="toggleFacGlosa('fac-${fac.replace(/[^a-z0-9]/gi,'')}-${rad}')">
+        <div style="font-family:var(--mono);font-weight:800;font-size:14px;color:var(--acc);">${fac}</div>
+        <div style="font-size:11px;color:var(--tx2);">📬 Rad: <strong>${rad}</strong></div>
+        <div style="font-size:11px;color:var(--tx2);">👤 ${doc}</div>
+        <div style="font-size:11px;color:var(--tx2);">🏥 ${ipsNom}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
+          <!-- Barra de progreso -->
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:80px;height:6px;background:var(--brd);border-radius:3px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:${pct===100?'var(--green)':'var(--acc)'};border-radius:3px;transition:width .3s;"></div>
+            </div>
+            <span style="font-size:10px;color:var(--tx2);">${respondidas}/${items.length}</span>
+          </div>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(totGlo)}</span>
+          ${pend>0
+            ?`<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">${pend} pendiente${pend>1?'s':''}</span>`
+            :`<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">✔ Completa</span>`}
+          <span style="font-size:16px;color:var(--tx3);" id="ico-${fac.replace(/[^a-z0-9]/gi,'')}-${rad}">▾</span>
         </div>
       </div>
-      <!-- Glosas de esta factura -->
-      ${items.map((gl,idx)=>{
-        const est=gl.respuesta||'pendiente';
-        const estCol=est==='aceptada'?'var(--red)':est==='no_aceptada'?'var(--green)':est==='parcial'?'var(--warn)':'var(--tx3)';
-        const estLbl=est==='aceptada'?'✔ Aceptada':est==='no_aceptada'?'✕ No Aceptada':est==='parcial'?'⚡ Parcial':'⏳ Pendiente';
-        return `
-        <div style="padding:12px 16px;border-top:1px solid var(--brd);">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-            ${gl.codElemento?`<span style="font-family:var(--mono);font-size:10px;background:var(--sur2);padding:2px 6px;border-radius:3px;">${gl.codElemento}</span>`:''}
-            ${gl.descElemento?`<span style="font-size:11px;color:var(--tx2);">${gl.descElemento}</span>`:''}
-            <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--red);">${fmt$(gl.vrGlosado)}</span>
-          </div>
-          <div style="font-size:12px;color:var(--tx);margin-bottom:10px;padding:8px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
-            <strong>Glosa ADRES:</strong> ${gl.descGlosa}
-          </div>
-          <!-- Respuesta -->
-          <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:start;">
-            <select onchange="updGlosaRespuesta('${gl.id}','tipo',this.value);calcGlosaValores('${gl.id}')" style="padding:5px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:${estCol};font-size:11px;font-weight:600;min-width:180px;">
-              <option value="pendiente" ${est==='pendiente'?'selected':''}>⏳ Sin responder</option>
-              <option value="no_aceptada" ${est==='no_aceptada'?'selected':''}>✕ No se acepta</option>
-              <option value="aceptada" ${est==='aceptada'?'selected':''}>✔ Se acepta</option>
-              <option value="parcial" ${est==='parcial'?'selected':''}>⚡ Parcial</option>
-            </select>
-            <div style="position:relative;">
-              <textarea id="txt-resp-${gl.id}" placeholder="Texto de respuesta a la glosa..." rows="2"
-                onchange="updGlosaRespuesta('${gl.id}','texto',this.value)"
-                style="width:100%;padding:6px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;resize:vertical;">${gl.textoResp||''}</textarea>
-              <!-- Respuestas rápidas -->
-              <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">
-                <span style="font-size:9px;color:var(--tx3);">Rápidas:</span>
-                ${RESP_RAPIDAS.slice(0,4).map((r,i)=>`<button onclick="insertarRespRapida('${gl.id}',${i})" style="font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx2);cursor:pointer;" title="${r}">R${i+1}</button>`).join('')}
-                <button onclick="mostrarRespRapidas('${gl.id}')" style="font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--acc);background:rgba(0,178,226,.08);color:var(--acc);cursor:pointer;">+ Ver todas</button>
+
+      <!-- Glosas de esta factura (expandible) -->
+      <div id="fac-${fac.replace(/[^a-z0-9]/gi,'')}-${rad}">
+        ${items.map((gl)=>{
+          const est=gl.respuesta||'pendiente';
+          const estCol=est==='aceptada'?'#d32f2f':est==='no_aceptada'?'var(--green)':est==='parcial'?'var(--warn)':'var(--tx3)';
+          return `
+          <div style="padding:14px 16px;border-top:1px solid var(--brd);${est!=='pendiente'?'opacity:.85':''}">
+            <!-- Info del elemento -->
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+              ${gl.tipoElemento?`<span style="font-size:9px;background:var(--sur2);color:var(--tx2);padding:2px 7px;border-radius:3px;font-family:var(--mono);">${gl.tipoElemento}</span>`:''}
+              ${gl.codElemento?`<span style="font-size:10px;background:var(--sur2);color:var(--acc);padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:600;">${gl.codElemento}</span>`:''}
+              ${gl.descElemento?`<span style="font-size:11px;color:var(--tx);">${gl.descElemento}</span>`:''}
+              <span style="margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(gl.vrGlosado)}</span>
+            </div>
+            <!-- Texto de la glosa -->
+            <div style="font-size:12px;margin-bottom:12px;padding:8px 12px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 5px 5px 0;">
+              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:var(--mono);">GLOSA ADRES:</span>
+              <span style="color:var(--tx);margin-left:6px;">${gl.descGlosa}</span>
+            </div>
+            <!-- Respuesta -->
+            <div style="display:grid;grid-template-columns:200px 1fr 100px 100px;gap:8px;align-items:start;">
+              <div>
+                <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;font-family:var(--mono);">DECISIÓN</div>
+                <select onchange="window.updGlosaRespuesta('${gl.id}','tipo',this.value)"
+                  style="width:100%;padding:6px 8px;border-radius:5px;border:2px solid ${estCol};background:var(--sur2);color:${estCol};font-size:11px;font-weight:700;">
+                  <option value="pendiente" ${est==='pendiente'?'selected':''}>⏳ Sin responder</option>
+                  <option value="no_aceptada" ${est==='no_aceptada'?'selected':''}>✕ No se acepta</option>
+                  <option value="aceptada" ${est==='aceptada'?'selected':''}>✔ Se acepta</option>
+                  <option value="parcial" ${est==='parcial'?'selected':''}>⚡ Parcial</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;font-family:var(--mono);">TEXTO DE RESPUESTA</div>
+                <textarea id="txt-resp-${gl.id}" rows="2"
+                  placeholder="Escribe la justificación de tu respuesta..."
+                  onchange="window.updGlosaRespuesta('${gl.id}','texto',this.value)"
+                  style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;resize:vertical;">${gl.textoResp||''}</textarea>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">
+                  <span style="font-size:9px;color:var(--tx3);padding-top:1px;">Rápidas:</span>
+                  ${RESP_RAPIDAS.slice(0,4).map((r,i)=>`<button type="button" onclick="window.insertarRespRapida('${gl.id}',${i})" title="${r}" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx2);cursor:pointer;">R${i+1}</button>`).join('')}
+                  <button type="button" onclick="window.mostrarRespRapidas('${gl.id}')" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--acc);background:rgba(0,178,226,.08);color:var(--acc);cursor:pointer;">+ más</button>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:9px;color:var(--red);margin-bottom:3px;font-family:var(--mono);">VR ACEPTADO</div>
+                <input type="number" id="va-${gl.id}" value="${gl.vrAceptado||0}" min="0"
+                  onchange="window.updGlosaRespuesta('${gl.id}','vrAceptado',this.value)"
+                  style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--red);font-size:11px;font-weight:600;">
+              </div>
+              <div>
+                <div style="font-size:9px;color:var(--green);margin-bottom:3px;font-family:var(--mono);">VR NO ACEPTADO</div>
+                <input type="number" id="vna-${gl.id}" value="${gl.vrNoAceptado||gl.vrGlosado||0}" min="0"
+                  onchange="window.updGlosaRespuesta('${gl.id}','vrNoAceptado',this.value)"
+                  style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--green);font-size:11px;font-weight:600;">
               </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:4px;min-width:110px;">
-              <div style="font-size:9px;color:var(--tx3);">Vr Aceptado</div>
-              <input type="number" id="va-${gl.id}" value="${gl.vrAceptado||0}" min="0" onchange="updGlosaRespuesta('${gl.id}','vrAceptado',this.value)"
-                style="padding:5px 6px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--red);font-size:11px;width:110px;">
-            </div>
-            <div style="display:flex;flex-direction:column;gap:4px;min-width:110px;">
-              <div style="font-size:9px;color:var(--tx3);">Vr No Aceptado</div>
-              <input type="number" id="vna-${gl.id}" value="${gl.vrNoAceptado||gl.vrGlosado||0}" min="0" onchange="updGlosaRespuesta('${gl.id}','vrNoAceptado',this.value)"
-                style="padding:5px 6px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--green);font-size:11px;width:110px;">
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
   }).join('');
-}
+};
+
+window.toggleFacGlosa=(id)=>{
+  const el=g(id); if(!el) return;
+  const visible=el.style.display!=='none';
+  el.style.display=visible?'none':'block';
+  // Update icon — find by replacing 'fac-' with 'ico-'
+  const icoId=id.replace('fac-','ico-');
+  const ico=g(icoId); if(ico) ico.textContent=visible?'▸':'▾';
+};
 
 // Respuestas rápidas
 window.insertarRespRapida=(gloId, idx)=>{
