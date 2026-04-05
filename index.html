@@ -150,12 +150,12 @@ select option{background:var(--sur2);}
     <!-- Logo CONEXA SVG -->
     <div style="text-align:center;margin-bottom:20px;">
       <svg viewBox="0 0 200 52" xmlns="http://www.w3.org/2000/svg" style="width:160px;height:auto;">
-        <text x="0" y="34" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="3" fill="#1a2e3b">CONE</text>
+        <text x="0" y="34" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="3" fill="#1a2e3b" class="logo-fill">CONE</text>
         <g transform="translate(120,2)">
           <line x1="0" y1="0" x2="20" y2="32" stroke="#00B2E2" stroke-width="4" stroke-linecap="round"/>
           <line x1="20" y1="0" x2="0" y2="32" stroke="#9DB455" stroke-width="4" stroke-linecap="round"/>
         </g>
-        <text x="143" y="34" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="3" fill="#1a2e3b">A</text>
+        <text x="143" y="34" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="3" fill="#1a2e3b" class="logo-fill">A</text>
         <text x="1" y="48" font-family="'Segoe UI',sans-serif" font-weight="300" font-size="8" letter-spacing="2" fill="#9DB455">INTEGRACIÓN DE PROCESOS EMPRESARIALES</text>
       </svg>
     </div>
@@ -190,12 +190,12 @@ select option{background:var(--sur2);}
     <div class="hbrand">
       <!-- Logo mini CONEXA -->
       <svg viewBox="0 0 110 28" xmlns="http://www.w3.org/2000/svg" style="width:90px;height:auto;flex-shrink:0;">
-        <text x="0" y="20" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="18" letter-spacing="1.5" fill="#1a2e3b">CONE</text>
+        <text x="0" y="20" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="18" letter-spacing="1.5" fill="#1a2e3b" class="logo-fill">CONE</text>
         <g transform="translate(65,2)">
           <line x1="0" y1="0" x2="11" y2="18" stroke="#00B2E2" stroke-width="2.5" stroke-linecap="round"/>
           <line x1="11" y1="0" x2="0" y2="18" stroke="#9DB455" stroke-width="2.5" stroke-linecap="round"/>
         </g>
-        <text x="78" y="20" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="18" letter-spacing="1.5" fill="#1a2e3b">A</text>
+        <text x="78" y="20" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="18" letter-spacing="1.5" fill="#1a2e3b" class="logo-fill">A</text>
       </svg>
       <span style="font-size:11px;color:var(--acc);font-weight:600;border-left:1px solid var(--brd2);padding-left:9px;margin-left:3px;">FURIPS · ADRES</span>
       <span style="font-size:10px;color:var(--tx3);margin-left:6px;">Circ. 022/2023</span>
@@ -204,6 +204,16 @@ select option{background:var(--sur2);}
       <span class="badge bw" id="rec-badge">0 reclamaciones</span>
       <span id="hdr-nom" style="font-size:12px;"></span>
       <span id="hdr-rol" class="badge"></span>
+      <!-- SELECTOR DE TEMAS -->
+      <div style="position:relative;display:inline-block;" id="theme-menu-wrap">
+        <button onclick="toggleThemeMenu()" title="Cambiar tema" style="background:none;border:1px solid var(--brd2);border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--tx2);font-size:14px;display:flex;align-items:center;gap:5px;">
+          🎨 <span style="font-size:10px;font-family:var(--mono);" id="theme-lbl">Tema</span>
+        </button>
+        <div id="theme-menu" style="display:none;position:absolute;right:0;top:36px;background:var(--sur);border:1px solid var(--brd2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:999;width:220px;padding:8px;">
+          <div style="font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;padding:4px 8px 8px;font-family:var(--mono);">Selecciona tu tema</div>
+          <div id="theme-opts"></div>
+        </div>
+      </div>
       <span style="font-size:11px;color:var(--tx3);font-family:var(--mono);" id="clk"></span>
       <button class="btn btn-sm br" onclick="logout()">⎋ Salir</button>
     </div>
@@ -1297,7 +1307,132 @@ window.abrirF1=()=>{
 window.abrirF2=()=>abrirF1();
 window.abrirParte2=()=>{ toast('Selecciona una reclamación de la lista para editarla.','w'); go('lista'); };
 
-// ── HELPERS ──
+// ── SISTEMA DE TEMAS ──
+const TEMAS = {
+  conexa_claro: {
+    nombre:'CONEXA Claro', emoji:'☀️',
+    vars:{
+      '--bg':'#f0f7fc','--sur':'#ffffff','--sur2':'#e8f4fb',
+      '--brd':'#cde6f5','--brd2':'#a8d4ea',
+      '--acc':'#00B2E2','--acc2':'#0090C0',
+      '--blue':'#00B2E2','--green':'#9DB455',
+      '--tx':'#1a2e3b','--tx2':'#4a7a96','--tx3':'#7aafc8',
+      '--logo-fill':'#1a2e3b',
+    }
+  },
+  conexa_oscuro: {
+    nombre:'CONEXA Oscuro', emoji:'🌙',
+    vars:{
+      '--bg':'#0a1a24','--sur':'#0f2231','--sur2':'#162d3e',
+      '--brd':'#1e3a4e','--brd2':'#2a4f68',
+      '--acc':'#00B2E2','--acc2':'#0090C0',
+      '--blue':'#00B2E2','--green':'#9DB455',
+      '--tx':'#e8f4f9','--tx2':'#8ab5c8','--tx3':'#5a8099',
+      '--logo-fill':'#e8f4f9',
+    }
+  },
+  verde_salud: {
+    nombre:'Verde Salud', emoji:'🏥',
+    vars:{
+      '--bg':'#f2faf4','--sur':'#ffffff','--sur2':'#e8f7ec',
+      '--brd':'#c3e8cc','--brd2':'#96d4a3',
+      '--acc':'#2e7d32','--acc2':'#1b5e20',
+      '--blue':'#1565c0','--green':'#558b2f',
+      '--tx':'#1a2e1c','--tx2':'#4a7a52','--tx3':'#7aaa82',
+      '--logo-fill':'#1a2e1c',
+    }
+  },
+  azul_marino: {
+    nombre:'Azul Marino', emoji:'🌊',
+    vars:{
+      '--bg':'#0d1b2a','--sur':'#1b2a3d','--sur2':'#243447',
+      '--brd':'#2d4460','--brd2':'#3a5878',
+      '--acc':'#4fc3f7','--acc2':'#0288d1',
+      '--blue':'#4fc3f7','--green':'#80cbc4',
+      '--tx':'#e3f2fd','--tx2':'#90caf9','--tx3':'#5b8fa8',
+      '--logo-fill':'#e3f2fd',
+    }
+  },
+  purpura: {
+    nombre:'Púrpura Pro', emoji:'💜',
+    vars:{
+      '--bg':'#f5f0ff','--sur':'#ffffff','--sur2':'#ede7f6',
+      '--brd':'#d1c4e9','--brd2':'#b39ddb',
+      '--acc':'#7c4dff','--acc2':'#651fff',
+      '--blue':'#7c4dff','--green':'#69f0ae',
+      '--tx':'#1a0533','--tx2':'#6a3aaa','--tx3':'#9c7cc7',
+      '--logo-fill':'#1a0533',
+    }
+  },
+  carbon: {
+    nombre:'Carbón Clásico', emoji:'⚫',
+    vars:{
+      '--bg':'#1a1a1a','--sur':'#242424','--sur2':'#2e2e2e',
+      '--brd':'#3a3a3a','--brd2':'#4a4a4a',
+      '--acc':'#ff6b35','--acc2':'#e55a25',
+      '--blue':'#ff6b35','--green':'#a5d6a7',
+      '--tx':'#f0f0f0','--tx2':'#aaaaaa','--tx3':'#707070',
+      '--logo-fill':'#f0f0f0',
+    }
+  },
+};
+
+let TEMA_ACTUAL = localStorage.getItem('furips_tema') || 'conexa_claro';
+
+function aplicarTema(id){
+  const t = TEMAS[id]; if(!t) return;
+  const root = document.documentElement;
+  Object.entries(t.vars).forEach(([k,v]) => root.style.setProperty(k,v));
+  TEMA_ACTUAL = id;
+  localStorage.setItem('furips_tema', id);
+  // Actualizar logo fill según tema
+  const fill = t.vars['--logo-fill'] || '#1a2e3b';
+  document.querySelectorAll('.logo-fill').forEach(el => el.setAttribute('fill', fill));
+  // Actualizar label
+  const lbl = document.getElementById('theme-lbl');
+  if(lbl) lbl.textContent = t.emoji + ' ' + t.nombre;
+  // Marcar activo
+  document.querySelectorAll('.theme-opt').forEach(el => {
+    el.style.background = el.dataset.tid === id ? 'rgba(0,0,0,.08)' : '';
+    el.style.fontWeight = el.dataset.tid === id ? '700' : '400';
+  });
+  cerrarThemeMenu();
+}
+
+function buildThemeMenu(){
+  const opts = document.getElementById('theme-opts'); if(!opts) return;
+  opts.innerHTML = Object.entries(TEMAS).map(([id,t]) => `
+    <div class="theme-opt" data-tid="${id}" onclick="aplicarTema('${id}')"
+      style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:background .15s;${TEMA_ACTUAL===id?'background:rgba(0,0,0,.08);font-weight:700;':''}">
+      <div style="display:flex;gap:3px;">
+        <div style="width:12px;height:12px;border-radius:50%;background:${t.vars['--bg']};border:1px solid #ccc;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:${t.vars['--acc']};"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:${t.vars['--green']};"></div>
+      </div>
+      <span style="font-size:12px;">${t.emoji} ${t.nombre}</span>
+      ${TEMA_ACTUAL===id?'<span style="margin-left:auto;font-size:10px;color:var(--acc);">✔</span>':''}
+    </div>`).join('');
+}
+
+window.toggleThemeMenu = () => {
+  const m = document.getElementById('theme-menu');
+  if(!m) return;
+  if(m.style.display === 'none'){ buildThemeMenu(); m.style.display='block'; }
+  else m.style.display='none';
+};
+
+function cerrarThemeMenu(){
+  const m = document.getElementById('theme-menu'); if(m) m.style.display='none';
+}
+
+// Cerrar al hacer clic fuera
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('theme-menu-wrap');
+  if(wrap && !wrap.contains(e.target)) cerrarThemeMenu();
+});
+
+// Aplicar tema guardado al cargar
+aplicarTema(TEMA_ACTUAL);
 const g=id=>document.getElementById(id);
 const gv=id=>(g(id)||{}).value?.trim()||'';
 
