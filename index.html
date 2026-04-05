@@ -233,7 +233,17 @@ select option{background:var(--sur2);}
           <div class="field"><label class="fl">Número de Factura <span class="req">*</span></label><input id="n-fac" maxlength="20" placeholder="Según DIAN"></div>
           <div class="field"><label class="fl">Consecutivo <span class="req">*</span></label><input id="n-con" maxlength="12"></div>
           <div class="field"><label class="fl">Radicado Anterior (RGO)</label><input id="n-rgo" maxlength="10" placeholder="Vacío = nueva"><span class="hint">Solo RGO: 0=total · 1=parcial · 6=transversal</span></div>
-          <div class="field"><label class="fl">Código Habilitación IPS <span class="req">*</span></label><input id="n-cod" maxlength="12" placeholder="12 dígitos REPS"></div>
+          <div class="field">
+            <label class="fl">IPS Prestadora <span class="req">*</span></label>
+            <select id="n-cod-sel" onchange="selIPSp1(this.value)" style="margin-bottom:4px;">
+              <option value="">Seleccione IPS...</option>
+              <option value="760011259501">760011259501 — OCCIDENTAL DE SALUD SAS</option>
+              <option value="157590080301">157590080301 — CLÍNICA EL LAGUITO S.A</option>
+              <option value="otro">Otra IPS (escribir código)</option>
+            </select>
+            <input id="n-cod" maxlength="12" placeholder="Código habilitación 12 dígitos">
+            <span class="hint">Se completa al seleccionar la IPS.</span>
+          </div>
         </div>
         <div class="divider"></div>
         <div style="display:flex;gap:8px;">
@@ -614,6 +624,14 @@ window.abrirParte2=()=>{ toast('Selecciona una reclamación de la lista para edi
 // ── HELPERS ──
 const g=id=>document.getElementById(id);
 const gv=id=>(g(id)||{}).value?.trim()||'';
+
+// ── IPS PRESTADORA ──
+window.selIPSp1=(val)=>{
+  const el=g('n-cod'); if(!el) return;
+  if(val==='otro'){ el.value=''; el.readOnly=false; el.placeholder='Escriba el código (12 dígitos)'; el.focus(); }
+  else if(val){ el.value=val; el.readOnly=true; }
+  else { el.value=''; el.readOnly=false; }
+};
 const _s=(id,v)=>{ const e=g(id); if(e) e.textContent=v; };
 const _s2=(id,v)=>{ const e=g(id); if(e) e.textContent=v; };
 const show=id=>g(id)?.classList.remove('hidden');
