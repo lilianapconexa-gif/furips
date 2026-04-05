@@ -710,7 +710,7 @@ select option{background:var(--sur2);}
             ondrop="event.preventDefault();this.style.borderColor='var(--brd2)';this.style.background='';procesarGlosasExcel(event.dataTransfer.files[0])">
             <div style="font-size:36px;margin-bottom:8px;">📊</div>
             <div style="font-size:13px;font-weight:600;color:var(--tx);">Haz clic o arrastra el archivo Excel aquí</div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:4px;">ReporteGlosasReclamPJ_*.xlsx — archivo de glosas ADRES</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;">ReporteGlosasReclamPJ_*.xlsx — archivo de glosas ADRES (cualquier IPS)</div>
           </div>
           <input type="file" id="glo-file" accept=".xlsx,.xls" style="display:none" onchange="procesarGlosasExcel(this.files[0])">
 
@@ -1589,7 +1589,8 @@ window.procesarGlosasExcel = (file) => {
       GLOSAS_PREVIEW = rows
         .filter(r=>{
           const fac=r['Número Factura']||r['FACTURA']||'';
-          return fac && String(fac).startsWith('FE');
+          // Aceptar cualquier factura que tenga contenido (no solo FE)
+          return String(fac).trim().length > 0;
         })
         .map((r,i)=>({
           idx: i,
@@ -1609,7 +1610,7 @@ window.procesarGlosasExcel = (file) => {
           creadoPor:   USER.uid,
         }));
 
-      if(!GLOSAS_PREVIEW.length){ toast('No se encontraron filas válidas (deben empezar con FE).','w'); return; }
+      if(!GLOSAS_PREVIEW.length){ toast('No se encontraron filas con datos de factura en el archivo.','w'); return; }
 
       _s('glo-preview-info',`✔ ${GLOSAS_PREVIEW.length} glosas encontradas · Total glosado: ${fmt$(GLOSAS_PREVIEW.reduce((a,r)=>a+r.vrGlosado,0))}`);
       g('glo-preview').classList.remove('hidden');
