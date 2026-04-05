@@ -209,7 +209,7 @@ select option{background:var(--sur2);}
         <button onclick="toggleThemeMenu()" title="Cambiar tema" style="background:none;border:1px solid var(--brd2);border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--tx2);font-size:14px;display:flex;align-items:center;gap:5px;">
           🎨 <span style="font-size:10px;font-family:var(--mono);" id="theme-lbl">Tema</span>
         </button>
-        <div id="theme-menu" style="display:none;position:absolute;right:0;top:36px;background:var(--sur);border:1px solid var(--brd2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:999;width:220px;padding:8px;">
+        <div id="theme-menu" style="display:none;position:absolute;right:0;top:36px;background:var(--sur);border:1px solid var(--brd2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:999;width:220px;padding:8px;" onclick="event.stopPropagation()">
           <div style="font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:1px;text-transform:uppercase;padding:4px 8px 8px;font-family:var(--mono);">Selecciona tu tema</div>
           <div id="theme-opts"></div>
         </div>
@@ -1425,14 +1425,15 @@ function cerrarThemeMenu(){
   const m = document.getElementById('theme-menu'); if(m) m.style.display='none';
 }
 
-// Cerrar al hacer clic fuera
+// Cerrar al hacer clic FUERA del menú (stopPropagation en el menú evita cierre prematuro)
 document.addEventListener('click', e => {
   const wrap = document.getElementById('theme-menu-wrap');
   if(wrap && !wrap.contains(e.target)) cerrarThemeMenu();
 });
 
-// Aplicar tema guardado al cargar
-aplicarTema(TEMA_ACTUAL);
+// Exponer aplicarTema globalmente para los onclick inline
+window.aplicarTema = aplicarTema;
+// (tema se aplica después de definir g, al final del script)
 const g=id=>document.getElementById(id);
 const gv=id=>(g(id)||{}).value?.trim()||'';
 
@@ -1593,6 +1594,9 @@ window.mOk=()=>{ g('modal').classList.add('hidden'); if(_cb)_cb(); _cb=null; };
 window.mCan=()=>{ g('modal').classList.add('hidden'); _cb=null; };
 function confirm2(t,m,cb){ _s('m-t',t); _s('m-m',m); _cb=cb; g('modal').classList.remove('hidden'); }
 setInterval(()=>{ const e=g('clk'); if(e) e.textContent=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); },1000);
+
+// Aplicar tema guardado (aquí g ya está definida)
+aplicarTema(TEMA_ACTUAL);
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
