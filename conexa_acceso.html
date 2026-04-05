@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONEXA · Sistema FURIPS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Raleway:wght@300;400;600&display=swap');
+
+  :root {
+    --azul:    #00B2E2;
+    --verde:   #9DB455;
+    --verdec:  #A3D55D;
+    --azul2:   #0090C0;
+    --blanco:  #ffffff;
+    --gris:    #f5f9fc;
+    --dark:    #1a2a35;
+    --txt:     #2d4a5a;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Raleway', sans-serif;
+    background: var(--gris);
+    color: var(--txt);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Fondo animado con el patrón de líneas del manual */
+  .bg-pattern {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    overflow: hidden;
+  }
+  .bg-pattern::before {
+    content: '';
+    position: absolute; top: -20%; right: -10%;
+    width: 55%; height: 120%;
+    border: 18px solid rgba(0,178,226,.10);
+    border-radius: 60px;
+    transform: rotate(-8deg);
+  }
+  .bg-pattern::after {
+    content: '';
+    position: absolute; top: 5%; right: -5%;
+    width: 50%; height: 110%;
+    border: 12px solid rgba(157,180,85,.10);
+    border-radius: 60px;
+    transform: rotate(-8deg);
+  }
+  .bp2 {
+    position: absolute; bottom: -10%; left: -8%;
+    width: 40%; height: 70%;
+    border: 14px solid rgba(0,178,226,.07);
+    border-radius: 50px;
+    transform: rotate(12deg);
+  }
+
+  /* Header */
+  header {
+    position: relative; z-index: 10;
+    padding: 28px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 2px solid rgba(0,178,226,.15);
+    box-shadow: 0 2px 20px rgba(0,178,226,.08);
+  }
+
+  .logo-area { display: flex; align-items: center; gap: 14px; }
+
+  /* Logo SVG CONEXA recreado */
+  .logo-svg { width: 160px; height: auto; }
+
+  .slogan {
+    font-family: 'Raleway', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--verde);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .header-info {
+    text-align: right;
+    font-size: 11px;
+    color: #888;
+  }
+  .header-info strong { color: var(--azul); font-size: 12px; }
+
+  /* Hero */
+  .hero {
+    position: relative; z-index: 5;
+    padding: 72px 48px 56px;
+    display: flex; align-items: center; gap: 60px;
+    max-width: 1100px; margin: 0 auto;
+  }
+
+  .hero-text { flex: 1; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(0,178,226,.1);
+    border: 1px solid rgba(0,178,226,.3);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 11px; font-weight: 600;
+    color: var(--azul);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero-badge::before { content: '●'; font-size: 8px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .hero h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--dark);
+    margin-bottom: 16px;
+  }
+  .hero h1 span.c-azul { color: var(--azul); }
+  .hero h1 span.c-verde { color: var(--verde); }
+
+  .hero-desc {
+    font-size: 15px;
+    color: #5a7080;
+    line-height: 1.7;
+    max-width: 480px;
+    margin-bottom: 36px;
+  }
+
+  .btn-acceso {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, var(--azul), var(--azul2));
+    color: #fff;
+    padding: 16px 36px;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px; font-weight: 700;
+    text-decoration: none;
+    letter-spacing: .5px;
+    box-shadow: 0 8px 24px rgba(0,178,226,.35);
+    transition: all .25s;
+    border: none; cursor: pointer;
+  }
+  .btn-acceso:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0,178,226,.45);
+  }
+  .btn-acceso .ico { font-size: 18px; }
+
+  .btn-sec {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent;
+    color: var(--verde);
+    padding: 15px 28px;
+    border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    text-decoration: none;
+    border: 2px solid var(--verde);
+    margin-left: 12px;
+    transition: all .25s;
+  }
+  .btn-sec:hover { background: var(--verde); color: #fff; }
+
+  /* Card visual del sistema */
+  .hero-card {
+    flex: 0 0 380px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,100,150,.12);
+    overflow: hidden;
+    border: 1px solid rgba(0,178,226,.12);
+    animation: flotar 4s ease-in-out infinite;
+  }
+  @keyframes flotar { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+  .card-header {
+    background: linear-gradient(135deg, var(--dark) 0%, #2d4a5a 100%);
+    padding: 16px 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .card-title { color: rgba(255,255,255,.5); font-size: 11px; font-family: monospace; flex: 1; text-align: center; }
+
+  .card-body { padding: 20px; }
+  .card-stat {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px;
+    background: var(--gris);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .card-stat .lbl { color: #888; }
+  .card-stat .val { font-weight: 700; font-family: monospace; color: var(--dark); }
+  .card-stat .val.ok { color: var(--verde); }
+  .card-stat .val.blue { color: var(--azul); }
+
+  .card-bar {
+    margin: 14px 0 6px;
+    height: 6px;
+    background: #e8f4f8;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .card-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--azul), var(--verdec));
+    width: 77%;
+    animation: barload 1.5s ease-out;
+  }
+  @keyframes barload { from{width:0} to{width:77%} }
+  .card-bar-lbl { font-size: 10px; color: #888; text-align: right; }
+
+  /* Features */
+  .features {
+    position: relative; z-index: 5;
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 48px 72px;
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 20px;
+  }
+
+  .feat {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid rgba(0,178,226,.1);
+    transition: all .25s;
+  }
+  .feat:hover {
+    border-color: var(--azul);
+    box-shadow: 0 8px 30px rgba(0,178,226,.12);
+    transform: translateY(-3px);
+  }
+  .feat-ico {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+  .feat-ico.azul { background: rgba(0,178,226,.1); }
+  .feat-ico.verde { background: rgba(157,180,85,.12); }
+  .feat h3 { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--dark); }
+  .feat p { font-size: 12px; color: #7a90a0; line-height: 1.6; }
+
+  /* Instrucciones acceso directo */
+  .instrucciones {
+    position: relative; z-index: 5;
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 48px 72px;
+  }
+  .inst-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px; font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .inst-title::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, var(--azul), transparent);
+  }
+
+  .inst-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  .inst-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    border-left: 4px solid var(--azul);
+  }
+  .inst-card.verde { border-left-color: var(--verde); }
+  .inst-card h4 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--dark); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .inst-card ol { padding-left: 18px; }
+  .inst-card li {
+    font-size: 12px; color: #5a7080;
+    line-height: 1.8; margin-bottom: 4px;
+  }
+  .inst-card li strong { color: var(--dark); }
+  .url-box {
+    margin-top: 14px;
+    background: var(--gris);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--azul);
+    word-break: break-all;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .url-box:hover { background: rgba(0,178,226,.1); }
+  .url-box::before { content: '🔗'; flex-shrink: 0; }
+
+  /* Footer */
+  footer {
+    position: relative; z-index: 5;
+    background: var(--dark);
+    padding: 24px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  footer .f-logo { color: var(--azul); font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 18px; }
+  footer .f-logo span { color: var(--verde); }
+  footer p { color: rgba(255,255,255,.4); font-size: 11px; }
+  footer .f-contact { color: rgba(255,255,255,.5); font-size: 11px; text-align: right; line-height: 1.8; }
+  footer .f-contact a { color: var(--azul); text-decoration: none; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--dark); color: #fff;
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    transform: translateY(80px); opacity: 0;
+    transition: all .3s;
+    z-index: 999;
+    border-left: 3px solid var(--verde);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="bg-pattern"><div class="bp2"></div></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-area">
+    <!-- Logo CONEXA en SVG basado en el manual -->
+    <svg class="logo-svg" viewBox="0 0 220 55" xmlns="http://www.w3.org/2000/svg">
+      <!-- Letras CONEXA -->
+      <text x="0" y="36" font-family="'Montserrat',sans-serif" font-weight="700" font-size="34" letter-spacing="4" fill="#2d4a5a">CONE</text>
+      <!-- X doble estilo del manual -->
+      <g transform="translate(130,2)">
+        <line x1="0" y1="0" x2="22" y2="34" stroke="#00B2E2" stroke-width="4.5" stroke-linecap="round"/>
+        <line x1="22" y1="0" x2="0" y2="34" stroke="#9DB455" stroke-width="4.5" stroke-linecap="round"/>
+      </g>
+      <text x="155" y="36" font-family="'Montserrat',sans-serif" font-weight="700" font-size="34" letter-spacing="4" fill="#2d4a5a">A</text>
+      <!-- Slogan -->
+      <text x="1" y="50" font-family="'Raleway',sans-serif" font-weight="400" font-size="9" letter-spacing="2" fill="#9DB455">INTEGRACIÓN DE PROCESOS EMPRESARIALES</text>
+    </svg>
+  </div>
+  <div class="header-info">
+    <strong>Sistema FURIPS · ADRES</strong><br>
+    Circular 022 / 2023<br>
+    www.conexa.com
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-badge">Sistema Activo</div>
+    <h1>
+      Gestión de<br>
+      <span class="c-azul">Reclamaciones</span><br>
+      <span class="c-verde">FURIPS · ADRES</span>
+    </h1>
+    <p class="hero-desc">
+      Plataforma integral para la gestión, validación y radicación de reclamaciones
+      ante ADRES según Circular 022/2023. Multiusuario, en tiempo real y en la nube.
+    </p>
+    <a href="https://lilianapconexa-gif.github.io/furips" target="_blank" class="btn-acceso">
+      <span class="ico">🚀</span> Ingresar al Sistema
+    </a>
+    <a href="#instrucciones" class="btn-sec">📱 Acceso Directo</a>
+  </div>
+
+  <!-- Card flotante -->
+  <div class="hero-card">
+    <div class="card-header">
+      <div class="card-dot" style="background:#f85149"></div>
+      <div class="card-dot" style="background:#e3b341"></div>
+      <div class="card-dot" style="background:#3fb950"></div>
+      <div class="card-title">furips.conexa · Sistema ADRES</div>
+    </div>
+    <div class="card-body">
+      <div class="card-stat">
+        <span class="lbl">Estado del sistema</span>
+        <span class="val ok">● En línea</span>
+      </div>
+      <div class="card-stat">
+        <span class="lbl">Base de datos</span>
+        <span class="val blue">Firebase ☁</span>
+      </div>
+      <div class="card-stat">
+        <span class="lbl">Formulario FURIPS 1</span>
+        <span class="val">102 campos</span>
+      </div>
+      <div class="card-stat">
+        <span class="lbl">Clientes activos</span>
+        <span class="val ok">2 IPS registradas</span>
+      </div>
+      <div class="card-stat">
+        <span class="lbl">Validaciones CIE-10</span>
+        <span class="val blue">Tiempo real</span>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="card-bar"><div class="card-bar-fill"></div></div>
+        <div class="card-bar-lbl">Formulario 77% completado en promedio</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="feat">
+    <div class="feat-ico azul">📋</div>
+    <h3>FURIPS 1 y 2</h3>
+    <p>Formularios completos con validaciones condicionales, CIE-10, CUPS y concordancia de fechas en tiempo real.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-ico verde">📬</div>
+    <h3>Radicación ADRES</h3>
+    <p>Gestión de radicados por lote e individuales. Estados: Radicada, Devuelta parcial, Devuelta total, Pagada.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-ico azul">📊</div>
+    <h3>Informes por Cliente</h3>
+    <p>Gráficas en tiempo real, informe interno y para cliente con valores facturados, reclamados y estado de radicación.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-ico verde">🔍</div>
+    <h3>Consultas BDUA · RNEC</h3>
+    <p>Botones de verificación rápida contra ADRES, Registraduría, RETHUS y SIRAS con panel de comparación.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-ico azul">📄</div>
+    <h3>Archivos Planos .txt</h3>
+    <p>Generación de FURIPS 1 y 2 según Circular 022/2023 para carga masiva ante ADRES.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-ico verde">☁</div>
+    <h3>Multiusuario en Nube</h3>
+    <p>Acceso por roles (Admin/Digitador), sincronización en tiempo real con Firebase y carga masiva desde Excel.</p>
+  </div>
+</section>
+
+<!-- INSTRUCCIONES ACCESO DIRECTO -->
+<section class="instrucciones" id="instrucciones">
+  <div class="inst-title">📱 Cómo crear tu Acceso Directo</div>
+  <div class="inst-grid">
+
+    <div class="inst-card">
+      <h4>🖥️ Windows (Chrome / Edge)</h4>
+      <ol>
+        <li>Abre el sistema en el navegador</li>
+        <li>Haz clic en los <strong>3 puntos ⋮</strong> (menú superior derecho)</li>
+        <li>Selecciona <strong>"Guardar e instalar"</strong> o<br><strong>"Más herramientas → Crear acceso directo"</strong></li>
+        <li>Marca <strong>"Abrir como ventana"</strong> y clic en <strong>Crear</strong></li>
+        <li>Aparece en el escritorio como una app ✔</li>
+      </ol>
+      <div class="url-box" onclick="copiarURL()">
+        https://lilianapconexa-gif.github.io/furips
+      </div>
+    </div>
+
+    <div class="inst-card verde">
+      <h4>📱 iPhone / iPad (Safari)</h4>
+      <ol>
+        <li>Abre Safari y ve al sistema</li>
+        <li>Toca el botón de <strong>Compartir</strong> (cuadro con flecha ↑)</li>
+        <li>Desliza y toca <strong>"Agregar a pantalla de inicio"</strong></li>
+        <li>Cambia el nombre a <strong>"CONEXA FURIPS"</strong></li>
+        <li>Toca <strong>Agregar</strong> — aparece como app en tu inicio ✔</li>
+      </ol>
+      <div class="url-box" onclick="copiarURL()">
+        https://lilianapconexa-gif.github.io/furips
+      </div>
+    </div>
+
+    <div class="inst-card verde">
+      <h4>🤖 Android (Chrome)</h4>
+      <ol>
+        <li>Abre Chrome y ve al sistema</li>
+        <li>Toca los <strong>3 puntos ⋮</strong> del menú</li>
+        <li>Selecciona <strong>"Agregar a pantalla de inicio"</strong></li>
+        <li>Ponle nombre <strong>"CONEXA FURIPS"</strong></li>
+        <li>Toca <strong>Agregar</strong> ✔</li>
+      </ol>
+      <div class="url-box" onclick="copiarURL()">
+        https://lilianapconexa-gif.github.io/furips
+      </div>
+    </div>
+
+    <div class="inst-card">
+      <h4>🔖 Favorito rápido (cualquier navegador)</h4>
+      <ol>
+        <li>Ve al sistema en tu navegador</li>
+        <li>Presiona <strong>Ctrl + D</strong> (Windows) o <strong>Cmd + D</strong> (Mac)</li>
+        <li>Nómbralo <strong>"CONEXA · Sistema FURIPS"</strong></li>
+        <li>Guárdalo en la <strong>Barra de favoritos</strong></li>
+        <li>Queda siempre visible en la barra superior ✔</li>
+      </ol>
+      <div class="url-box" onclick="copiarURL()">
+        https://lilianapconexa-gif.github.io/furips
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="f-logo">CONE<span>X</span>A</div>
+    <div style="color:rgba(255,255,255,.3);font-size:10px;margin-top:3px;">Integración de procesos empresariales</div>
+  </div>
+  <p>Sistema FURIPS · Circular 022/2023 · ADRES Colombia<br>Todos los derechos reservados © CONEXA 2025</p>
+  <div class="f-contact">
+    Calle 58 #17-53, Bogotá<br>
+    <a href="mailto:contacto@conexa.com">contacto@conexa.com</a><br>
+    (57 1) 314 61 25
+  </div>
+</footer>
+
+<div class="toast" id="toast">📋 URL copiada al portapapeles</div>
+
+<script>
+function copiarURL(){
+  navigator.clipboard?.writeText('https://lilianapconexa-gif.github.io/furips').catch(()=>{});
+  const t=document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+// Scroll suave
+document.querySelector('a[href="#instrucciones"]').addEventListener('click',e=>{
+  e.preventDefault();
+  document.getElementById('instrucciones').scrollIntoView({behavior:'smooth'});
+});
+</script>
+</body>
+</html>
