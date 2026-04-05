@@ -1852,14 +1852,18 @@ window.renderGlosasResp = function(){
               <div>
                 <div style="font-size:9px;color:var(--red);margin-bottom:3px;font-family:var(--mono);">VR ACEPTADO</div>
                 <input type="number" id="va-${gl.id}" value="${gl.vrAceptado||0}" min="0"
-                  onchange="window.updGlosaRespuesta('${gl.id}','vrAceptado',this.value)"
-                  style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--red);font-size:11px;font-weight:600;">
+                  oninput="window.recalcParcial('${gl.id}','aceptado')"
+                  onchange="window.recalcParcial('${gl.id}','aceptado')"
+                  style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--red);font-size:11px;font-weight:600;"
+                  ${(gl.respuesta==='aceptada'||gl.respuesta==='no_aceptada'||!gl.respuesta||gl.respuesta==='pendiente')?'readonly style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--red);font-size:11px;font-weight:600;opacity:.5;"':''}>
               </div>
               <div>
                 <div style="font-size:9px;color:var(--green);margin-bottom:3px;font-family:var(--mono);">VR NO ACEPTADO</div>
                 <input type="number" id="vna-${gl.id}" value="${gl.vrNoAceptado||gl.vrGlosado||0}" min="0"
-                  onchange="window.updGlosaRespuesta('${gl.id}','vrNoAceptado',this.value)"
-                  style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--green);font-size:11px;font-weight:600;">
+                  oninput="window.recalcParcial('${gl.id}','no_aceptado')"
+                  onchange="window.recalcParcial('${gl.id}','no_aceptado')"
+                  style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--green);font-size:11px;font-weight:600;"
+                  ${(gl.respuesta==='aceptada'||gl.respuesta==='no_aceptada'||!gl.respuesta||gl.respuesta==='pendiente')?'readonly style="width:100%;padding:5px 6px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--green);font-size:11px;font-weight:600;opacity:.5;"':''}>
               </div>
             </div>
           </div>`;
@@ -1893,26 +1897,94 @@ window.mostrarRespRapidas=(gloId)=>{
   }
 };
 
-// Calcular valores automáticamente
+// Calcular y bloquear valores según decisión
 window.calcGlosaValores=(gloId)=>{
   const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
   const tipo=gl.respuesta||'pendiente';
   const va=g('va-'+gloId), vna=g('vna-'+gloId); if(!va||!vna) return;
-  if(tipo==='aceptada'){ va.value=gl.vrGlosado; vna.value=0; gl.vrAceptado=gl.vrGlosado; gl.vrNoAceptado=0; }
-  else if(tipo==='no_aceptada'){ va.value=0; vna.value=gl.vrGlosado; gl.vrAceptado=0; gl.vrNoAceptado=gl.vrGlosado; }
+  const vrG=parseInt(gl.vrGlosado)||0;
+
+  if(tipo==='aceptada'){
+    // Se acepta: valor aceptado = total, no aceptado = 0, ambos bloqueados
+    va.value=vrG;  va.readOnly=true;  va.style.opacity='.5';  va.style.background='var(--sur2)';
+    vna.value=0;   vna.readOnly=true; vna.style.opacity='.5'; vna.style.background='var(--sur2)';
+    gl.vrAceptado=vrG; gl.vrNoAceptado=0;
+
+  } else if(tipo==='no_aceptada'){
+    // No se acepta: no aceptado = total, aceptado = 0, ambos bloqueados
+    va.value=0;    va.readOnly=true;  va.style.opacity='.5';  va.style.background='var(--sur2)';
+    vna.value=vrG; vna.readOnly=true; vna.style.opacity='.5'; vna.style.background='var(--sur2)';
+    gl.vrAceptado=0; gl.vrNoAceptado=vrG;
+
+  } else if(tipo==='parcial'){
+    // Parcial: ambos editables, se calculan entre sí
+    va.readOnly=false;  va.style.opacity='1';  va.style.background='var(--sur2)';
+    vna.readOnly=false; vna.style.opacity='1'; vna.style.background='var(--sur2)';
+    // Si aún no tienen valor, inicializar
+    if(!parseInt(va.value) && !parseInt(vna.value)){
+      va.value=0; vna.value=vrG;
+      gl.vrAceptado=0; gl.vrNoAceptado=vrG;
+    }
+
+  } else {
+    // Pendiente: limpiar y bloquear
+    va.value=0;    va.readOnly=true;  va.style.opacity='.4';  va.style.background='var(--sur2)';
+    vna.value=vrG; vna.readOnly=true; vna.style.opacity='.4'; vna.style.background='var(--sur2)';
+    gl.vrAceptado=0; gl.vrNoAceptado=0;
+  }
+};
+
+// Recalcular el campo complementario en parcial
+window.recalcParcial=(gloId, campoEditado)=>{
+  const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
+  if(gl.respuesta!=='parcial') return;
+  const vrG=parseInt(gl.vrGlosado)||0;
+  const va=g('va-'+gloId), vna=g('vna-'+gloId); if(!va||!vna) return;
+
+  if(campoEditado==='aceptado'){
+    const valAc=Math.min(Math.max(parseInt(va.value)||0, 0), vrG);
+    va.value=valAc;
+    vna.value=vrG-valAc;
+    gl.vrAceptado=valAc; gl.vrNoAceptado=vrG-valAc;
+  } else {
+    const valNoAc=Math.min(Math.max(parseInt(vna.value)||0, 0), vrG);
+    vna.value=valNoAc;
+    va.value=vrG-valNoAc;
+    gl.vrNoAceptado=valNoAc; gl.vrAceptado=vrG-valNoAc;
+  }
+  // Guardar en Firebase
+  window.updGlosaRespuesta(gloId,'vrAceptado',gl.vrAceptado);
+  window.updGlosaRespuesta(gloId,'vrNoAceptado',gl.vrNoAceptado);
 };
 
 // Actualizar glosa en Firebase
 window.updGlosaRespuesta = async (gloId, campo, valor) => {
   const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
-  if(campo==='tipo'){ gl.respuesta=valor; calcGlosaValores(gloId); }
-  else if(campo==='texto'){ gl.textoResp=valor; }
+  if(campo==='tipo'){
+    gl.respuesta=valor;
+    calcGlosaValores(gloId);
+    // Guardar tipo + valores calculados juntos
+    try{
+      await updateDoc(doc(db,'glosas',gloId),{
+        respuesta:gl.respuesta,
+        textoResp:gl.textoResp||'',
+        vrAceptado:gl.vrAceptado||0,
+        vrNoAceptado:gl.vrNoAceptado||0,
+        actualizado:serverTimestamp(),
+      });
+      updGloKpis();
+    } catch(e){ toast('Error guardando: '+e.message,'e'); }
+    return;
+  }
+  if(campo==='texto'){ gl.textoResp=valor; }
   else if(campo==='vrAceptado'){ gl.vrAceptado=parseInt(valor)||0; }
   else if(campo==='vrNoAceptado'){ gl.vrNoAceptado=parseInt(valor)||0; }
   try{
     await updateDoc(doc(db,'glosas',gloId),{
-      respuesta:gl.respuesta, textoResp:gl.textoResp,
-      vrAceptado:gl.vrAceptado, vrNoAceptado:gl.vrNoAceptado,
+      respuesta:gl.respuesta||'pendiente',
+      textoResp:gl.textoResp||'',
+      vrAceptado:gl.vrAceptado||0,
+      vrNoAceptado:gl.vrNoAceptado||0,
       actualizado:serverTimestamp(),
     });
     updGloKpis();
