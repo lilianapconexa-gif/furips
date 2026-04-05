@@ -334,51 +334,85 @@ select option{background:var(--sur2);}
       <div class="page hidden" id="p-lista">
         <div class="ptitle">Reclamaciones</div>
         <div class="psub">Tiempo real desde Firebase. <span id="lista-info"></span></div>
+
+        <!-- BARRA SUPERIOR -->
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
           <button class="btn bp" onclick="go('nueva')">✚ Nueva</button>
-          <!-- BÚSQUEDA -->
-          <div style="position:relative;flex:1;min-width:200px;">
-            <input id="buscar-fac" placeholder="🔍 Buscar por factura, consecutivo o IPS..."
+          <div style="position:relative;flex:1;min-width:180px;">
+            <input id="buscar-fac" placeholder="🔍 Buscar factura, consecutivo o IPS..."
               oninput="filtrarLista(this.value)"
-              style="width:100%;padding:7px 32px 7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
-            <span onclick="g('buscar-fac').value='';filtrarLista('')"
-              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tx3);font-size:14px;">✕</span>
+              style="width:100%;padding:7px 30px 7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+            <span onclick="g('buscar-fac').value='';filtrarLista('')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tx3);">✕</span>
           </div>
-          <button class="btn bs" onclick="go('txt')">📄 .txt</button>
-          <button class="btn" style="background:#1d6f42;border-color:#217346;color:#fff;" onclick="go('xl')">📊 Excel</button>
         </div>
-        <!-- Filtro estado -->
-        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
-          <span style="font-size:11px;color:var(--tx3);padding-top:3px;">Filtrar:</span>
-          <button class="btn btn-sm" id="f-todas" onclick="setFiltro('todas')" style="background:var(--acc2);color:#fff;border-color:var(--acc2);">Todas</button>
+
+        <!-- FILTROS -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:11px;color:var(--tx3);">Filtrar:</span>
+          <button class="btn btn-sm" id="f-todas"  onclick="setFiltro('todas')"  style="background:var(--acc2);color:#fff;border-color:var(--acc2);">Todas</button>
           <button class="btn btn-sm bs" id="f-pend"   onclick="setFiltro('pend')">F1 Pendiente</button>
           <button class="btn btn-sm bs" id="f-comp"   onclick="setFiltro('comp')">F1 Completo</button>
-          <button class="btn btn-sm bs" id="f-rad"    onclick="setFiltro('rad')">Radicadas</button>
           <button class="btn btn-sm bs" id="f-sinrad" onclick="setFiltro('sinrad')">Sin Radicar</button>
+          <button class="btn btn-sm bs" id="f-rad"    onclick="setFiltro('rad')">Radicadas</button>
+          <button class="btn btn-sm bs" id="f-dev"    onclick="setFiltro('dev')">Devueltas</button>
+          <button class="btn btn-sm bs" id="f-pag"    onclick="setFiltro('pag')">Pagadas</button>
         </div>
+
+        <!-- BARRA ACCIONES SELECCIÓN -->
+        <div id="sel-bar" style="display:none;background:rgba(31,111,235,.1);border:1px solid rgba(31,111,235,.3);border-radius:6px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span id="sel-count" style="font-size:12px;font-weight:600;color:#79c0ff;"></span>
+          <div style="flex:1;"></div>
+          <button class="btn btn-sm bs" onclick="selTodas()">☑ Sel. todas</button>
+          <button class="btn btn-sm bs" onclick="deselTodas()">☐ Deseleccionar</button>
+          <button class="btn btn-sm" style="background:rgba(26,127,100,.2);border-color:var(--acc);color:#3fb950;" onclick="expTxtSel()">📄 .txt selección</button>
+          <button class="btn btn-sm" style="background:#1d6f42;border-color:#217346;color:#fff;" onclick="expXLSel()">📊 Excel selección</button>
+          <button class="btn btn-sm bb" onclick="abrirRadicadoGrupal()">📬 Radicar lote</button>
+        </div>
+
         <div id="lista-wrap"></div>
       </div>
 
-      <!-- MODAL RADICADO -->
-      <div id="modal-rad" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;">
-        <div style="background:var(--sur);border:1px solid var(--brd2);border-radius:10px;padding:24px;width:420px;max-width:92vw;">
+      <!-- MODAL RADICADO GRUPAL -->
+      <div id="modal-rad" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:center;justify-content:center;">
+        <div style="background:var(--sur);border:1px solid var(--brd2);border-radius:10px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;">
           <h3 style="font-size:15px;margin-bottom:4px;">📬 Registrar Radicado</h3>
-          <p style="font-size:12px;color:var(--tx2);margin-bottom:16px;">Factura: <strong id="rad-fac-lbl"></strong></p>
-          <div class="field" style="margin-bottom:10px;">
-            <label class="fl">Número de Radicado ADRES <span class="req">*</span></label>
-            <input id="rad-num" maxlength="30" placeholder="Ej: RAD-2024-001234">
+          <p style="font-size:12px;color:var(--tx2);margin-bottom:14px;" id="rad-subtitulo"></p>
+
+          <!-- Radicado grupal -->
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:6px;padding:12px;margin-bottom:14px;">
+            <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:8px;">RADICADO DEL LOTE (grupo de reclamaciones)</div>
+            <div class="g2">
+              <div class="field">
+                <label class="fl">N° Radicado Lote ADRES <span class="req">*</span></label>
+                <input id="rad-lote-num" maxlength="40" placeholder="Ej: RAD-LOTE-2024-001">
+              </div>
+              <div class="field">
+                <label class="fl">Fecha Radicación <span class="req">*</span></label>
+                <input id="rad-lote-fecha" type="date">
+              </div>
+              <div class="field">
+                <label class="fl">Estado del Lote</label>
+                <select id="rad-lote-estado">
+                  <option value="radicada">Radicada — En revisión ADRES</option>
+                  <option value="devuelta_parcial">Devuelta Parcial — Algunas glosas</option>
+                  <option value="devuelta_total">Devuelta Total — Rechazada</option>
+                  <option value="pagada">Pagada — Aprobada y pagada</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="fl">Observaciones del Lote</label>
+                <input id="rad-lote-obs" maxlength="150" placeholder="Opcional">
+              </div>
+            </div>
           </div>
-          <div class="field" style="margin-bottom:10px;">
-            <label class="fl">Fecha de Radicación <span class="req">*</span></label>
-            <input id="rad-fecha" type="date">
-          </div>
-          <div class="field" style="margin-bottom:16px;">
-            <label class="fl">Observaciones</label>
-            <input id="rad-obs" maxlength="100" placeholder="Opcional">
-          </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
+
+          <!-- Reclamaciones del lote -->
+          <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:8px;">RECLAMACIONES INCLUIDAS EN EL LOTE</div>
+          <div id="rad-recs-lista" style="max-height:280px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;"></div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
             <button class="btn bs" onclick="cerrarRadicado()">Cancelar</button>
-            <button class="btn bp" onclick="guardarRadicado()">💾 Guardar Radicado</button>
+            <button class="btn bp" onclick="guardarRadicadoGrupal()">💾 Guardar Radicado</button>
           </div>
         </div>
       </div>
@@ -640,77 +674,210 @@ window.delRec=(id)=>{
   confirm2('¿Eliminar reclamación?','No se puede deshacer.',async()=>{ await deleteDoc(doc(db,'reclamaciones',id)); if(CUR_ID===id)CUR_ID=null; toast('Eliminada','w'); });
 };
 
-let FILTRO_ESTADO='todas', BUSQUEDA='';
+// ── SELECCIÓN Y LISTA ──
+let FILTRO_ESTADO='todas', BUSQUEDA='', SEL_IDS=new Set();
+
+const ESTADOS_RAD={
+  'sinradicar': {lbl:'Sin Radicar',   col:'#e3b341', bg:'rgba(210,153,34,.15)'},
+  'radicada':   {lbl:'Radicada',      col:'#79c0ff', bg:'rgba(31,111,235,.15)'},
+  'devuelta_parcial':{lbl:'Dev.Parcial', col:'#f85149', bg:'rgba(218,54,51,.15)'},
+  'devuelta_total':  {lbl:'Dev.Total',   col:'#f85149', bg:'rgba(218,54,51,.2)'},
+  'pagada':     {lbl:'Pagada ✔',     col:'#3fb950', bg:'rgba(26,127,100,.2)'},
+};
+
+function estadoRad(r){
+  if(!r.radicado?.numero) return 'sinradicar';
+  return r.radicado.estado||'radicada';
+}
 
 window.filtrarLista=(q)=>{ BUSQUEDA=q.toLowerCase().trim(); renderLista(); };
 window.setFiltro=(f)=>{
   FILTRO_ESTADO=f;
-  ['todas','pend','comp','rad','sinrad'].forEach(x=>{ const b=g('f-'+x); if(b){b.style.background='';b.style.color='';b.style.borderColor='';b.className='btn btn-sm bs';} });
+  ['todas','pend','comp','sinrad','rad','dev','pag'].forEach(x=>{ const b=g('f-'+x); if(b){b.className='btn btn-sm bs';b.style='';} });
   const act=g('f-'+f); if(act){act.style.background='var(--acc2)';act.style.color='#fff';act.style.borderColor='var(--acc2)';}
   renderLista();
 };
 
+window.toggleSel=(id)=>{
+  if(SEL_IDS.has(id)) SEL_IDS.delete(id); else SEL_IDS.add(id);
+  updSelBar(); renderLista();
+};
+window.selTodas=()=>{ recsFiltrados().forEach(r=>SEL_IDS.add(r.id)); updSelBar(); renderLista(); };
+window.deselTodas=()=>{ SEL_IDS.clear(); updSelBar(); renderLista(); };
+
+function recsFiltrados(){
+  let recs=[...RECS];
+  if(BUSQUEDA) recs=recs.filter(r=>(r.factura||'').toLowerCase().includes(BUSQUEDA)||(r.consec||'').toLowerCase().includes(BUSQUEDA)||(r.codHab||'').toLowerCase().includes(BUSQUEDA));
+  if(FILTRO_ESTADO==='pend')   recs=recs.filter(r=>!r.furips1?.c83);
+  else if(FILTRO_ESTADO==='comp')   recs=recs.filter(r=>!!r.furips1?.c83);
+  else if(FILTRO_ESTADO==='sinrad') recs=recs.filter(r=>estadoRad(r)==='sinradicar');
+  else if(FILTRO_ESTADO==='rad')    recs=recs.filter(r=>estadoRad(r)==='radicada');
+  else if(FILTRO_ESTADO==='dev')    recs=recs.filter(r=>estadoRad(r).startsWith('devuelta'));
+  else if(FILTRO_ESTADO==='pag')    recs=recs.filter(r=>estadoRad(r)==='pagada');
+  return recs;
+}
+
+function updSelBar(){
+  const n=SEL_IDS.size, bar=g('sel-bar'), cnt=g('sel-count');
+  if(bar) bar.style.display=n>0?'flex':'none';
+  if(cnt) cnt.textContent=`${n} reclamación${n!==1?'es':''} seleccionada${n!==1?'s':''}`;
+}
+
 function renderLista(){
   const w=g('lista-wrap');
-  let recs=[...RECS];
-  // Filtro búsqueda
-  if(BUSQUEDA) recs=recs.filter(r=>(r.factura||'').toLowerCase().includes(BUSQUEDA)||(r.consec||'').toLowerCase().includes(BUSQUEDA)||(r.codHab||'').toLowerCase().includes(BUSQUEDA));
-  // Filtro estado
-  if(FILTRO_ESTADO==='pend') recs=recs.filter(r=>!r.furips1?.c83);
-  else if(FILTRO_ESTADO==='comp') recs=recs.filter(r=>!!r.furips1?.c83);
-  else if(FILTRO_ESTADO==='rad') recs=recs.filter(r=>!!r.radicado?.numero);
-  else if(FILTRO_ESTADO==='sinrad') recs=recs.filter(r=>!r.radicado?.numero);
-
+  const recs=recsFiltrados();
   _s('lista-info',USER.rol==='admin'?`Admin: ${RECS.length} total · ${recs.length} mostradas`:`Tus reclamaciones: ${recs.length}`);
-  if(!recs.length){ w.innerHTML=`<div style="color:var(--tx3);font-size:12px;text-align:center;padding:32px 0;">${BUSQUEDA?'No hay resultados para "'+BUSQUEDA+'"':'No hay reclamaciones.'}</div>`; return; }
+  if(!recs.length){ w.innerHTML=`<div style="color:var(--tx3);font-size:12px;text-align:center;padding:32px 0;">${BUSQUEDA?'Sin resultados para "'+BUSQUEDA+'"':'No hay reclamaciones con este filtro.'}</div>`; return; }
+
   w.innerHTML=recs.map(r=>{
-    const f1ok=r.furips1?.c83, items=(r.furips2||[]).length;
+    const f1ok=!!r.furips1?.c83, items=(r.furips2||[]).length;
     const ts=r.creado?.toDate?r.creado.toDate().toLocaleDateString('es-CO'):'—';
     const canEdit=USER.rol==='admin'||r.creadoPor===USER.uid;
-    const rad=r.radicado;
-    const radBadge=rad?.numero
-      ?`<span style="background:rgba(26,127,100,.2);color:#3fb950;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600;">📬 ${rad.numero} · ${rad.fecha||''}</span>`
-      :`<span style="background:rgba(210,153,34,.15);color:#e3b341;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:4px;">Sin radicar</span>`;
-    return `<div class="rcard${r.id===CUR_ID?' sel':''}">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:26px;">#${r.id.slice(-4)}</div>
+    const sel=SEL_IDS.has(r.id);
+    const estRad=estadoRad(r);
+    const eInf=ESTADOS_RAD[estRad]||ESTADOS_RAD.sinradicar;
+    const radBadge=`<span style="background:${eInf.bg};color:${eInf.col};font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;">${eInf.lbl}</span>`;
+    const loteTag=r.radicado?.lote?`<span style="background:rgba(31,111,235,.15);color:#79c0ff;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;">Lote: ${r.radicado.lote}</span>`:'';
+    const radNum=r.radicado?.numero?`<span style="font-size:10px;color:var(--tx3);margin-left:4px;">· ${r.radicado.numero}</span>`:'';
+    return `<div class="rcard${sel?' sel':''}" style="${sel?'border-color:var(--blue);background:rgba(31,111,235,.05)':''}">
+      <!-- Checkbox selección -->
+      <label style="cursor:pointer;display:flex;align-items:center;padding:0 4px;">
+        <input type="checkbox" ${sel?'checked':''} onchange="toggleSel('${r.id}')"
+          style="width:15px;height:15px;accent-color:var(--blue);cursor:pointer;">
+      </label>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:24px;">#${r.id.slice(-4)}</div>
       <div style="flex:1;cursor:pointer;" onclick="selRec('${r.id}')">
-        <div style="font-weight:500;font-size:13px;">${r.factura} <span class="badge bb2">${r.consec}</span> ${radBadge}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px;">IPS:${r.codHab} · ${items} ítems · ${f1ok?'<span style="color:#3fb950">F1✔</span>':'<span style="color:#e3b341">F1 pendiente</span>'} · ${ts}${USER.rol==='admin'?' · <span style="color:var(--tx3)">👤'+(r.creadoPorNombre||'?')+'</span>':''}</div>
+        <div style="font-weight:500;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          ${r.factura} <span class="badge bb2">${r.consec}</span> ${radBadge} ${loteTag} ${radNum}
+        </div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px;">
+          IPS:${r.codHab} · ${items} ítems ·
+          ${f1ok?'<span style="color:#3fb950">F1✔</span>':'<span style="color:#e3b341">F1⏳</span>'} · ${ts}
+          ${USER.rol==='admin'?'· <span style="color:var(--tx3)">👤'+(r.creadoPorNombre||'?')+'</span>':''}
+          ${r.radicado?.obs?`· <span style="color:var(--tx3);font-style:italic;">${r.radicado.obs}</span>`:''}
+        </div>
       </div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
         ${canEdit?`
-          <button class="btn btn-sm bs" onclick="selRec('${r.id}')">Editar</button>
-          <button class="btn btn-sm" style="background:rgba(31,111,235,.15);border-color:var(--blue);color:#79c0ff;padding:4px 9px;font-size:11px;" onclick="abrirRadicado('${r.id}','${r.factura}')">📬 Radicar</button>
+          <button class="btn btn-sm bs" onclick="selRec('${r.id}')">✏</button>
+          <button class="btn btn-sm" style="background:rgba(31,111,235,.15);border-color:var(--blue);color:#79c0ff;padding:4px 9px;font-size:11px;" onclick="abrirRadicadoGrupal('${r.id}')">📬</button>
           <button class="btn btn-sm bd" onclick="delRec('${r.id}')">✕</button>
         `:'<span style="font-size:10px;color:var(--tx3);">Solo lectura</span>'}
       </div>
     </div>`;
   }).join('');
+  updSelBar();
 }
 
-// ── RADICADO ──
-let RAD_ID=null;
-window.abrirRadicado=(id,fac)=>{
-  RAD_ID=id;
-  _s('rad-fac-lbl',fac);
-  const rec=RECS.find(r=>r.id===id);
-  if(rec?.radicado){ g('rad-num').value=rec.radicado.numero||''; g('rad-fecha').value=rec.radicado.fecha||''; g('rad-obs').value=rec.radicado.obs||''; }
-  else { g('rad-num').value=''; g('rad-fecha').value=new Date().toISOString().split('T')[0]; g('rad-obs').value=''; }
-  const m=g('modal-rad'); if(m){ m.style.display='flex'; }
+// ── RADICADO GRUPAL ──
+window.abrirRadicadoGrupal=(idIndividual)=>{
+  // Si se llama con ID individual, lo selecciona solo
+  if(idIndividual){ SEL_IDS.clear(); SEL_IDS.add(idIndividual); updSelBar(); renderLista(); }
+  const ids=[...SEL_IDS];
+  if(!ids.length){ toast('Selecciona al menos una reclamación primero.','w'); return; }
+  const recs=RECS.filter(r=>ids.includes(r.id));
+
+  _s('rad-subtitulo',`${ids.length} reclamación${ids.length>1?'es':''} seleccionada${ids.length>1?'s':''}`);
+
+  // Pre-llenar si es solo una y ya tiene radicado
+  if(ids.length===1&&recs[0]?.radicado){
+    const rad=recs[0].radicado;
+    g('rad-lote-num').value=rad.numero||rad.lote||'';
+    g('rad-lote-fecha').value=rad.fecha||new Date().toISOString().split('T')[0];
+    g('rad-lote-estado').value=rad.estado||'radicada';
+    g('rad-lote-obs').value=rad.obs||'';
+  } else {
+    g('rad-lote-num').value='';
+    g('rad-lote-fecha').value=new Date().toISOString().split('T')[0];
+    g('rad-lote-estado').value='radicada';
+    g('rad-lote-obs').value='';
+  }
+
+  // Mostrar lista de reclamaciones con número individual
+  const eInf=ESTADOS_RAD;
+  g('rad-recs-lista').innerHTML=recs.map(r=>{
+    const estActual=estadoRad(r);
+    const inf=eInf[estActual]||eInf.sinradicar;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--brd);">
+      <span style="font-family:var(--mono);font-weight:600;font-size:12px;min-width:80px;">${r.factura}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--tx2);">${r.consec}</span>
+      <div style="flex:1;">
+        <div style="font-size:11px;margin-bottom:3px;">N° radicado individual:</div>
+        <input id="rad-ind-${r.id}" value="${r.radicado?.numero||''}" maxlength="40" placeholder="N° radicado individual (opcional)"
+          style="width:100%;padding:4px 8px;font-size:11px;background:var(--sur);border:1px solid var(--brd);border-radius:4px;color:var(--tx);">
+      </div>
+      <span style="background:${inf.bg};color:${inf.col};font-size:9px;padding:2px 7px;border-radius:4px;font-family:var(--mono);white-space:nowrap;">${inf.lbl}</span>
+    </div>`;
+  }).join('');
+
+  g('modal-rad').style.display='flex';
 };
-window.cerrarRadicado=()=>{ const m=g('modal-rad'); if(m) m.style.display='none'; RAD_ID=null; };
-window.guardarRadicado=async()=>{
-  const num=gv('rad-num'), fecha=gv('rad-fecha');
-  if(!num||!fecha){ toast('Complete número y fecha de radicado.','w'); return; }
-  if(!RAD_ID) return;
+
+window.cerrarRadicado=()=>{ g('modal-rad').style.display='none'; };
+
+window.guardarRadicadoGrupal=async()=>{
+  const loteNum=gv('rad-lote-num'), loteFecha=gv('rad-lote-fecha'), loteEst=gv('rad-lote-estado'), loteObs=gv('rad-lote-obs');
+  if(!loteNum||!loteFecha){ toast('Complete número de radicado y fecha.','w'); return; }
+  const ids=[...SEL_IDS];
+  if(!ids.length){ toast('No hay reclamaciones seleccionadas.','w'); return; }
   loader(true);
-  try{
-    await updateDoc(doc(db,'reclamaciones',RAD_ID),{
-      radicado:{numero:num,fecha:fecha,obs:gv('rad-obs'),registradoPor:USER.uid,registradoEn:serverTimestamp()},
-      actualizado:serverTimestamp()
-    });
-    loader(false); cerrarRadicado(); toast('✔ Radicado registrado correctamente.','ok');
-  } catch(e){ loader(false); toast('Error: '+e.message,'e'); }
+  let ok=0, err=0;
+  for(const id of ids){
+    const indNum=(g('rad-ind-'+id)||{}).value?.trim()||'';
+    try{
+      await updateDoc(doc(db,'reclamaciones',id),{
+        radicado:{
+          lote:loteNum,           // número del lote/grupo
+          numero:indNum||loteNum, // número individual (si no tiene, usa el del lote)
+          fecha:loteFecha,
+          estado:loteEst,
+          obs:loteObs,
+          registradoPor:USER.uid,
+          registradoEn:serverTimestamp()
+        },
+        actualizado:serverTimestamp()
+      });
+      ok++;
+    } catch(e){ err++; console.error(e); }
+  }
+  loader(false);
+  cerrarRadicado();
+  toast(`✔ ${ok} radicado${ok>1?'s':''} guardado${ok>1?'s':''}${err>0?` · ${err} errores`:''}`, ok>0?'ok':'e');
+};
+
+// ── EXPORTAR TXT Y EXCEL DE SELECCIÓN ──
+window.expTxtSel=()=>{
+  const ids=[...SEL_IDS];
+  if(!ids.length){ toast('Selecciona al menos una reclamación.','w'); return; }
+  const recsSel=RECS.filter(r=>ids.includes(r.id));
+  const cod=recsSel[0]?.codHab||'';
+  const fecha=new Date().toISOString().split('T')[0];
+  const DATEF=['c11','c12','c22','c33','c34','c64','c69','c79','c81'];
+  const fd=s=>{if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;};
+  const F1K=['c1','c1t','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19','c20','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','c31','c32','c33','c34','c35','c36','c37','c38','c39','c40','c41','c42','c43','c44','c45','c46','c47','c48','c49','c50','c51','c52','c53','c54','c55','c56','c57','c58','c59','c60','c61','c62','c63','c64','c65','c66','c67','c68','c69','c70','c71','c72','c73','c74','c75','c76','c77','c78','c79','c80','c81','c82','c83','c84','c85','c86','c87','c88','c89','c90','c91','c92','c93','c94','c95','c96','c97','c98','c99','c100','c101'];
+  const f1=recsSel.map(r=>{ const d=r.furips1||{}; return F1K.map(k=>{ const v=(d[k]||'').toString().replace(/,/g,' '); return DATEF.includes(k)?fd(v):v; }).join(','); }).join('\n');
+  const f2Lines=[];
+  recsSel.forEach(r=>(r.furips2||[]).forEach(row=>f2Lines.push([row.factura||'',row.consec||'',row.tipo||'',row.codigo||'',(row.descripcion||'').replace(/,/g,' '),row.cantidad||'0',row.vrUnitario||'0',row.totalFact||'0',row.totalRec||'0'].join(','))));
+  const p=fecha.split('-'); const d=p.length===3?`${p[2]}${p[1]}${p[0]}`:fecha.replace(/-/g,'');
+  dl(f1,`FURIPS1${cod}${d}.txt`,'text/plain');
+  setTimeout(()=>dl(f2Lines.join('\n'),`FURIPS2${cod}${d}.txt`,'text/plain'),500);
+  toast(`✔ Archivos .txt generados para ${ids.length} reclamaciones.`,'ok');
+};
+
+window.expXLSel=()=>{
+  if(typeof XLSX==='undefined'){ toast('Cargando Excel...','w'); setTimeout(expXLSel,1500); return; }
+  const ids=[...SEL_IDS];
+  if(!ids.length){ toast('Selecciona al menos una reclamación.','w'); return; }
+  const recsSel=RECS.filter(r=>ids.includes(r.id));
+  // Reusar lógica expXL pero solo con recsSel
+  const wb=XLSX.utils.book_new();
+  const fd=s=>{if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;};
+  const h1=['Factura','Consec','CodHab','Radicado_Lote','Radicado_Ind','Fecha_Rad','Estado_Rad','F1_Completo'];
+  const r1=recsSel.map(r=>[r.factura,r.consec,r.codHab,r.radicado?.lote||'',r.radicado?.numero||'',r.radicado?.fecha||'',r.radicado?.estado||'sin radicar',r.furips1?.c83?'Sí':'No']);
+  const ws1=XLSX.utils.aoa_to_sheet([h1,...r1]); ws1['!cols']=h1.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,ws1,'Reclamaciones');
+  XLSX.writeFile(wb,`Seleccion_${new Date().toISOString().split('T')[0].replace(/-/g,'')}.xlsx`);
+  toast(`✔ Excel generado para ${ids.length} reclamaciones.`,'ok');
 };
 
 // ── INFORMES ──
