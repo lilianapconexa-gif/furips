@@ -7,16 +7,17 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 :root{
-  --bg:#0d1117;--sur:#161b22;--sur2:#1f2937;--brd:#30363d;--brd2:#3d444d;
-  --acc:#1a7f64;--acc2:#238636;--blue:#1f6feb;--red:#da3633;--warn:#d29922;
-  --tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;
+  --bg:#0a1a24;--sur:#0f2231;--sur2:#162d3e;--brd:#1e3a4e;--brd2:#2a4f68;
+  --acc:#00B2E2;--acc2:#0090C0;--blue:#00B2E2;--green:#9DB455;--red:#da3633;--warn:#d29922;
+  --tx:#e8f4f9;--tx2:#8ab5c8;--tx3:#5a8099;
+  --mono:'Courier New',monospace;--sans:'Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;}
 
 /* LOGIN */
-.lscr{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 30%,rgba(26,127,100,.15),transparent 60%),var(--bg);}
+.lscr{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 30%,rgba(0,178,226,.18),transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(157,180,85,.10),transparent 50%),var(--bg);}
 .lbox{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:36px 32px;width:390px;max-width:93vw;}
 .llogo{display:flex;align-items:center;gap:10px;margin-bottom:22px;}
 .lbadge{background:var(--acc);color:#fff;font-family:var(--mono);font-size:14px;font-weight:600;padding:4px 12px;border-radius:6px;}
@@ -38,7 +39,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px
 .ng{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:1.5px;color:var(--tx3);text-transform:uppercase;padding:10px 14px 3px;margin-top:6px;}
 .ni{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;color:var(--tx2);font-size:12px;transition:all .15s;border-left:2px solid transparent;}
 .ni:hover{background:var(--sur2);color:var(--tx);}
-.ni.active{background:rgba(26,127,100,.12);color:var(--acc);border-left-color:var(--acc);font-weight:500;}
+.ni.active{background:rgba(0,178,226,.10);color:var(--acc);border-left-color:var(--acc);font-weight:500;}
 .ndot{width:6px;height:6px;border-radius:50%;background:var(--brd2);flex-shrink:0;}
 .ni.active .ndot{background:var(--acc);}
 
@@ -76,29 +77,30 @@ select option{background:var(--sur2);}
 /* BUTTONS */
 .btn{padding:7px 14px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:5px;transition:all .15s;font-family:var(--sans);}
 .btn-sm{padding:4px 9px;font-size:11px;}
-.bp{background:var(--acc2);border-color:#2ea043;color:#fff;}.bp:hover{background:#2ea043;}
+.bp{background:var(--acc);border-color:var(--acc2);color:#fff;}.bp:hover{background:var(--acc2);}
+.bb2{background:rgba(0,178,226,.15);border-color:var(--acc);color:var(--acc);}.bb2:hover{background:var(--acc);color:#fff;}
 .bs{background:var(--sur2);border-color:var(--brd2);color:var(--tx);}.bs:hover{background:var(--sur);}
 .bd{background:rgba(218,54,51,.1);border-color:var(--red);color:#f85149;}.bd:hover{background:rgba(218,54,51,.18);}
-.bb{background:var(--blue);border-color:#388bfd;color:#fff;}.bb:hover{background:#388bfd;}
+.bb{background:var(--blue);border-color:var(--acc2);color:#fff;}.bb:hover{background:var(--acc2);}
 .br{background:rgba(218,54,51,.12);border-color:var(--red);color:#f85149;}
 
 /* ALERTS */
 .alert{padding:9px 13px;border-radius:6px;font-size:12px;margin-bottom:10px;}
 .ai{background:rgba(31,111,235,.1);border:1px solid rgba(31,111,235,.3);color:#79c0ff;}
-.as{background:rgba(26,127,100,.1);border:1px solid rgba(26,127,100,.3);color:#3fb950;}
+.as{background:rgba(0,178,226,.1);border:1px solid rgba(26,127,100,.3);color:#9DB455;}
 .aw{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);color:#e3b341;}
 .ae{background:rgba(218,54,51,.1);border:1px solid rgba(218,54,51,.3);color:#f85149;}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:10px;font-weight:600;}
-.bg{background:rgba(26,127,100,.2);color:#3fb950;}
+.bg{background:rgba(157,180,85,.15);color:#9DB455;}
 .bb2{background:rgba(31,111,235,.2);color:#79c0ff;}
 .bw{background:rgba(210,153,34,.2);color:#e3b341;}
 
 /* CARDS */
 .rcard{background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:10px 13px;margin-bottom:6px;display:flex;align-items:center;gap:11px;transition:border-color .15s;}
 .rcard:hover{border-color:var(--acc);}
-.rcard.sel{border-color:var(--acc);background:rgba(26,127,100,.05);}
+.rcard.sel{border-color:var(--acc);background:rgba(0,178,226,.05);}
 
 /* MISC */
 .divider{height:1px;background:var(--brd);margin:12px 0;}
@@ -107,7 +109,7 @@ select option{background:var(--sur2);}
 /* TOAST */
 #toast{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:5px;pointer-events:none;}
 .tm{background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:9px 14px;font-size:12px;max-width:320px;animation:fin .2s ease;box-shadow:0 4px 18px rgba(0,0,0,.4);}
-.tok{border-color:var(--acc);color:#3fb950;}
+.tok{border-color:var(--acc);color:#9DB455;}
 .twn{border-color:var(--warn);color:#e3b341;}
 .ter{border-color:var(--red);color:#f85149;}
 @keyframes fin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -146,8 +148,24 @@ select option{background:var(--sur2);}
 <!-- ══ LOGIN ══ -->
 <div id="scr-login" class="lscr">
   <div class="lbox">
-    <div class="llogo"><span class="lbadge">ADRES</span><span class="ltitle">Sistema FURIPS</span></div>
-    <div class="lsub">Circular 022/2023 · Fase 3 · Firebase · Multiusuario</div>
+    <!-- Logo CONEXA SVG -->
+    <div style="text-align:center;margin-bottom:20px;">
+      <svg viewBox="0 0 200 52" xmlns="http://www.w3.org/2000/svg" style="width:160px;height:auto;">
+        <text x="0" y="34" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="3" fill="#e8f4f9">CONE</text>
+        <g transform="translate(120,2)">
+          <line x1="0" y1="0" x2="20" y2="32" stroke="#00B2E2" stroke-width="4" stroke-linecap="round"/>
+          <line x1="20" y1="0" x2="0" y2="32" stroke="#9DB455" stroke-width="4" stroke-linecap="round"/>
+        </g>
+        <text x="143" y="34" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="32" letter-spacing="3" fill="#e8f4f9">A</text>
+        <text x="1" y="48" font-family="'Segoe UI',sans-serif" font-weight="300" font-size="8" letter-spacing="2" fill="#9DB455">INTEGRACIÓN DE PROCESOS EMPRESARIALES</text>
+      </svg>
+    </div>
+    <div style="text-align:center;margin-bottom:6px;">
+      <span style="background:var(--acc);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 10px;border-radius:4px;">ADRES</span>
+      <span style="font-size:13px;font-weight:600;margin-left:8px;">Sistema FURIPS</span>
+    </div>
+    <div class="lsub" style="text-align:center;">Circular 022/2023 · Multiusuario · Firebase</div>
+    <div style="height:1px;background:linear-gradient(90deg,transparent,var(--acc),transparent);margin:16px 0;"></div>
     <div class="field" style="margin-bottom:10px;">
       <label class="fl">Correo electrónico</label>
       <input id="l-email" type="email" placeholder="correo@ips.com" onkeydown="if(event.key==='Enter')g('l-pass').focus()">
@@ -158,10 +176,10 @@ select option{background:var(--sur2);}
     </div>
     <div id="l-err" class="alert ae hidden"></div>
     <div id="l-ok" class="alert as hidden"></div>
-    <button class="btn bp" style="width:100%;justify-content:center;" onclick="login()">Ingresar →</button>
+    <button class="btn bp" style="width:100%;justify-content:center;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;" onclick="login()">Ingresar →</button>
     <div id="l-spin" class="hidden" style="text-align:center;margin-top:10px;font-size:12px;color:var(--tx2);">Verificando…</div>
     <div style="margin-top:14px;text-align:center;">
-      <span style="font-size:12px;color:#79c0ff;cursor:pointer;text-decoration:underline;" onclick="resetPass()">¿Olvidaste tu contraseña?</span>
+      <span style="font-size:12px;color:var(--acc);cursor:pointer;text-decoration:underline;" onclick="resetPass()">¿Olvidaste tu contraseña?</span>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--tx3);text-align:center;">El administrador crea las cuentas desde el Panel Admin.</div>
   </div>
@@ -171,10 +189,17 @@ select option{background:var(--sur2);}
 <div id="scr-app" class="hidden">
   <div class="hdr">
     <div class="hbrand">
-      <span class="hbadge">ADRES</span>
-      <span style="font-size:14px;font-weight:600;">Sistema FURIPS</span>
-      <span style="font-size:11px;color:var(--tx2);margin-left:6px;">Circular 022 · 2023</span>
-      <span class="badge bb2" style="margin-left:6px;font-size:9px;">FASE 3 · FIREBASE</span>
+      <!-- Logo mini CONEXA -->
+      <svg viewBox="0 0 110 28" xmlns="http://www.w3.org/2000/svg" style="width:90px;height:auto;flex-shrink:0;">
+        <text x="0" y="20" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="18" letter-spacing="1.5" fill="#e8f4f9">CONE</text>
+        <g transform="translate(65,2)">
+          <line x1="0" y1="0" x2="11" y2="18" stroke="#00B2E2" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="11" y1="0" x2="0" y2="18" stroke="#9DB455" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
+        <text x="78" y="20" font-family="'Segoe UI',sans-serif" font-weight="700" font-size="18" letter-spacing="1.5" fill="#e8f4f9">A</text>
+      </svg>
+      <span style="font-size:11px;color:var(--acc);font-weight:600;border-left:1px solid var(--brd2);padding-left:9px;margin-left:3px;">FURIPS · ADRES</span>
+      <span style="font-size:10px;color:var(--tx3);margin-left:6px;">Circ. 022/2023</span>
     </div>
     <div class="hright">
       <span class="badge bw" id="rec-badge">0 reclamaciones</span>
@@ -289,7 +314,7 @@ select option{background:var(--sur2);}
           <!-- Zona de carga -->
           <div id="drop-zone" onclick="document.getElementById('excel-input').click()"
             style="border:2px dashed var(--brd2);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;"
-            ondragover="event.preventDefault();this.style.borderColor='var(--acc)';this.style.background='rgba(26,127,100,.05)'"
+            ondragover="event.preventDefault();this.style.borderColor='var(--acc)';this.style.background='rgba(0,178,226,.05)'"
             ondragleave="this.style.borderColor='var(--brd2)';this.style.background=''"
             ondrop="event.preventDefault();this.style.borderColor='var(--brd2)';this.style.background='';procesarExcel(event.dataTransfer.files[0])">
             <div style="font-size:32px;margin-bottom:8px;">📊</div>
@@ -364,7 +389,7 @@ select option{background:var(--sur2);}
           <div style="flex:1;"></div>
           <button class="btn btn-sm bs" onclick="selTodas()">☑ Sel. todas</button>
           <button class="btn btn-sm bs" onclick="deselTodas()">☐ Deseleccionar</button>
-          <button class="btn btn-sm" style="background:rgba(26,127,100,.2);border-color:var(--acc);color:#3fb950;" onclick="expTxtSel()">📄 .txt selección</button>
+          <button class="btn btn-sm" style="background:rgba(157,180,85,.15);border-color:var(--acc);color:#9DB455;" onclick="expTxtSel()">📄 .txt selección</button>
           <button class="btn btn-sm" style="background:#1d6f42;border-color:#217346;color:#fff;" onclick="expXLSel()">📊 Excel selección</button>
           <button class="btn btn-sm bb" onclick="abrirRadicadoGrupal()">📬 Radicar lote</button>
         </div>
@@ -488,7 +513,7 @@ select option{background:var(--sur2);}
                 <div style="font-size:11px;color:var(--tx3);" id="inf-cli-cod"></div>
               </div>
               <div style="text-align:right;">
-                <div style="font-family:var(--mono);font-size:11px;color:var(--acc);background:rgba(26,127,100,.1);padding:6px 12px;border-radius:6px;border:1px solid var(--acc);margin-bottom:6px;">CONFIDENCIAL</div>
+                <div style="font-family:var(--mono);font-size:11px;color:var(--acc);background:rgba(0,178,226,.1);padding:6px 12px;border-radius:6px;border:1px solid var(--acc);margin-bottom:6px;">CONFIDENCIAL</div>
                 <div style="font-size:10px;color:var(--tx3);" id="inf-cli-periodo"></div>
               </div>
             </div>
@@ -528,9 +553,9 @@ select option{background:var(--sur2);}
           </div>
           <div id="prev-w" class="hidden">
             <div style="font-family:var(--mono);font-size:11px;color:var(--tx2);margin-bottom:4px;">▶ FURIPS 1</div>
-            <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:#3fb950;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="pv-f1"></div>
+            <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:#9DB455;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="pv-f1"></div>
             <div style="font-family:var(--mono);font-size:11px;color:var(--tx2);margin:10px 0 4px;">▶ FURIPS 2</div>
-            <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:#3fb950;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="pv-f2"></div>
+            <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:#9DB455;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="pv-f2"></div>
           </div>
         </div>
       </div>
@@ -573,7 +598,7 @@ select option{background:var(--sur2);}
         <div class="sh" style="margin-top:14px;">🔧 Reglas de Firestore requeridas</div>
         <div class="sb">
           <p style="font-size:12px;color:var(--tx2);margin-bottom:10px;">Si el panel no carga usuarios o no puedes crear reclamaciones, ve a <strong>Firebase Console → Firestore Database → Reglas</strong> y publica esto:</p>
-          <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:12px;font-family:var(--mono);font-size:11px;color:#3fb950;white-space:pre-wrap;">rules_version = '2';
+          <div style="background:#0a0d10;border:1px solid var(--brd);border-radius:6px;padding:12px;font-family:var(--mono);font-size:11px;color:#9DB455;white-space:pre-wrap;">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
@@ -721,7 +746,7 @@ const ESTADOS_RAD={
   'radicada':   {lbl:'Radicada',      col:'#79c0ff', bg:'rgba(31,111,235,.15)'},
   'devuelta_parcial':{lbl:'Dev.Parcial', col:'#f85149', bg:'rgba(218,54,51,.15)'},
   'devuelta_total':  {lbl:'Dev.Total',   col:'#f85149', bg:'rgba(218,54,51,.2)'},
-  'pagada':     {lbl:'Pagada ✔',     col:'#3fb950', bg:'rgba(26,127,100,.2)'},
+  'pagada':     {lbl:'Pagada ✔',     col:'#3fb950', bg:'rgba(157,180,85,.15)'},
 };
 
 function estadoRad(r){
@@ -791,7 +816,7 @@ function renderLista(){
         </div>
         <div style="font-size:11px;color:var(--tx2);margin-top:2px;">
           IPS:${r.codHab} · ${items} ítems ·
-          ${f1ok?'<span style="color:#3fb950">F1✔</span>':'<span style="color:#e3b341">F1⏳</span>'} · ${ts}
+          ${f1ok?'<span style="color:#9DB455">F1✔</span>':'<span style="color:#e3b341">F1⏳</span>'} · ${ts}
           ${USER.rol==='admin'?'· <span style="color:var(--tx3)">👤'+(r.creadoPorNombre||'?')+'</span>':''}
           ${r.radicado?.obs?`· <span style="color:var(--tx3);font-style:italic;">${r.radicado.obs}</span>`:''}
         </div>
@@ -967,13 +992,13 @@ function buildChartsInterno(cod=''){
   const kp=g('inf-kpis');
   if(kp) kp.innerHTML=`
     <div class="stat"><div class="sv">${tot}</div><div class="sl">${nomCli}</div></div>
-    <div class="stat"><div class="sv" style="color:#3fb950">${comp}</div><div class="sl">F1 Completos</div></div>
+    <div class="stat"><div class="sv" style="color:#9DB455">${comp}</div><div class="sl">F1 Completos</div></div>
     <div class="stat"><div class="sv" style="color:#e3b341">${pend}</div><div class="sl">F1 Pendientes</div></div>
     <div class="stat"><div class="sv" style="color:#79c0ff">${eRad.radicada}</div><div class="sl">Radicadas</div></div>
     <div class="stat"><div class="sv" style="color:#f85149">${eRad.devuelta_parcial+eRad.devuelta_total}</div><div class="sl">Devueltas</div></div>
-    <div class="stat"><div class="sv" style="color:#3fb950">${eRad.pagada}</div><div class="sl">Pagadas</div></div>
+    <div class="stat"><div class="sv" style="color:#9DB455">${eRad.pagada}</div><div class="sl">Pagadas</div></div>
     <div class="stat"><div class="sv" style="font-size:13px;">$${(totFact/1000000).toFixed(1)}M</div><div class="sl">Facturado</div></div>
-    <div class="stat"><div class="sv" style="font-size:13px;color:#3fb950;">$${(totRec/1000000).toFixed(1)}M</div><div class="sl">Reclamado</div></div>`;
+    <div class="stat"><div class="sv" style="font-size:13px;color:#9DB455;">$${(totRec/1000000).toFixed(1)}M</div><div class="sl">Reclamado</div></div>`;
 
   const cargar=()=>dibujarGraficas(recs,comp,pend,eRad,totFact,totRec,cod);
   if(typeof Chart==='undefined'){
@@ -992,7 +1017,7 @@ function dibujarGraficas(recs,comp,pend,eRad,totFact,totRec,cod){
     CHART_ESTADO=new C(ctx1,{type:'doughnut',data:{
       labels:['Sin Radicar','Radicada','Dev.Parcial','Dev.Total','Pagada'],
       datasets:[{data:[eRad.sinradicar,eRad.radicada,eRad.devuelta_parcial,eRad.devuelta_total,eRad.pagada],
-        backgroundColor:['#d29922','#1f6feb','#da3633','#8b1c1c','#238636'],borderWidth:0}]
+        backgroundColor:['#d29922','var(--acc)','#da3633','#8b1c1c','#238636'],borderWidth:0}]
     },options:{...opts,cutout:'60%'}});
   }
 
@@ -1084,7 +1109,7 @@ function buildInformeCliente(cod){
           <td style="padding:7px 8px;font-weight:500;">${r.factura}</td>
           <td style="padding:7px 8px;font-family:var(--mono);">${r.consec}</td>
           <td style="padding:7px 8px;text-align:right;font-family:var(--mono);">$${vf.toLocaleString('es-CO')}</td>
-          <td style="padding:7px 8px;text-align:right;font-family:var(--mono);color:#3fb950;">$${vr.toLocaleString('es-CO')}</td>
+          <td style="padding:7px 8px;text-align:right;font-family:var(--mono);color:#9DB455;">$${vr.toLocaleString('es-CO')}</td>
           <td style="padding:7px 8px;font-family:var(--mono);font-size:10px;">${r.radicado?.lote||'—'}</td>
           <td style="padding:7px 8px;font-family:var(--mono);font-size:10px;">${r.radicado?.numero||'—'}</td>
           <td style="padding:7px 8px;font-size:11px;">${r.radicado?.fecha||'—'}</td>
@@ -1095,7 +1120,7 @@ function buildInformeCliente(cod){
     <tfoot><tr style="background:var(--sur2);font-weight:700;">
       <td colspan="2" style="padding:8px;font-family:var(--mono);font-size:11px;">TOTALES (${tot} reclamaciones)</td>
       <td style="padding:8px;text-align:right;font-family:var(--mono);">$${totFact.toLocaleString('es-CO')}</td>
-      <td style="padding:8px;text-align:right;font-family:var(--mono);color:#3fb950;">$${totRec.toLocaleString('es-CO')}</td>
+      <td style="padding:8px;text-align:right;font-family:var(--mono);color:#9DB455;">$${totRec.toLocaleString('es-CO')}</td>
       <td colspan="4"></td>
     </tr></tfoot>
   </table>`;
@@ -1109,7 +1134,7 @@ function buildInformeCliente(cod){
       </div>
       <div style="background:var(--sur2);border-radius:6px;padding:10px;text-align:center;">
         <div style="font-size:11px;color:var(--tx2);margin-bottom:3px;">Total Reclamado Méd-Qx</div>
-        <div style="font-family:var(--mono);font-weight:700;color:#3fb950;">$${totRec.toLocaleString('es-CO')}</div>
+        <div style="font-family:var(--mono);font-weight:700;color:#9DB455;">$${totRec.toLocaleString('es-CO')}</div>
       </div>
       <div style="background:var(--sur2);border-radius:6px;padding:10px;text-align:center;">
         <div style="font-size:11px;color:var(--tx2);margin-bottom:3px;">Total Transporte</div>
@@ -1342,7 +1367,7 @@ window.procesarExcel=(file)=>{
       const errores=FILAS_EXCEL.filter(f=>f.estado.startsWith('error')).length;
       const listos=FILAS_EXCEL.filter(f=>f.estado==='listo').length;
 
-      g('excel-count').innerHTML=`<span style="color:#3fb950">✔ ${listos} reclamaciones listas</span>${errores>0?` · <span style="color:#f85149">❌ ${errores} con errores</span>`:''}`;
+      g('excel-count').innerHTML=`<span style="color:#9DB455">✔ ${listos} reclamaciones listas</span>${errores>0?` · <span style="color:#f85149">❌ ${errores} con errores</span>`:''}`;
       renderPreview();
       g('excel-preview').classList.remove('hidden');
       const btn=g('btn-cargar-mas');
