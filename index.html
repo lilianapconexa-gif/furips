@@ -509,7 +509,16 @@ select option{background:var(--sur2);}
         <div id="txt-no" class="alert aw">⚠️ No hay reclamaciones.</div>
         <div id="txt-fm" class="hidden">
           <div class="g2" style="margin-bottom:14px;">
-            <div class="field"><label class="fl">Código Habilitación IPS <span class="req">*</span></label><input id="tx-cod" maxlength="12"></div>
+            <div class="field">
+              <label class="fl">IPS Prestadora <span class="req">*</span></label>
+              <select id="tx-cod-sel" onchange="selIPSTxt(this.value)" style="margin-bottom:4px;">
+                <option value="">Seleccione IPS...</option>
+                <option value="760011259501">760011259501 — OCCIDENTAL DE SALUD SAS</option>
+                <option value="157590080301">157590080301 — CLÍNICA EL LAGUITO S.A</option>
+                <option value="otro">Otra IPS (escribir código)</option>
+              </select>
+              <input id="tx-cod" maxlength="12" placeholder="Código habilitación (12 dígitos)">
+            </div>
             <div class="field"><label class="fl">Fecha Generación <span class="req">*</span></label><input id="tx-fec" type="date"></div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
@@ -1132,7 +1141,26 @@ window.expTxt=(t)=>{
 };
 window.prevTxt=()=>{ show('prev-w'); _s2('pv-f1',bF1()||'(sin datos)'); _s2('pv-f2',bF2()||'(sin datos)'); };
 
-function loadTxt(){ if(!RECS.length){show('txt-no');hide('txt-fm');}else{hide('txt-no');show('txt-fm');const tf=g('tx-fec');if(tf&&!tf.value)tf.value=new Date().toISOString().split('T')[0];const tc=g('tx-cod');if(tc&&!tc.value&&RECS[0])tc.value=RECS[0].codHab||'';} }
+window.selIPSTxt=(val)=>{
+  const el=g('tx-cod'); if(!el) return;
+  if(val==='otro'){ el.value=''; el.readOnly=false; el.focus(); }
+  else if(val){ el.value=val; el.readOnly=true; }
+  else { el.value=''; el.readOnly=false; }
+};
+
+function loadTxt(){
+  if(!RECS.length){ show('txt-no'); hide('txt-fm'); return; }
+  hide('txt-no'); show('txt-fm');
+  const tf=g('tx-fec'); if(tf&&!tf.value) tf.value=new Date().toISOString().split('T')[0];
+  // Auto-seleccionar IPS del primer registro
+  const primCod=RECS[0]?.codHab||'';
+  const sel=g('tx-cod-sel'), inp=g('tx-cod');
+  if(sel&&inp&&primCod){
+    const opt=[...sel.options].find(o=>o.value===primCod);
+    if(opt){ sel.value=primCod; inp.value=primCod; inp.readOnly=true; }
+    else { inp.value=primCod; }
+  }
+}
 
 // ── EXCEL ──
 function loadXL(){
