@@ -226,6 +226,7 @@ select option{background:var(--sur2);}
       <div class="ni" id="n-nueva"  onclick="go('nueva')"> <span class="ndot"></span>Nueva Reclamación</div>
       <div class="ni" id="n-lista"  onclick="go('lista')"> <span class="ndot"></span>Reclamaciones</div>
       <div class="ni" id="n-inf"    onclick="go('inf')">   <span class="ndot"></span>Informes</div>
+      <div class="ni" id="n-pagos"  onclick="go('pagos')"> <span class="ndot"></span>💰 Pagos y Comisiones</div>
       <div class="ng">Formularios</div>
       <div class="ni" id="n-f1"     onclick="abrirF1()">   <span class="ndot"></span>FURIPS 1 — Detalle</div>
       <div class="ni" id="n-f2"     onclick="abrirF2()">   <span class="ndot"></span>FURIPS 2 — Factura</div>
@@ -532,6 +533,136 @@ select option{background:var(--sur2);}
             <div id="inf-cli-tabla"></div>
             <!-- Totales y firma -->
             <div id="inf-cli-totales" style="margin-top:16px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGOS Y COMISIONES -->
+      <div class="page hidden" id="p-pagos">
+        <div class="ptitle">💰 Pagos y Comisiones</div>
+        <div class="psub">Registro de pagos ADRES · Cuentas por IPS · Comisiones CONEXA</div>
+
+        <!-- KPIs de pagos -->
+        <div class="stats" id="pag-kpis" style="margin-bottom:16px;"></div>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--brd);margin-bottom:16px;">
+          <div id="ptab-reg"  onclick="switchPagTab('reg')"  style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--acc);border-bottom:2px solid var(--acc);margin-bottom:-2px;font-family:var(--mono);">📝 Registrar Pago</div>
+          <div id="ptab-his"  onclick="switchPagTab('his')"  style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">📋 Historial</div>
+          <div id="ptab-ips"  onclick="switchPagTab('ips')"  style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">🏥 Por IPS</div>
+          <div id="ptab-com"  onclick="switchPagTab('com')"  style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">💼 Comisiones CONEXA</div>
+        </div>
+
+        <!-- TAB: Registrar Pago -->
+        <div id="ptab-reg-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px;">
+            <!-- Seleccionar reclamación -->
+            <div class="field" style="grid-column:1/-1;">
+              <label class="fl">Reclamación a Pagar <span class="req">*</span></label>
+              <select id="pag-rec-sel" onchange="onSelRecPago(this.value)" style="margin-bottom:4px;">
+                <option value="">Seleccione una reclamación radicada...</option>
+              </select>
+              <div id="pag-rec-info" style="font-size:11px;color:var(--tx2);margin-top:4px;padding:8px;background:var(--sur2);border-radius:5px;display:none;"></div>
+            </div>
+            <div class="field">
+              <label class="fl">Tipo de Pago <span class="req">*</span></label>
+              <select id="pag-tipo">
+                <option value="">Seleccione...</option>
+                <option value="total">Pago Total — 100% aprobado</option>
+                <option value="parcial">Pago Parcial — con glosas</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="fl">Fecha de Pago ADRES <span class="req">*</span></label>
+              <input id="pag-fecha" type="date">
+            </div>
+            <div class="field">
+              <label class="fl">Valor Reclamado Original ($) <span class="req">*</span></label>
+              <input id="pag-vr-rec" type="number" min="0" placeholder="0" oninput="calcComision()">
+            </div>
+            <div class="field">
+              <label class="fl">Valor Pagado por ADRES ($) <span class="req">*</span></label>
+              <input id="pag-vr-pag" type="number" min="0" placeholder="0" oninput="calcComision()">
+            </div>
+            <div class="field">
+              <label class="fl">Valor Glosado ($)</label>
+              <input id="pag-vr-glo" type="number" min="0" placeholder="0" readonly style="opacity:.7;">
+              <span class="hint">Calculado automáticamente</span>
+            </div>
+            <div class="field">
+              <label class="fl">N° Resolución / Referencia Pago</label>
+              <input id="pag-ref" maxlength="40" placeholder="Ej: RES-2024-001234">
+            </div>
+            <!-- Comisión CONEXA -->
+            <div style="grid-column:1/-1;background:linear-gradient(135deg,rgba(0,178,226,.06),rgba(157,180,85,.06));border:1px solid var(--brd2);border-radius:8px;padding:14px;">
+              <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:10px;letter-spacing:1px;">💼 COMISIÓN CONEXA</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;">
+                <div class="field" style="margin:0;">
+                  <label class="fl">% Comisión Pactada <span class="req">*</span></label>
+                  <select id="pag-pct" onchange="calcComision()">
+                    <option value="">Seleccione...</option>
+                    <option value="5">5%</option>
+                    <option value="8">8%</option>
+                    <option value="10">10%</option>
+                    <option value="12">12%</option>
+                    <option value="15">15%</option>
+                    <option value="18">18%</option>
+                    <option value="20">20%</option>
+                    <option value="otro">Otro %</option>
+                  </select>
+                </div>
+                <div class="field" style="margin:0;" id="pag-pct-manual-wrap" class="hidden">
+                  <label class="fl">% Manual</label>
+                  <input id="pag-pct-manual" type="number" min="0" max="100" step="0.5" placeholder="Ej: 7.5" oninput="calcComision()">
+                </div>
+                <div style="background:var(--sur);border-radius:6px;padding:10px 14px;border:2px solid var(--acc);">
+                  <div style="font-size:10px;color:var(--tx2);">Comisión CONEXA</div>
+                  <div id="pag-comision-val" style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--acc);">$0</div>
+                </div>
+                <div style="background:var(--sur);border-radius:6px;padding:10px 14px;border:1px solid var(--green);">
+                  <div style="font-size:10px;color:var(--tx2);">Neto IPS</div>
+                  <div id="pag-neto-val" style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green);">$0</div>
+                </div>
+              </div>
+            </div>
+            <div class="field" style="grid-column:1/-1;">
+              <label class="fl">Observaciones</label>
+              <input id="pag-obs" maxlength="150" placeholder="Glosas aplicadas, observaciones ADRES, etc.">
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;">
+            <button class="btn bp" onclick="registrarPago()">💾 Registrar Pago</button>
+            <button class="btn bs" onclick="limpiarFormPago()">✕ Limpiar</button>
+          </div>
+          <div id="pag-alr" class="hidden" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- TAB: Historial -->
+        <div id="ptab-his-body" class="hidden">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+            <input id="pag-buscar" placeholder="🔍 Buscar por factura, IPS o referencia..." oninput="renderHistorial()" style="flex:1;min-width:200px;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+            <button class="btn bs" onclick="expPagosExcel()" style="font-size:12px;">📊 Exportar Excel</button>
+          </div>
+          <div id="pag-lista"></div>
+        </div>
+
+        <!-- TAB: Por IPS -->
+        <div id="ptab-ips-body" class="hidden">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="pag-ips-cards"></div>
+        </div>
+
+        <!-- TAB: Comisiones CONEXA -->
+        <div id="ptab-com-body" class="hidden">
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:20px;max-width:700px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--brd);">
+              <div>
+                <div style="font-size:16px;font-weight:700;">LIQUIDACIÓN DE COMISIONES</div>
+                <div style="font-size:11px;color:var(--tx2);">CONEXA · Integración de procesos empresariales</div>
+              </div>
+              <button class="btn bs" onclick="window.print()" style="font-size:11px;">🖨 Imprimir</button>
+            </div>
+            <div class="stats" id="com-kpis" style="margin-bottom:16px;"></div>
+            <div id="com-tabla"></div>
           </div>
         </div>
       </div>
@@ -953,6 +1084,325 @@ window.expXLSel=()=>{
   toast(`✔ Excel generado para ${ids.length} reclamaciones.`,'ok');
 };
 
+// ── PAGOS Y COMISIONES ──
+let PAGOS_CACHE = [];
+
+const fmt$ = v => '$' + (parseInt(v)||0).toLocaleString('es-CO');
+const fmtD2 = s => { if(!s) return '—'; const p=s.split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s; };
+
+window.switchPagTab = (tab) => {
+  ['reg','his','ips','com'].forEach(t => {
+    const btn=g('ptab-'+t), body=g('ptab-'+t+'-body'); if(!btn||!body) return;
+    const act = t===tab;
+    btn.style.color = act ? 'var(--acc)' : 'var(--tx3)';
+    btn.style.borderBottomColor = act ? 'var(--acc)' : 'transparent';
+    btn.style.fontWeight = act ? '700' : '400';
+    body.classList.toggle('hidden', !act);
+  });
+  if(tab==='his') renderHistorial();
+  if(tab==='ips') renderPorIPS();
+  if(tab==='com') renderComisiones();
+};
+
+function loadPagos(){
+  // Llenar selector de reclamaciones radicadas
+  const sel = g('pag-rec-sel'); if(!sel) return;
+  const radicadas = RECS.filter(r => r.radicado?.numero);
+  sel.innerHTML = '<option value="">Seleccione una reclamación radicada...</option>'
+    + radicadas.map(r => {
+        const vRec = parseInt(r.furips1?.c97||0)||0;
+        return `<option value="${r.id}">${r.factura} · ${r.consec} · IPS:${r.codHab} · Rec:${fmt$(vRec)}</option>`;
+      }).join('');
+  // Precargar % comisión guardado por IPS
+  calcComision();
+  cargarPagos();
+  updPagKpis();
+}
+
+async function cargarPagos(){
+  try {
+    const snap = await getDocs(collection(db,'pagos'));
+    PAGOS_CACHE = snap.docs.map(d=>({id:d.id,...d.data()}));
+    updPagKpis();
+    renderHistorial();
+  } catch(e){ console.error('Error cargando pagos:',e); }
+}
+
+function updPagKpis(){
+  const tot     = PAGOS_CACHE.length;
+  const totPag  = PAGOS_CACHE.reduce((a,p)=>a+(parseInt(p.vrPagado)||0),0);
+  const totCom  = PAGOS_CACHE.reduce((a,p)=>a+(parseInt(p.comision)||0),0);
+  const totNeto = PAGOS_CACHE.reduce((a,p)=>a+(parseInt(p.netoIPS)||0),0);
+  const totGlo  = PAGOS_CACHE.reduce((a,p)=>a+(parseInt(p.vrGlosado)||0),0);
+  const kp = g('pag-kpis'); if(!kp) return;
+  kp.innerHTML = `
+    <div class="stat"><div class="sv">${tot}</div><div class="sl">Pagos Registrados</div></div>
+    <div class="stat"><div class="sv" style="font-size:15px;color:var(--acc)">${fmt$(totPag)}</div><div class="sl">Total Pagado ADRES</div></div>
+    <div class="stat"><div class="sv" style="font-size:15px;color:var(--green)">${fmt$(totCom)}</div><div class="sl">Comisiones CONEXA</div></div>
+    <div class="stat"><div class="sv" style="font-size:15px;">${fmt$(totNeto)}</div><div class="sl">Neto IPS</div></div>
+    <div class="stat"><div class="sv" style="font-size:15px;color:var(--red)">${fmt$(totGlo)}</div><div class="sl">Total Glosado</div></div>`;
+}
+
+window.onSelRecPago = (id) => {
+  const rec = RECS.find(r=>r.id===id);
+  const info = g('pag-rec-info'); if(!info) return;
+  if(!rec){ info.style.display='none'; return; }
+  const vRec = parseInt(rec.furips1?.c97||0)||0;
+  const vFac = parseInt(rec.furips1?.c96||0)||0;
+  info.style.display='block';
+  info.innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <span>📋 <strong>${rec.factura}</strong> · Consec. ${rec.consec}</span>
+      <span>🏥 IPS: <strong>${rec.codHab}</strong></span>
+      <span>📬 Radicado: <strong>${rec.radicado?.numero||'—'}</strong> · Lote: ${rec.radicado?.lote||'—'}</span>
+      <span>💵 Facturado: <strong>${fmt$(vFac)}</strong></span>
+      <span>💵 Reclamado: <strong style="color:var(--acc)">${fmt$(vRec)}</strong></span>
+    </div>`;
+  // Auto-llenar valor reclamado
+  const vr = g('pag-vr-rec'); if(vr) { vr.value=vRec; calcComision(); }
+  // Cargar % comisión guardado para esta IPS
+  const pagPrev = PAGOS_CACHE.find(p=>p.codHab===rec.codHab);
+  if(pagPrev?.pct){ const s=g('pag-pct'); if(s) s.value=pagPrev.pct; calcComision(); }
+};
+
+window.calcComision = () => {
+  const pctSel = gv('pag-pct');
+  const wrap = g('pag-pct-manual-wrap');
+  if(wrap) wrap.style.display = pctSel==='otro' ? 'block' : 'none';
+  const pct = pctSel==='otro' ? parseFloat(gv('pag-pct-manual'))||0 : parseFloat(pctSel)||0;
+  const vPag = parseInt(g('pag-vr-pag')?.value)||0;
+  const vRec = parseInt(g('pag-vr-rec')?.value)||0;
+  const vGlo = Math.max(0, vRec - vPag);
+  if(g('pag-vr-glo')) g('pag-vr-glo').value = vGlo;
+  const comision = Math.round(vPag * pct / 100);
+  const neto = vPag - comision;
+  const cv = g('pag-comision-val'); if(cv) cv.textContent = fmt$(comision);
+  const nv = g('pag-neto-val');     if(nv) nv.textContent = fmt$(neto);
+};
+
+window.registrarPago = async () => {
+  const recId  = gv('pag-rec-sel');
+  const tipo   = gv('pag-tipo');
+  const fecha  = gv('pag-fecha');
+  const vRec   = parseInt(g('pag-vr-rec')?.value)||0;
+  const vPag   = parseInt(g('pag-vr-pag')?.value)||0;
+  const ref    = gv('pag-ref');
+  const obs    = gv('pag-obs');
+  const pctSel = gv('pag-pct');
+  const pct    = pctSel==='otro' ? parseFloat(gv('pag-pct-manual'))||0 : parseFloat(pctSel)||0;
+
+  if(!recId||!tipo||!fecha||!vPag||!pct){
+    toast('Complete todos los campos obligatorios (*).','w'); return;
+  }
+
+  const rec = RECS.find(r=>r.id===recId);
+  if(!rec){ toast('Reclamación no encontrada.','e'); return; }
+
+  const vGlo    = Math.max(0, vRec-vPag);
+  const comision = Math.round(vPag * pct / 100);
+  const netoIPS  = vPag - comision;
+
+  loader(true);
+  try {
+    // Guardar pago en Firebase
+    await addDoc(collection(db,'pagos'),{
+      recId, factura:rec.factura, consec:rec.consec, codHab:rec.codHab,
+      tipo, fecha, vrReclamado:vRec, vrPagado:vPag, vrGlosado:vGlo,
+      pct, comision, netoIPS, ref, obs,
+      registradoPor:USER.uid, registradoEn:serverTimestamp(),
+    });
+    // Actualizar estado de la reclamación
+    await updateDoc(doc(db,'reclamaciones',recId),{
+      'radicado.estado': tipo==='total'?'pagada':'devuelta_parcial',
+      'radicado.vrPagado': vPag,
+      'radicado.vrGlosado': vGlo,
+      actualizado: serverTimestamp(),
+    });
+    loader(false);
+    toast(`✔ Pago de ${fmt$(vPag)} registrado. Comisión CONEXA: ${fmt$(comision)}.`,'ok');
+    limpiarFormPago();
+    await cargarPagos();
+  } catch(e){ loader(false); toast('Error: '+e.message,'e'); }
+};
+
+window.limpiarFormPago = () => {
+  ['pag-rec-sel','pag-tipo','pag-fecha','pag-vr-rec','pag-vr-pag','pag-vr-glo','pag-ref','pag-obs','pag-pct','pag-pct-manual'].forEach(id=>{ const e=g(id); if(e) e.value=''; });
+  ['pag-comision-val','pag-neto-val'].forEach(id=>{ const e=g(id); if(e) e.textContent='$0'; });
+  const info=g('pag-rec-info'); if(info) info.style.display='none';
+};
+
+function renderHistorial(){
+  const busq = gv('pag-buscar').toLowerCase();
+  let pags = [...PAGOS_CACHE];
+  if(busq) pags = pags.filter(p =>
+    (p.factura||'').toLowerCase().includes(busq)||
+    (p.codHab||'').toLowerCase().includes(busq)||
+    (p.ref||'').toLowerCase().includes(busq)
+  );
+  const lista = g('pag-lista'); if(!lista) return;
+  if(!pags.length){ lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay pagos registrados.</div>'; return; }
+
+  lista.innerHTML=`<div style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead style="background:var(--sur2);">
+      <tr>
+        ${['Factura','IPS','Tipo','Fecha','Reclamado','Pagado','Glosado','% Com.','Comisión CONEXA','Neto IPS','Referencia','Acciones'].map(h=>`<th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);white-space:nowrap;">${h}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+    ${pags.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(p=>`
+      <tr style="border-bottom:1px solid var(--brd);">
+        <td style="padding:7px 10px;font-weight:600;">${p.factura||'—'}</td>
+        <td style="padding:7px 10px;font-family:var(--mono);font-size:10px;">${p.codHab||'—'}</td>
+        <td style="padding:7px 10px;">
+          <span style="background:${p.tipo==='total'?'rgba(0,178,226,.15)':'rgba(157,180,85,.15)'};color:${p.tipo==='total'?'var(--acc)':'var(--green)'};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;">
+            ${p.tipo==='total'?'💯 Total':'⚡ Parcial'}
+          </span>
+        </td>
+        <td style="padding:7px 10px;">${fmtD2(p.fecha)}</td>
+        <td style="padding:7px 10px;font-family:var(--mono);">${fmt$(p.vrReclamado)}</td>
+        <td style="padding:7px 10px;font-family:var(--mono);color:var(--acc);font-weight:600;">${fmt$(p.vrPagado)}</td>
+        <td style="padding:7px 10px;font-family:var(--mono);color:var(--red);">${fmt$(p.vrGlosado)}</td>
+        <td style="padding:7px 10px;font-family:var(--mono);">${p.pct||0}%</td>
+        <td style="padding:7px 10px;font-family:var(--mono);color:var(--acc);font-weight:700;">${fmt$(p.comision)}</td>
+        <td style="padding:7px 10px;font-family:var(--mono);color:var(--green);font-weight:600;">${fmt$(p.netoIPS)}</td>
+        <td style="padding:7px 10px;font-size:11px;color:var(--tx3);">${p.ref||'—'}</td>
+        <td style="padding:7px 10px;">
+          <button class="btn btn-sm bd" onclick="eliminarPago('${p.id}')" title="Eliminar">✕</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+    <tfoot style="background:var(--sur2);font-weight:700;">
+      <tr>
+        <td colspan="4" style="padding:8px 10px;font-family:var(--mono);font-size:11px;">TOTALES (${pags.length} pagos)</td>
+        <td style="padding:8px 10px;font-family:var(--mono);">${fmt$(pags.reduce((a,p)=>a+(parseInt(p.vrReclamado)||0),0))}</td>
+        <td style="padding:8px 10px;font-family:var(--mono);color:var(--acc);">${fmt$(pags.reduce((a,p)=>a+(parseInt(p.vrPagado)||0),0))}</td>
+        <td style="padding:8px 10px;font-family:var(--mono);color:var(--red);">${fmt$(pags.reduce((a,p)=>a+(parseInt(p.vrGlosado)||0),0))}</td>
+        <td></td>
+        <td style="padding:8px 10px;font-family:var(--mono);color:var(--acc);">${fmt$(pags.reduce((a,p)=>a+(parseInt(p.comision)||0),0))}</td>
+        <td style="padding:8px 10px;font-family:var(--mono);color:var(--green);">${fmt$(pags.reduce((a,p)=>a+(parseInt(p.netoIPS)||0),0))}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+  </table></div>`;
+}
+
+function renderPorIPS(){
+  const IPS_NOM={'760011259501':'OCCIDENTAL DE SALUD SAS','157590080301':'CLÍNICA EL LAGUITO S.A'};
+  const cards = g('pag-ips-cards'); if(!cards) return;
+  const ipsIds = [...new Set(PAGOS_CACHE.map(p=>p.codHab))];
+  if(!ipsIds.length){ cards.innerHTML='<div style="color:var(--tx3);padding:32px;">No hay pagos registrados.</div>'; return; }
+
+  cards.innerHTML = ipsIds.map(cod=>{
+    const pags = PAGOS_CACHE.filter(p=>p.codHab===cod);
+    const totPag  = pags.reduce((a,p)=>a+(parseInt(p.vrPagado)||0),0);
+    const totCom  = pags.reduce((a,p)=>a+(parseInt(p.comision)||0),0);
+    const totNeto = pags.reduce((a,p)=>a+(parseInt(p.netoIPS)||0),0);
+    const totGlo  = pags.reduce((a,p)=>a+(parseInt(p.vrGlosado)||0),0);
+    const totParcial = pags.filter(p=>p.tipo==='parcial').length;
+    const totTotal   = pags.filter(p=>p.tipo==='total').length;
+    return `
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:20px;">
+      <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc);margin-bottom:4px;">${cod}</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--tx);">${IPS_NOM[cod]||cod}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="background:var(--sur2);border-radius:6px;padding:10px;text-align:center;">
+          <div style="font-size:11px;color:var(--tx2);">Total pagos</div>
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;">${pags.length}</div>
+          <div style="font-size:10px;color:var(--tx3);">${totTotal} totales · ${totParcial} parciales</div>
+        </div>
+        <div style="background:rgba(0,178,226,.06);border-radius:6px;padding:10px;text-align:center;border:1px solid rgba(0,178,226,.2);">
+          <div style="font-size:11px;color:var(--tx2);">Pagado ADRES</div>
+          <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--acc);">${fmt$(totPag)}</div>
+        </div>
+        <div style="background:rgba(157,180,85,.06);border-radius:6px;padding:10px;text-align:center;border:1px solid rgba(157,180,85,.2);">
+          <div style="font-size:11px;color:var(--tx2);">Neto IPS</div>
+          <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green);">${fmt$(totNeto)}</div>
+        </div>
+        <div style="background:rgba(211,47,47,.06);border-radius:6px;padding:10px;text-align:center;border:1px solid rgba(211,47,47,.2);">
+          <div style="font-size:11px;color:var(--tx2);">Glosado</div>
+          <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--red);">${fmt$(totGlo)}</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--brd);padding-top:12px;">
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:4px;">Comisión CONEXA acumulada</div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--acc);">${fmt$(totCom)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderComisiones(){
+  const IPS_NOM={'760011259501':'OCCIDENTAL DE SALUD SAS','157590080301':'CLÍNICA EL LAGUITO S.A'};
+  const totCom  = PAGOS_CACHE.reduce((a,p)=>a+(parseInt(p.comision)||0),0);
+  const totPag  = PAGOS_CACHE.reduce((a,p)=>a+(parseInt(p.vrPagado)||0),0);
+  const totNeto = PAGOS_CACHE.reduce((a,p)=>a+(parseInt(p.netoIPS)||0),0);
+
+  const kp=g('com-kpis');
+  if(kp) kp.innerHTML=`
+    <div class="stat"><div class="sv" style="color:var(--acc);font-size:15px;">${fmt$(totCom)}</div><div class="sl">Total Comisiones CONEXA</div></div>
+    <div class="stat"><div class="sv" style="font-size:15px;">${fmt$(totPag)}</div><div class="sl">Total Recaudado ADRES</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green);font-size:15px;">${fmt$(totNeto)}</div><div class="sl">Total Neto IPS</div></div>`;
+
+  const tb=g('com-tabla'); if(!tb) return;
+  const fh=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+
+  tb.innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--sur2);">
+        ${['Fecha','Factura','IPS','Tipo','Pagado ADRES','% Com.','Comisión CONEXA','Neto IPS'].map(h=>`<th style="padding:8px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">${h}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+      ${PAGOS_CACHE.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(p=>`
+        <tr style="border-bottom:1px solid var(--brd);">
+          <td style="padding:7px 8px;">${fmtD2(p.fecha)}</td>
+          <td style="padding:7px 8px;font-weight:600;">${p.factura}</td>
+          <td style="padding:7px 8px;font-size:10px;">${IPS_NOM[p.codHab]||p.codHab}</td>
+          <td style="padding:7px 8px;"><span style="font-size:10px;font-weight:600;color:${p.tipo==='total'?'var(--acc)':'var(--green)'};">${p.tipo==='total'?'Total':'Parcial'}</span></td>
+          <td style="padding:7px 8px;font-family:var(--mono);">${fmt$(p.vrPagado)}</td>
+          <td style="padding:7px 8px;font-family:var(--mono);">${p.pct}%</td>
+          <td style="padding:7px 8px;font-family:var(--mono);color:var(--acc);font-weight:700;">${fmt$(p.comision)}</td>
+          <td style="padding:7px 8px;font-family:var(--mono);color:var(--green);">${fmt$(p.netoIPS)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr style="background:var(--sur2);font-weight:700;">
+        <td colspan="4" style="padding:8px;font-family:var(--mono);">TOTALES</td>
+        <td style="padding:8px;font-family:var(--mono);">${fmt$(totPag)}</td>
+        <td></td>
+        <td style="padding:8px;font-family:var(--mono);color:var(--acc);">${fmt$(totCom)}</td>
+        <td style="padding:8px;font-family:var(--mono);color:var(--green);">${fmt$(totNeto)}</td>
+      </tr></tfoot>
+    </table>
+    <div style="margin-top:16px;font-size:10px;color:var(--tx3);text-align:center;border-top:1px solid var(--brd);padding-top:10px;">
+      Liquidación generada el ${fh} · CONEXA · Integración de procesos empresariales
+    </div>`;
+}
+
+window.eliminarPago = async (id) => {
+  confirm2('Eliminar pago','¿Seguro que deseas eliminar este registro de pago?', async()=>{
+    try{ await deleteDoc(doc(db,'pagos',id)); await cargarPagos(); toast('Pago eliminado.','ok'); }
+    catch(e){ toast('Error: '+e.message,'e'); }
+  });
+};
+
+window.expPagosExcel = () => {
+  if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); return; }
+  const IPS_NOM={'760011259501':'OCCIDENTAL DE SALUD SAS','157590080301':'CLÍNICA EL LAGUITO S.A'};
+  const h=['Fecha','Factura','Consecutivo','IPS','Nombre IPS','Tipo Pago','Reclamado','Pagado ADRES','Glosado','% Comisión','Comisión CONEXA','Neto IPS','Referencia','Observaciones'];
+  const rows=PAGOS_CACHE.map(p=>[
+    fmtD2(p.fecha),p.factura,p.consec,p.codHab,IPS_NOM[p.codHab]||p.codHab,
+    p.tipo==='total'?'Total':'Parcial',
+    parseInt(p.vrReclamado)||0,parseInt(p.vrPagado)||0,parseInt(p.vrGlosado)||0,
+    p.pct+'%',parseInt(p.comision)||0,parseInt(p.netoIPS)||0,p.ref||'',p.obs||'',
+  ]);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([h,...rows]);
+  ws['!cols']=[{wch:12},{wch:14},{wch:10},{wch:16},{wch:30},{wch:10},{wch:14},{wch:14},{wch:12},{wch:8},{wch:16},{wch:14},{wch:18},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'Pagos');
+  XLSX.writeFile(wb,`Pagos_CONEXA_${new Date().toISOString().split('T')[0].replace(/-/g,'')}.xlsx`);
+  toast('✔ Excel de pagos descargado.','ok');
+};
+
 // ── INFORMES ──
 const IPS_NOMBRES={
   '760011259501':'OCCIDENTAL DE SALUD SAS',
@@ -1278,6 +1728,7 @@ window.go=(id)=>{
   if(id==='xl')    loadXL();
   if(id==='adm')   cargarUsers();
   if(id==='inf')   { verInforme('interno'); }
+  if(id==='pagos') { loadPagos(); }
 };
 
 // ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
