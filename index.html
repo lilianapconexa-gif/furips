@@ -1581,41 +1581,81 @@ window.procesarGlosasExcel = (file) => {
     try{
       const wb=XLSX.read(e.target.result,{type:'binary'});
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      if(!rows.length){ toast('El archivo está vacío.','w'); return; }
 
-      // Detectar si es el reporte largo ADRES (tiene encabezado en fila 6) o el simple
-      // Normalizar columnas
-      GLOSAS_PREVIEW = rows
-        .filter(r=>{
-          const fac=r['Número Factura']||r['FACTURA']||'';
-          // Aceptar cualquier factura que tenga contenido (no solo FE)
-          return String(fac).trim().length > 0;
-        })
-        .map((r,i)=>({
-          idx: i,
-          factura:     String(r['Número Factura']||r['FACTURA']||'').trim(),
-          radicado:    String(r['Número Radicación']||r['RADICADO']||'').trim(),
-          docVictima:  String(r['Tip- Num Doc Victima']||r['DOCUMENTO']||'').trim(),
-          codElemento: String(r['Cod Elemento']||r['CÓDIGO']||'').trim(),
-          descElemento:String(r['Descripción Elemento']||r['DESCRIPCIÓN DEL ÍTEM']||'').trim(),
-          descGlosa:   String(r['Descripción Anotación']||r['DESCRIPCIÓN GLOSA']||'').trim(),
-          vrGlosado:   parseInt(String(r['Valor Glosado']||'0').replace(/[^\d]/g,''))||0,
-          codHab:      gv('glo-ips-sel'),
+      // Leer como array de arrays para detectar donde están los headers
+      const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // Buscar fila de encabezados (puede estar en fila 1 o fila 6 según formato ADRES)
+      let headerRow=-1;
+      for(let i=0;i<Math.min(aoa.length,10);i++){
+        const row=aoa[i].map(c=>String(c||'').trim());
+        if(row.some(c=>c==='Número Factura'||c==='FACTURA'||c.includes('Num Factura'))){
+          headerRow=i; break;
+        }
+      }
+      if(headerRow===-1){ toast('No se encontró la fila de encabezados. Verifica que el archivo sea el ReporteGlosasReclamPJ de ADRES.','w'); return; }
+
+      const headers=aoa[headerRow].map(c=>String(c||'').trim());
+
+      // Mapear índices de columnas por nombre
+      const fi=(terms)=>headers.findIndex(h=>terms.some(t=>h.includes(t)));
+      const idx={
+        codHab:   fi(['Código Habilitación','Habilitacion']),
+        radicado: fi(['Radicaci','Radicacion']),
+        factura:  fi(['Factura','FACTURA']),
+        docVic:   fi(['Victima','Víctima','Doc Vic']),
+        vrGlosado:fi(['Glosado']),
+        codElem:  fi(['Cod Elemento','CÓDIGO','Codigo Elemento']),
+        descElem: fi(['Descripción Elemento','Descripcion Elemento','DESCRIPCIÓN DEL']),
+        tipoElem: fi(['Tipo Elemento']),
+        descGlosa:fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA']),
+        anotacion:fi(['Anotación','Anotacion']),
+      };
+
+      GLOSAS_PREVIEW=[];
+      aoa.slice(headerRow+1).forEach((row,i)=>{
+        const fac=String(row[idx.factura]||'').trim();
+        if(!fac) return;
+
+        // Preferir Descripción Anotación sobre Descripción Glosa (ambas existen en formato ADRES)
+        let descGlosa='';
+        if(idx.anotacion>=0) descGlosa=String(row[idx.anotacion]||'').trim();
+        if(!descGlosa && idx.descGlosa>=0) descGlosa=String(row[idx.descGlosa]||'').trim();
+        
+        const vrG=parseFloat(String(row[idx.vrGlosado>=0?idx.vrGlosado:0]||'0').replace(/[^\d.]/g,''))||0;
+        if(!descGlosa && !vrG) return; // saltar filas sin glosa
+
+        GLOSAS_PREVIEW.push({
+          idx:i,
+          factura:     fac,
+          radicado:    String(row[idx.radicado>=0?idx.radicado:0]||'').trim(),
+          docVictima:  String(row[idx.docVic>=0?idx.docVic:0]||'').trim(),
+          codElemento: String(row[idx.codElem>=0?idx.codElem:0]||'').trim(),
+          descElemento:String(row[idx.descElem>=0?idx.descElem:0]||'').trim(),
+          tipoElemento:String(row[idx.tipoElem>=0?idx.tipoElem:0]||'').trim(),
+          descGlosa:   descGlosa,
+          vrGlosado:   Math.round(vrG),
+          codHab:      idx.codHab>=0?String(row[idx.codHab]||'').trim():gv('glo-ips-sel'),
           periodo:     gv('glo-periodo'),
           respuesta:   'pendiente',
           textoResp:   '',
           vrAceptado:  0,
           vrNoAceptado:0,
           creadoPor:   USER.uid,
-        }));
+        });
+      });
 
-      if(!GLOSAS_PREVIEW.length){ toast('No se encontraron filas con datos de factura en el archivo.','w'); return; }
+      if(!GLOSAS_PREVIEW.length){ toast('No se encontraron glosas en el archivo.','w'); return; }
 
-      _s('glo-preview-info',`✔ ${GLOSAS_PREVIEW.length} glosas encontradas · Total glosado: ${fmt$(GLOSAS_PREVIEW.reduce((a,r)=>a+r.vrGlosado,0))}`);
+      // Auto-seleccionar IPS si viene en el archivo
+      if(GLOSAS_PREVIEW[0]?.codHab){
+        const sel=g('glo-ips-sel');
+        if(sel){const opt=[...sel.options].find(o=>o.value===GLOSAS_PREVIEW[0].codHab);if(opt)sel.value=opt.value;}
+      }
+
+      _s('glo-preview-info',`✔ ${GLOSAS_PREVIEW.length} glosas encontradas · Total: ${fmt$(GLOSAS_PREVIEW.reduce((a,r)=>a+r.vrGlosado,0))}`);
       g('glo-preview').classList.remove('hidden');
 
-      // Renderizar preview
       const tb=g('glo-tbody'); if(!tb) return;
       tb.innerHTML=GLOSAS_PREVIEW.map(r=>`
         <tr style="border-bottom:1px solid var(--brd);">
@@ -1627,7 +1667,7 @@ window.procesarGlosasExcel = (file) => {
           <td style="padding:5px 10px;text-align:right;font-family:var(--mono);color:var(--red);font-weight:600;">${fmt$(r.vrGlosado)}</td>
         </tr>`).join('');
 
-    } catch(err){ toast('Error leyendo el archivo: '+err.message,'e'); }
+    } catch(err){ toast('Error: '+err.message,'e'); console.error(err); }
   };
   reader.readAsBinaryString(file);
 };
