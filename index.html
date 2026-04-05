@@ -227,6 +227,7 @@ select option{background:var(--sur2);}
       <div class="ni" id="n-lista"  onclick="go('lista')"> <span class="ndot"></span>Reclamaciones</div>
       <div class="ni" id="n-inf"    onclick="go('inf')">   <span class="ndot"></span>Informes</div>
       <div class="ni" id="n-pagos"  onclick="go('pagos')"> <span class="ndot"></span>💰 Pagos y Comisiones</div>
+      <div class="ni" id="n-glosas" onclick="go('glosas')"><span class="ndot"></span>⚡ Gestión de Glosas</div>
       <div class="ng">Formularios</div>
       <div class="ni" id="n-f1"     onclick="abrirF1()">   <span class="ndot"></span>FURIPS 1 — Detalle</div>
       <div class="ni" id="n-f2"     onclick="abrirF2()">   <span class="ndot"></span>FURIPS 2 — Factura</div>
@@ -664,6 +665,106 @@ select option{background:var(--sur2);}
             <div class="stats" id="com-kpis" style="margin-bottom:16px;"></div>
             <div id="com-tabla"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- GLOSAS -->
+      <div class="page hidden" id="p-glosas">
+        <div class="ptitle">⚡ Gestión de Glosas ADRES</div>
+        <div class="psub">Carga el archivo de glosas · Registra respuestas · Genera Excel de respuesta</div>
+
+        <!-- KPIs -->
+        <div class="stats" id="glo-kpis" style="margin-bottom:16px;"></div>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--brd);margin-bottom:16px;">
+          <div id="gtab-carga"  onclick="switchGloTab('carga')"  style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:700;color:var(--acc);border-bottom:2px solid var(--acc);margin-bottom:-2px;font-family:var(--mono);">📥 Cargar Glosas ADRES</div>
+          <div id="gtab-resp"   onclick="switchGloTab('resp')"   style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">✍️ Responder Glosas</div>
+          <div id="gtab-exp"    onclick="switchGloTab('exp')"    style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">📤 Exportar Respuesta</div>
+        </div>
+
+        <!-- TAB: Cargar -->
+        <div id="gtab-carga-body">
+          <div class="alert ai" style="margin-bottom:14px;">
+            📊 Sube el archivo Excel de glosas que genera ADRES (ReporteGlosasReclamPJ). El sistema lo procesa automáticamente.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;max-width:600px;">
+            <div class="field">
+              <label class="fl">IPS Prestadora <span class="req">*</span></label>
+              <select id="glo-ips-sel">
+                <option value="">Seleccione IPS...</option>
+                <option value="760011259501">760011259501 — OCCIDENTAL DE SALUD SAS</option>
+                <option value="157590080301">157590080301 — CLÍNICA EL LAGUITO S.A</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="fl">Período / Lote</label>
+              <input id="glo-periodo" placeholder="Ej: Mayo 2024" maxlength="30">
+            </div>
+          </div>
+          <!-- Drop zone -->
+          <div id="glo-drop" onclick="document.getElementById('glo-file').click()"
+            style="border:2px dashed var(--brd2);border-radius:8px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;max-width:500px;"
+            ondragover="event.preventDefault();this.style.borderColor='var(--acc)';this.style.background='rgba(0,178,226,.04)'"
+            ondragleave="this.style.borderColor='var(--brd2)';this.style.background=''"
+            ondrop="event.preventDefault();this.style.borderColor='var(--brd2)';this.style.background='';procesarGlosasExcel(event.dataTransfer.files[0])">
+            <div style="font-size:36px;margin-bottom:8px;">📊</div>
+            <div style="font-size:13px;font-weight:600;color:var(--tx);">Haz clic o arrastra el archivo Excel aquí</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:4px;">ReporteGlosasReclamPJ_*.xlsx — archivo de glosas ADRES</div>
+          </div>
+          <input type="file" id="glo-file" accept=".xlsx,.xls" style="display:none" onchange="procesarGlosasExcel(this.files[0])">
+
+          <!-- Preview tabla -->
+          <div id="glo-preview" class="hidden" style="margin-top:16px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+              <div id="glo-preview-info" style="font-size:12px;font-weight:600;color:var(--tx);"></div>
+              <button class="btn bp" onclick="guardarGlosas()">☁ Guardar en Firebase</button>
+              <button class="btn bs" onclick="limpiarGlosas()">✕ Cancelar</button>
+            </div>
+            <div style="overflow-x:auto;border:1px solid var(--brd);border-radius:6px;max-height:320px;overflow-y:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                <thead style="background:var(--sur2);position:sticky;top:0;">
+                  <tr>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">FACTURA</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">RADICADO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">DOCUMENTO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">CÓD. ELEMENTO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);min-width:200px;">DESCRIPCIÓN GLOSA</th>
+                    <th style="padding:6px 10px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">VR GLOSADO</th>
+                  </tr>
+                </thead>
+                <tbody id="glo-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Responder -->
+        <div id="gtab-resp-body" class="hidden">
+          <!-- Filtros -->
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+            <input id="glo-buscar" placeholder="🔍 Buscar por factura, radicado o documento..." oninput="renderGlosasResp()" style="flex:1;min-width:200px;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+            <select id="glo-filtro-est" onchange="renderGlosasResp()" style="padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+              <option value="">Todas</option>
+              <option value="pendiente">⏳ Pendientes</option>
+              <option value="aceptada">✔ Aceptadas</option>
+              <option value="no_aceptada">✕ No Aceptadas</option>
+              <option value="parcial">⚡ Parciales</option>
+            </select>
+          </div>
+          <div id="glo-resp-lista"></div>
+        </div>
+
+        <!-- TAB: Exportar -->
+        <div id="gtab-exp-body" class="hidden">
+          <div class="alert ai" style="margin-bottom:14px;">
+            📤 Genera el archivo Excel de Respuesta a Glosas en el formato requerido por ADRES — una hoja por factura con el encabezado y tabla de respuestas.
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+            <button class="btn bp" onclick="exportarRespuestaGlosas()">📊 Descargar Excel Respuesta</button>
+            <button class="btn bs" onclick="verResumenGlosas()">📋 Ver Resumen</button>
+          </div>
+          <div id="glo-resumen"></div>
         </div>
       </div>
 
@@ -1403,6 +1504,382 @@ window.expPagosExcel = () => {
   toast('✔ Excel de pagos descargado.','ok');
 };
 
+// ── GESTIÓN DE GLOSAS ──
+let GLOSAS_PREVIEW = [];   // glosas cargadas del Excel pero no guardadas
+let GLOSAS_DB      = [];   // glosas guardadas en Firebase
+
+const IPS_NOM_GLO = {
+  '760011259501':'OCCIDENTAL DE SALUD SAS',
+  '157590080301':'CLÍNICA EL LAGUITO S.A',
+};
+
+const TIPOS_RESP = [
+  {v:'aceptada',    l:'✔ Se acepta la glosa',         c:'var(--red)'},
+  {v:'no_aceptada', l:'✕ No se acepta — se sustenta', c:'var(--green)'},
+  {v:'parcial',     l:'⚡ Aceptación parcial',          c:'var(--warn)'},
+];
+
+// Respuestas predefinidas comunes
+const RESP_RAPIDAS = [
+  'Se allegó el soporte requerido dentro del plazo establecido.',
+  'Se adjunta certificado de atención firmado por el profesional tratante.',
+  'El formulario FURIPS fue diligenciado correctamente conforme a la Circular 022/2023.',
+  'El servicio prestado se encuentra dentro del plan obligatorio de atención SOAT.',
+  'Se anexa historia clínica completa que soporta la atención brindada.',
+  'El valor reclamado corresponde al tarifario SOAT vigente para el período de prestación.',
+  'Se adjuntan soportes de la IPS remitente y copia de la orden de remisión.',
+  'El paciente presenta diagnóstico compatible con la atención facturada según historia clínica.',
+];
+
+window.switchGloTab = (tab) => {
+  ['carga','resp','exp'].forEach(t=>{
+    const btn=g('gtab-'+t), body=g('gtab-'+t+'-body'); if(!btn||!body) return;
+    const act=t===tab;
+    btn.style.color=act?'var(--acc)':'var(--tx3)';
+    btn.style.borderBottomColor=act?'var(--acc)':'transparent';
+    btn.style.fontWeight=act?'700':'600';
+    body.classList.toggle('hidden',!act);
+  });
+  if(tab==='resp') renderGlosasResp();
+  if(tab==='exp')  verResumenGlosas();
+};
+
+async function loadGlosas(){
+  try {
+    const snap = await getDocs(collection(db,'glosas'));
+    GLOSAS_DB = snap.docs.map(d=>({id:d.id,...d.data()}));
+    updGloKpis();
+    renderGlosasResp();
+  } catch(e){ console.error('Error cargando glosas:',e); }
+}
+
+function updGloKpis(){
+  const tot     = GLOSAS_DB.length;
+  const pend    = GLOSAS_DB.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+  const acept   = GLOSAS_DB.filter(g=>g.respuesta==='aceptada').length;
+  const noAcept = GLOSAS_DB.filter(g=>g.respuesta==='no_aceptada').length;
+  const parcial = GLOSAS_DB.filter(g=>g.respuesta==='parcial').length;
+  const totGlo  = GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+  const totNoAc = GLOSAS_DB.filter(g=>g.respuesta==='no_aceptada'||g.respuesta==='parcial').reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||g.vrGlosado||0),0);
+
+  const kp=g('glo-kpis'); if(!kp) return;
+  kp.innerHTML=`
+    <div class="stat"><div class="sv">${tot}</div><div class="sl">Total Glosas</div></div>
+    <div class="stat"><div class="sv" style="color:var(--warn)">${pend}</div><div class="sl">Pendientes</div></div>
+    <div class="stat"><div class="sv" style="color:var(--red)">${acept}</div><div class="sl">Aceptadas</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green)">${noAcept}</div><div class="sl">No Aceptadas</div></div>
+    <div class="stat"><div class="sv" style="color:var(--warn)">${parcial}</div><div class="sl">Parciales</div></div>
+    <div class="stat"><div class="sv" style="font-size:14px;color:var(--red)">${fmt$(totGlo)}</div><div class="sl">Total Glosado</div></div>
+    <div class="stat"><div class="sv" style="font-size:14px;color:var(--green)">${fmt$(totNoAc)}</div><div class="sl">Recuperado</div></div>`;
+}
+
+window.procesarGlosasExcel = (file) => {
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(()=>procesarGlosasExcel(file),1500); return; }
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){ toast('El archivo está vacío.','w'); return; }
+
+      // Detectar si es el reporte largo ADRES (tiene encabezado en fila 6) o el simple
+      // Normalizar columnas
+      GLOSAS_PREVIEW = rows
+        .filter(r=>{
+          const fac=r['Número Factura']||r['FACTURA']||'';
+          return fac && String(fac).startsWith('FE');
+        })
+        .map((r,i)=>({
+          idx: i,
+          factura:     String(r['Número Factura']||r['FACTURA']||'').trim(),
+          radicado:    String(r['Número Radicación']||r['RADICADO']||'').trim(),
+          docVictima:  String(r['Tip- Num Doc Victima']||r['DOCUMENTO']||'').trim(),
+          codElemento: String(r['Cod Elemento']||r['CÓDIGO']||'').trim(),
+          descElemento:String(r['Descripción Elemento']||r['DESCRIPCIÓN DEL ÍTEM']||'').trim(),
+          descGlosa:   String(r['Descripción Anotación']||r['DESCRIPCIÓN GLOSA']||'').trim(),
+          vrGlosado:   parseInt(String(r['Valor Glosado']||'0').replace(/[^\d]/g,''))||0,
+          codHab:      gv('glo-ips-sel'),
+          periodo:     gv('glo-periodo'),
+          respuesta:   'pendiente',
+          textoResp:   '',
+          vrAceptado:  0,
+          vrNoAceptado:0,
+          creadoPor:   USER.uid,
+        }));
+
+      if(!GLOSAS_PREVIEW.length){ toast('No se encontraron filas válidas (deben empezar con FE).','w'); return; }
+
+      _s('glo-preview-info',`✔ ${GLOSAS_PREVIEW.length} glosas encontradas · Total glosado: ${fmt$(GLOSAS_PREVIEW.reduce((a,r)=>a+r.vrGlosado,0))}`);
+      g('glo-preview').classList.remove('hidden');
+
+      // Renderizar preview
+      const tb=g('glo-tbody'); if(!tb) return;
+      tb.innerHTML=GLOSAS_PREVIEW.map(r=>`
+        <tr style="border-bottom:1px solid var(--brd);">
+          <td style="padding:5px 10px;font-weight:600;font-family:var(--mono);">${r.factura}</td>
+          <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${r.radicado}</td>
+          <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${r.docVictima}</td>
+          <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${r.codElemento||'—'}</td>
+          <td style="padding:5px 10px;font-size:11px;max-width:300px;">${r.descGlosa}</td>
+          <td style="padding:5px 10px;text-align:right;font-family:var(--mono);color:var(--red);font-weight:600;">${fmt$(r.vrGlosado)}</td>
+        </tr>`).join('');
+
+    } catch(err){ toast('Error leyendo el archivo: '+err.message,'e'); }
+  };
+  reader.readAsBinaryString(file);
+};
+
+window.guardarGlosas = async () => {
+  if(!GLOSAS_PREVIEW.length){ toast('No hay glosas cargadas.','w'); return; }
+  if(!gv('glo-ips-sel')){ toast('Selecciona la IPS primero.','w'); return; }
+  loader(true);
+  let ok=0, err=0;
+  for(const g of GLOSAS_PREVIEW){
+    try{ await addDoc(collection(db,'glosas'),{...g, creado:serverTimestamp()}); ok++; }
+    catch(e){ err++; }
+  }
+  loader(false);
+  toast(`✔ ${ok} glosas guardadas${err>0?` · ${err} errores`:''}`, ok>0?'ok':'e');
+  GLOSAS_PREVIEW=[];
+  g('glo-preview').classList.add('hidden');
+  g('glo-file').value='';
+  await loadGlosas();
+  switchGloTab('resp');
+};
+
+window.limpiarGlosas = () => {
+  GLOSAS_PREVIEW=[];
+  g('glo-preview').classList.add('hidden');
+  g('glo-file').value='';
+};
+
+function renderGlosasResp(){
+  const busq  = gv('glo-buscar').toLowerCase();
+  const filtEst = gv('glo-filtro-est');
+  let glos = [...GLOSAS_DB];
+  if(busq) glos=glos.filter(g=>(g.factura||'').toLowerCase().includes(busq)||(g.radicado||'').toLowerCase().includes(busq)||(g.docVictima||'').toLowerCase().includes(busq));
+  if(filtEst) glos=glos.filter(g=>(g.respuesta||'pendiente')===filtEst);
+
+  const lista=g('glo-resp-lista'); if(!lista) return;
+  if(!glos.length){ lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay glosas con este filtro.</div>'; return; }
+
+  // Agrupar por factura
+  const porFactura={};
+  glos.forEach(gl=>{ const k=gl.factura+'|'+gl.radicado; if(!porFactura[k]) porFactura[k]=[]; porFactura[k].push(gl); });
+
+  lista.innerHTML=Object.entries(porFactura).map(([key,items])=>{
+    const [fac,rad]=key.split('|');
+    const totGlo=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+    const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+    return `
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;margin-bottom:12px;overflow:hidden;">
+      <!-- Cabecera de factura -->
+      <div style="background:var(--sur2);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-family:var(--mono);font-weight:700;font-size:13px;color:var(--acc);">${fac}</div>
+        <div style="font-size:11px;color:var(--tx2);">Radicado: <strong>${rad}</strong></div>
+        <div style="font-size:11px;color:var(--tx2);">Doc: <strong>${items[0]?.docVictima||'—'}</strong></div>
+        <div style="font-size:11px;color:var(--tx2);">IPS: ${IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—'}</div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">Glosado: ${fmt$(totGlo)}</span>
+          ${pend>0?`<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--mono);">${pend} pendientes</span>`:'<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--mono);">✔ Respondida</span>'}
+        </div>
+      </div>
+      <!-- Glosas de esta factura -->
+      ${items.map((gl,idx)=>{
+        const est=gl.respuesta||'pendiente';
+        const estCol=est==='aceptada'?'var(--red)':est==='no_aceptada'?'var(--green)':est==='parcial'?'var(--warn)':'var(--tx3)';
+        const estLbl=est==='aceptada'?'✔ Aceptada':est==='no_aceptada'?'✕ No Aceptada':est==='parcial'?'⚡ Parcial':'⏳ Pendiente';
+        return `
+        <div style="padding:12px 16px;border-top:1px solid var(--brd);">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+            ${gl.codElemento?`<span style="font-family:var(--mono);font-size:10px;background:var(--sur2);padding:2px 6px;border-radius:3px;">${gl.codElemento}</span>`:''}
+            ${gl.descElemento?`<span style="font-size:11px;color:var(--tx2);">${gl.descElemento}</span>`:''}
+            <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--red);">${fmt$(gl.vrGlosado)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--tx);margin-bottom:10px;padding:8px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+            <strong>Glosa ADRES:</strong> ${gl.descGlosa}
+          </div>
+          <!-- Respuesta -->
+          <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:start;">
+            <select onchange="updGlosaRespuesta('${gl.id}','tipo',this.value);calcGlosaValores('${gl.id}')" style="padding:5px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:${estCol};font-size:11px;font-weight:600;min-width:180px;">
+              <option value="pendiente" ${est==='pendiente'?'selected':''}>⏳ Sin responder</option>
+              <option value="no_aceptada" ${est==='no_aceptada'?'selected':''}>✕ No se acepta</option>
+              <option value="aceptada" ${est==='aceptada'?'selected':''}>✔ Se acepta</option>
+              <option value="parcial" ${est==='parcial'?'selected':''}>⚡ Parcial</option>
+            </select>
+            <div style="position:relative;">
+              <textarea id="txt-resp-${gl.id}" placeholder="Texto de respuesta a la glosa..." rows="2"
+                onchange="updGlosaRespuesta('${gl.id}','texto',this.value)"
+                style="width:100%;padding:6px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;resize:vertical;">${gl.textoResp||''}</textarea>
+              <!-- Respuestas rápidas -->
+              <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">
+                <span style="font-size:9px;color:var(--tx3);">Rápidas:</span>
+                ${RESP_RAPIDAS.slice(0,4).map((r,i)=>`<button onclick="insertarRespRapida('${gl.id}',${i})" style="font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx2);cursor:pointer;" title="${r}">R${i+1}</button>`).join('')}
+                <button onclick="mostrarRespRapidas('${gl.id}')" style="font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--acc);background:rgba(0,178,226,.08);color:var(--acc);cursor:pointer;">+ Ver todas</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;min-width:110px;">
+              <div style="font-size:9px;color:var(--tx3);">Vr Aceptado</div>
+              <input type="number" id="va-${gl.id}" value="${gl.vrAceptado||0}" min="0" onchange="updGlosaRespuesta('${gl.id}','vrAceptado',this.value)"
+                style="padding:5px 6px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--red);font-size:11px;width:110px;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;min-width:110px;">
+              <div style="font-size:9px;color:var(--tx3);">Vr No Aceptado</div>
+              <input type="number" id="vna-${gl.id}" value="${gl.vrNoAceptado||gl.vrGlosado||0}" min="0" onchange="updGlosaRespuesta('${gl.id}','vrNoAceptado',this.value)"
+                style="padding:5px 6px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--green);font-size:11px;width:110px;">
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+// Respuestas rápidas
+window.insertarRespRapida=(gloId, idx)=>{
+  const txt=g('txt-resp-'+gloId); if(!txt) return;
+  txt.value=RESP_RAPIDAS[idx];
+  updGlosaRespuesta(gloId,'texto',RESP_RAPIDAS[idx]);
+};
+window.mostrarRespRapidas=(gloId)=>{
+  const opciones=RESP_RAPIDAS.map((r,i)=>`${i+1}. ${r}`).join('\n');
+  const sel=prompt('Selecciona número de respuesta rápida:\n\n'+opciones);
+  if(sel&&!isNaN(sel)&&RESP_RAPIDAS[parseInt(sel)-1]){
+    const txt=g('txt-resp-'+gloId); if(txt) txt.value=RESP_RAPIDAS[parseInt(sel)-1];
+    updGlosaRespuesta(gloId,'texto',RESP_RAPIDAS[parseInt(sel)-1]);
+  }
+};
+
+// Calcular valores automáticamente
+window.calcGlosaValores=(gloId)=>{
+  const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
+  const tipo=gl.respuesta||'pendiente';
+  const va=g('va-'+gloId), vna=g('vna-'+gloId); if(!va||!vna) return;
+  if(tipo==='aceptada'){ va.value=gl.vrGlosado; vna.value=0; gl.vrAceptado=gl.vrGlosado; gl.vrNoAceptado=0; }
+  else if(tipo==='no_aceptada'){ va.value=0; vna.value=gl.vrGlosado; gl.vrAceptado=0; gl.vrNoAceptado=gl.vrGlosado; }
+};
+
+// Actualizar glosa en Firebase
+window.updGlosaRespuesta = async (gloId, campo, valor) => {
+  const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
+  if(campo==='tipo'){ gl.respuesta=valor; calcGlosaValores(gloId); }
+  else if(campo==='texto'){ gl.textoResp=valor; }
+  else if(campo==='vrAceptado'){ gl.vrAceptado=parseInt(valor)||0; }
+  else if(campo==='vrNoAceptado'){ gl.vrNoAceptado=parseInt(valor)||0; }
+  try{
+    await updateDoc(doc(db,'glosas',gloId),{
+      respuesta:gl.respuesta, textoResp:gl.textoResp,
+      vrAceptado:gl.vrAceptado, vrNoAceptado:gl.vrNoAceptado,
+      actualizado:serverTimestamp(),
+    });
+    updGloKpis();
+  } catch(e){ toast('Error guardando: '+e.message,'e'); }
+};
+
+window.verResumenGlosas = () => {
+  const res=g('glo-resumen'); if(!res) return;
+  const porFactura={};
+  GLOSAS_DB.forEach(gl=>{ const k=gl.factura+'|'+gl.radicado+'|'+gl.docVictima; if(!porFactura[k]) porFactura[k]=[]; porFactura[k].push(gl); });
+  const facturasCount=Object.keys(porFactura).length;
+  const totGlo=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+  const totNoAc=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
+  const totAc=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrAceptado)||0),0);
+  const pend=GLOSAS_DB.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+
+  res.innerHTML=`
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:16px;max-width:700px;margin-bottom:14px;">
+      <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:12px;">RESUMEN DE GLOSAS</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+        <div style="background:var(--sur2);border-radius:6px;padding:10px;text-align:center;">
+          <div style="font-size:20px;font-weight:700;font-family:var(--mono);">${facturasCount}</div>
+          <div style="font-size:10px;color:var(--tx2);">Facturas con glosa</div>
+        </div>
+        <div style="background:rgba(211,47,47,.06);border-radius:6px;padding:10px;text-align:center;">
+          <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--red);">${fmt$(totGlo)}</div>
+          <div style="font-size:10px;color:var(--tx2);">Total Glosado</div>
+        </div>
+        <div style="background:rgba(0,178,226,.06);border-radius:6px;padding:10px;text-align:center;">
+          <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--acc);">${fmt$(totAc)}</div>
+          <div style="font-size:10px;color:var(--tx2);">Aceptado</div>
+        </div>
+        <div style="background:rgba(157,180,85,.06);border-radius:6px;padding:10px;text-align:center;">
+          <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--green);">${fmt$(totNoAc)}</div>
+          <div style="font-size:10px;color:var(--tx2);">No Aceptado (recuperar)</div>
+        </div>
+      </div>
+      ${pend>0?`<div class="alert aw">⚠️ Hay <strong>${pend} glosas sin responder</strong>. Respóndelas antes de exportar.</div>`:'<div class="alert as">✔ Todas las glosas están respondidas. Listo para exportar.</div>'}
+    </div>`;
+};
+
+window.exportarRespuestaGlosas = () => {
+  if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); setTimeout(exportarRespuestaGlosas,1500); return; }
+  if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // Agrupar por factura
+  const porFactura = {};
+  GLOSAS_DB.forEach(gl=>{
+    const k = gl.factura+'||'+gl.radicado+'||'+gl.docVictima;
+    if(!porFactura[k]) porFactura[k]=[];
+    porFactura[k].push(gl);
+  });
+
+  // Crear UNA hoja por factura
+  Object.entries(porFactura).forEach(([key,items],idx)=>{
+    const [fac,rad,doc]=key.split('||');
+    const ipsNom = IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'';
+
+    const data=[
+      ['','','','','','',''],
+      ['','','','','','',''],
+      ['','','','','','',''],
+      ['','','','','','',''],
+      ['','','','','','',''],
+      ['','','','','','',''],
+      ['Señores','','','','','',''],
+      ['ADRES','','','','','',''],
+      ['Ciudad','','','','','',''],
+      ['','','','','','',''],
+      ['FACTURA',fac,'','','','',''],
+      ['RADICADO',rad,'','','','',''],
+      ['DOCUMENTO',doc,'','','','',''],
+      ['IPS',ipsNom,'','','','',''],
+      ['CÓDIGO ','DESCRIPCIÓN DEL ÍTEM','DESCRIPCIÓN GLOSA','Valor Glosado','RESPUESTA DE GLOSA','Valor\nAceptado','Valor\nNo Aceptado'],
+    ];
+
+    items.forEach(gl=>{
+      data.push([
+        gl.codElemento||'',
+        gl.descElemento||'',
+        gl.descGlosa||'',
+        parseInt(gl.vrGlosado)||0,
+        gl.textoResp||'',
+        parseInt(gl.vrAceptado)||0,
+        parseInt(gl.vrNoAceptado)||gl.vrGlosado||0,
+      ]);
+    });
+
+    // Fila de totales
+    const totGlo=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+    const totAc=items.reduce((a,g)=>a+(parseInt(g.vrAceptado)||0),0);
+    const totNoAc=items.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
+    data.push(['','','TOTAL',totGlo,'',totAc,totNoAc]);
+
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:14},{wch:35},{wch:50},{wch:14},{wch:60},{wch:14},{wch:14}];
+    // Nombre de hoja: factura (máx 31 chars)
+    const sheetName = fac.replace(/[^a-zA-Z0-9_]/g,'').substring(0,28)||`Factura${idx+1}`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const fecha=new Date().toISOString().split('T')[0].replace(/-/g,'');
+  XLSX.writeFile(wb, `RespuestaGlosas_CONEXA_${fecha}.xlsx`);
+  toast(`✔ Excel generado con ${Object.keys(porFactura).length} hojas (una por factura).`,'ok');
+};
+
 // ── INFORMES ──
 const IPS_NOMBRES={
   '760011259501':'OCCIDENTAL DE SALUD SAS',
@@ -1729,6 +2206,7 @@ window.go=(id)=>{
   if(id==='adm')   cargarUsers();
   if(id==='inf')   { verInforme('interno'); }
   if(id==='pagos') { loadPagos(); }
+  if(id==='glosas'){ loadGlosas(); }
 };
 
 // ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
