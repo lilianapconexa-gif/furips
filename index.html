@@ -816,7 +816,7 @@ select option{background:var(--sur2);}
       <!-- ADMIN -->
       <div class="page hidden" id="p-adm">
         <div class="ptitle">Gestión de Usuarios</div>
-        <div class="psub">Solo administradores. Los usuarios acceden con correo y contraseña.</div>
+        <div class="psub">Solo Admin y Super Admin. El Super Admin tiene acceso completo.</div>
         <div class="sh" style="margin-top:0;">✚ Crear Nuevo Usuario</div>
         <div class="sb">
           <div class="g2">
@@ -826,7 +826,8 @@ select option{background:var(--sur2);}
             <div class="field"><label class="fl">Rol <span class="req">*</span></label>
               <select id="u-rol">
                 <option value="digitador">Digitador — Solo sus reclamaciones</option>
-                <option value="admin">Admin — Todo + crear usuarios</option>
+                <option value="admin">Admin — Reclamaciones y glosas (sin pagos/informes)</option>
+                <option value="superadmin">Super Admin — Acceso total</option>
               </select>
             </div>
           </div>
@@ -912,9 +913,16 @@ function showLogin(){ g('scr-login').classList.remove('hidden'); g('scr-app').cl
 function showApp(){
   g('scr-login').classList.add('hidden'); g('scr-app').classList.remove('hidden');
   _s('hdr-nom',USER.nombre);
-  const hr=g('hdr-rol'); if(hr){hr.textContent=USER.rol;hr.className='badge '+(USER.rol==='admin'?'bg':'bb2');}
-  const na=g('nav-adm'); if(na) na.style.display=USER.rol==='admin'?'block':'none';
-  _s('dash-rol',USER.rol==='admin'?'Vista: todas las reclamaciones':'Vista: solo mis reclamaciones');
+  const rolLbl={'digitador':'Digitador','admin':'Admin','superadmin':'⭐ Super Admin'};
+  const rolCls={'digitador':'bb2','admin':'bg','superadmin':'bg'};
+  const hr=g('hdr-rol'); if(hr){hr.textContent=rolLbl[USER.rol]||USER.rol;hr.className='badge '+(rolCls[USER.rol]||'bb2');hr.style.background=USER.rol==='superadmin'?'linear-gradient(135deg,#f57c00,#ff6b35)':'';}
+  const isSA=USER.rol==='superadmin', isAdm=USER.rol==='admin'||isSA;
+  // Mostrar/ocultar nav items según rol
+  const na=g('nav-adm'); if(na) na.style.display=isAdm?'block':'none';
+  // Pagos e Informes: solo superadmin
+  const nPagos=g('n-pagos'); if(nPagos) nPagos.style.display=isSA?'flex':'none';
+  const nInf=g('n-inf');     if(nInf)   nInf.style.display=isSA?'flex':'none';
+  _s('dash-rol',isAdm?'Vista: todas las reclamaciones':'Vista: solo mis reclamaciones');
   // Asegurar que todas las páginas estén ocultas primero
   document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display=''; });
   initSnap();
@@ -927,7 +935,7 @@ function showApp(){
 // ── FIRESTORE LISTENER ──
 function initSnap(){
   if(unsub) unsub();
-  const q2 = USER.rol==='admin'
+  const q2 = USER.rol==='admin'||USER.rol==='superadmin'
     ? query(collection(db,'reclamaciones'),orderBy('creado','desc'))
     : query(collection(db,'reclamaciones'),where('creadoPor','==',USER.uid),orderBy('creado','desc'));
   unsub = onSnapshot(q2, snap=>{
@@ -1031,13 +1039,13 @@ function updSelBar(){
 function renderLista(){
   const w=g('lista-wrap');
   const recs=recsFiltrados();
-  _s('lista-info',USER.rol==='admin'?`Admin: ${RECS.length} total · ${recs.length} mostradas`:`Tus reclamaciones: ${recs.length}`);
+  _s('lista-info',(USER.rol==='admin'||USER.rol==='superadmin')?`${USER.rol==='superadmin'?'⭐ Super Admin':'Admin'}: ${RECS.length} total · ${recs.length} mostradas`:`Tus reclamaciones: ${recs.length}`);
   if(!recs.length){ w.innerHTML=`<div style="color:var(--tx3);font-size:12px;text-align:center;padding:32px 0;">${BUSQUEDA?'Sin resultados para "'+BUSQUEDA+'"':'No hay reclamaciones con este filtro.'}</div>`; return; }
 
   w.innerHTML=recs.map(r=>{
     const f1ok=!!r.furips1?.c83, items=(r.furips2||[]).length;
     const ts=r.creado?.toDate?r.creado.toDate().toLocaleDateString('es-CO'):'—';
-    const canEdit=USER.rol==='admin'||r.creadoPor===USER.uid;
+    const canEdit=USER.rol==='admin'||USER.rol==='superadmin'||r.creadoPor===USER.uid;
     const sel=SEL_IDS.has(r.id);
     const estRad=estadoRad(r);
     const eInf=ESTADOS_RAD[estRad]||ESTADOS_RAD.sinradicar;
@@ -1058,7 +1066,7 @@ function renderLista(){
         <div style="font-size:11px;color:var(--tx2);margin-top:2px;">
           IPS:${r.codHab} · ${items} ítems ·
           ${f1ok?'<span style="color:#9DB455">F1✔</span>':'<span style="color:#e3b341">F1⏳</span>'} · ${ts}
-          ${USER.rol==='admin'?'· <span style="color:var(--tx3)">👤'+(r.creadoPorNombre||'?')+'</span>':''}
+          ${(USER.rol==='admin'||USER.rol==='superadmin')?'· <span style="color:var(--tx3)">👤'+(r.creadoPorNombre||'?')+'</span>':""}
           ${r.radicado?.obs?`· <span style="color:var(--tx3);font-style:italic;">${r.radicado.obs}</span>`:''}
         </div>
       </div>
@@ -2207,27 +2215,41 @@ async function cargarUsers(){
     if(snap.empty){ if(w) w.innerHTML='<div style="color:var(--tx3);font-size:12px;">No hay usuarios registrados aún.</div>'; return; }
     const users=snap.docs.map(d=>({id:d.id,...d.data()}));
     if(!w) return;
-    w.innerHTML=users.map(u=>`
-      <div class="rcard">
-        <div style="width:32px;height:32px;border-radius:50%;background:${u.rol==='admin'?'var(--acc)':'var(--blue)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;">${(u.nombre||'?')[0].toUpperCase()}</div>
-        <div style="flex:1;"><div style="font-weight:500;font-size:13px;">${u.nombre||'Sin nombre'}</div>
-          <div style="font-size:11px;color:var(--tx2);">${u.email||''} · <span class="badge ${u.rol==='admin'?'bg':'bb2'}">${u.rol||'digitador'}</span></div></div>
-        <div style="display:flex;gap:5px;">
-          <button class="btn btn-sm bs" onclick="cambRol('${u.id}','${u.rol||'digitador'}','${u.nombre||''}')">
-            ${(u.rol||'digitador')==='admin'?'→ Digitador':'→ Admin'}
-          </button>
-          ${u.id!==USER.uid?`<button class="btn btn-sm bd" onclick="elimUser('${u.id}','${u.nombre||''}')">✕</button>`:'<span style="font-size:10px;color:var(--tx3);padding:4px 6px;">Tú</span>'}
+    w.innerHTML=users.map(u=>{
+      const rolColor=u.rol==='superadmin'?'linear-gradient(135deg,#f57c00,#ff6b35)':u.rol==='admin'?'var(--acc)':'var(--blue)';
+      const rolBadge=u.rol==='superadmin'?'⭐ Super Admin':u.rol==='admin'?'Admin':'Digitador';
+      const badgeCls=u.rol==='superadmin'||u.rol==='admin'?'bg':'bb2';
+      return `<div class="rcard">
+        <div style="width:36px;height:36px;border-radius:50%;background:${rolColor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;color:#fff;">${(u.nombre||'?')[0].toUpperCase()}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:13px;">${u.nombre||'Sin nombre'}</div>
+          <div style="font-size:11px;color:var(--tx2);">${u.email||''} · <span class="badge ${badgeCls}" style="${u.rol==='superadmin'?'background:linear-gradient(135deg,#f57c00,#ff6b35);color:#fff;':''}">${rolBadge}</span></div>
         </div>
-      </div>`).join('');
+        <div style="display:flex;gap:5px;align-items:center;">
+          ${u.id!==USER.uid?`
+            <select onchange="cambRolSelect('${u.id}','${u.nombre||''}',this.value)" style="padding:4px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;">
+              <option value="digitador" ${(u.rol||'digitador')==='digitador'?'selected':''}>Digitador</option>
+              <option value="admin"     ${u.rol==='admin'?'selected':''}>Admin</option>
+              <option value="superadmin" ${u.rol==='superadmin'?'selected':''}>⭐ Super Admin</option>
+            </select>
+            <button class="btn btn-sm bd" onclick="elimUser('${u.id}','${u.nombre||''}')">✕</button>
+          `:'<span style="font-size:10px;color:var(--tx3);padding:4px 8px;background:var(--sur2);border-radius:4px;">Tú</span>'}
+        </div>
+      </div>`;
+    }).join('');
   } catch(err){
     if(w) w.innerHTML=`<div class="alert ae">❌ Error al cargar usuarios: ${err.message}<br><br><strong>Solución:</strong> Ve a Firebase Console → Firestore → Reglas y publica las reglas indicadas abajo.</div>`;
     toast('Error cargando usuarios: '+err.message,'e');
   }
 }
 
-window.cambRol=async(uid,rol,nom)=>{
-  const nr=rol==='admin'?'digitador':'admin';
-  confirm2(`¿Cambiar rol de ${nom}?`,`De ${rol} a ${nr}.`,async()=>{ await updateDoc(doc(db,'usuarios',uid),{rol:nr}); toast(`Rol cambiado a ${nr}`,'ok'); cargarUsers(); });
+window.cambRolSelect=async(uid,nom,nuevoRol)=>{
+  const rolLbl={'digitador':'Digitador','admin':'Admin','superadmin':'⭐ Super Admin'};
+  confirm2(`¿Cambiar rol de ${nom}?`,`Nuevo rol: ${rolLbl[nuevoRol]||nuevoRol}`,async()=>{
+    await updateDoc(doc(db,'usuarios',uid),{rol:nuevoRol});
+    toast(`✔ Rol de ${nom} cambiado a ${rolLbl[nuevoRol]}`,'ok');
+    cargarUsers();
+  });
 };
 window.elimUser=(uid,nom)=>{
   confirm2(`¿Eliminar a ${nom}?`,'Se elimina su perfil de la base de datos.',async()=>{ await deleteDoc(doc(db,'usuarios',uid)); toast(`${nom} eliminado`,'w'); cargarUsers(); });
@@ -2245,8 +2267,14 @@ window.go=(id)=>{
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
   if(id==='adm')   cargarUsers();
-  if(id==='inf')   { verInforme('interno'); }
-  if(id==='pagos') { loadPagos(); }
+  if(id==='inf'){
+    if(USER.rol!=='superadmin'){ toast('Solo el Super Admin puede acceder a Informes.','w'); return; }
+    verInforme('interno');
+  }
+  if(id==='pagos'){
+    if(USER.rol!=='superadmin'){ toast('Solo el Super Admin puede acceder a Pagos y Comisiones.','w'); return; }
+    loadPagos();
+  }
   if(id==='glosas'){ loadGlosas(); }
 };
 
