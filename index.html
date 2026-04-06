@@ -307,7 +307,11 @@ select option{background:var(--sur2);}
         <!-- INDIVIDUAL -->
         <div id="n-ind">
           <div class="g2">
-            <div class="field"><label class="fl">Número de Factura <span class="req">*</span></label><input id="n-fac" maxlength="20" placeholder="Según DIAN"></div>
+            <div class="field"><label class="fl">Número de Factura <span class="req">*</span></label>
+              <input id="n-fac" maxlength="20" placeholder="Según DIAN"
+                oninput="window.chkDupFac(this.value)">
+              <div id="n-fac-dup" style="display:none;margin-top:4px;padding:6px 10px;border-radius:5px;background:rgba(211,47,47,.08);border:1px solid rgba(211,47,47,.3);font-size:11px;color:var(--red);"></div>
+            </div>
             <div class="field"><label class="fl">Consecutivo <span class="req">*</span></label><input id="n-con" maxlength="12"></div>
             <div class="field"><label class="fl">Radicado Anterior (RGO)</label><input id="n-rgo" maxlength="10" placeholder="Vacío = nueva"><span class="hint">Solo RGO: 0=total · 1=parcial · 6=transversal</span></div>
             <div class="field">
@@ -1132,15 +1136,45 @@ async function saveRec(id,data){
 }
 
 // ── RECLAMACIONES ──
+// ── VALIDACIÓN DE FACTURAS DUPLICADAS ──
+window.chkDupFac=(val)=>{
+  const fac=(val||'').trim().toUpperCase();
+  const div=g('n-fac-dup'); if(!div) return;
+  const btn=document.querySelector('button[onclick="crearRec()"]');
+  if(!fac){ div.style.display='none'; if(btn) btn.disabled=false; return; }
+  const dup=RECS.find(r=>(r.factura||'').toUpperCase()===fac);
+  if(dup){
+    div.style.display='block';
+    div.innerHTML=`⚠️ <strong>${fac}</strong> ya existe · Consec: ${dup.consec} · IPS: ${dup.codHab} · Estado: <strong>${(ESTADOS_RAD[estadoRad(dup)]?.lbl||estadoRad(dup)).toUpperCase()}</strong>
+      &nbsp;<a href="#" onclick="selRec('${dup.id}');return false;" style="color:var(--acc);font-weight:700;">→ Abrir</a>`;
+    if(btn){ btn.disabled=true; btn.style.opacity='.5'; }
+  } else {
+    div.style.display='none';
+    if(btn){ btn.disabled=false; btn.style.opacity=''; }
+  }
+};
+
 window.crearRec = async ()=>{
   const fac=gv('n-fac'),con=gv('n-con'),cod=gv('n-cod'),rgo=gv('n-rgo');
   if(!fac||!con||!cod){ialert('n-alr','aw','Complete Factura, Consecutivo y Código Habilitación.');return;}
+
+  // ── VALIDAR DUPLICADO ──
+  const dup = RECS.find(r => r.factura?.toUpperCase()===fac.toUpperCase());
+  if(dup){
+    ialert('n-alr','ae',
+      `⚠️ La factura <strong>${fac}</strong> ya existe en el sistema.<br>` +
+      `Consecutivo: ${dup.consec} · IPS: ${dup.codHab} · Estado: ${estadoRad(dup).toUpperCase()}<br>` +
+      `<a href="#" onclick="selRec('${dup.id}');return false;" style="color:var(--acc);font-weight:600;">→ Abrir reclamación existente</a>`
+    );
+    loader(false);
+    return;
+  }
+
   loader(true);
   try{
     const data={factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre',creado:serverTimestamp(),actualizado:serverTimestamp()};
     const ref=await addDoc(collection(db,'reclamaciones'),data);
     CUR_ID=ref.id;
-    // Guardar inmediatamente en localStorage para Parte 2 sin esperar el snapshot
     const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
     localStorage.setItem('furips_p2_rec',JSON.stringify(recLocal));
     localStorage.setItem('furips_p2_rol',USER.rol);
@@ -3196,10 +3230,21 @@ window.procesarExcel=(file)=>{
         estado: !f.factura?'error:Sin factura':!f.consec?'error:Sin consecutivo':!f.codHab?'error:Sin código IPS':'listo'
       }));
 
-      const errores=FILAS_EXCEL.filter(f=>f.estado.startsWith('error')).length;
-      const listos=FILAS_EXCEL.filter(f=>f.estado==='listo').length;
+      // Detectar duplicados contra Firebase en tiempo de carga
+      FILAS_EXCEL=FILAS_EXCEL.map(f=>{
+        if(f.estado!=='listo') return f;
+        const dup=RECS.find(r=>(r.factura||'').toUpperCase()===(f.factura||'').toUpperCase());
+        return dup ? {...f, estado:'duplicado', dupId:dup.id} : f;
+      });
 
-      g('excel-count').innerHTML=`<span style="color:#9DB455">✔ ${listos} reclamaciones listas</span>${errores>0?` · <span style="color:#f85149">❌ ${errores} con errores</span>`:''}`;
+      const errores  =FILAS_EXCEL.filter(f=>f.estado.startsWith('error')).length;
+      const dups     =FILAS_EXCEL.filter(f=>f.estado==='duplicado').length;
+      const listos   =FILAS_EXCEL.filter(f=>f.estado==='listo').length;
+
+      g('excel-count').innerHTML=
+        `<span style="color:var(--green)">✔ ${listos} nuevas</span>`+
+        (dups   >0?` · <span style="color:var(--warn)">⚠️ ${dups} duplicadas (se omitirán)</span>`:'')+
+        (errores>0?` · <span style="color:var(--red)">❌ ${errores} con errores</span>`:'');
       renderPreview();
       g('excel-preview').classList.remove('hidden');
       const btn=g('btn-cargar-mas');
@@ -3213,10 +3258,13 @@ function renderPreview(){
   const tb=g('excel-tbody'); if(!tb) return;
   tb.innerHTML=FILAS_EXCEL.map(f=>{
     const esError=f.estado.startsWith('error');
-    const color=esError?'#f85149':f.estado==='ok'?'#3fb950':'var(--tx)';
-    const ico=esError?'❌':f.estado==='ok'?'✔':'⏳';
-    const lbl=esError?f.estado.replace('error:',''):f.estado==='ok'?'Creada':f.estado==='cargando'?'Creando...':'Lista';
-    return `<tr style="border-bottom:1px solid var(--brd);">
+    const esDup  =f.estado==='duplicado';
+    const color  =esError?'var(--red)':esDup?'var(--warn)':f.estado==='ok'?'var(--green)':'var(--tx)';
+    const ico    =esError?'❌':esDup?'⚠️':f.estado==='ok'?'✔':f.estado==='cargando'?'⏳':'🔵';
+    const lbl    =esError?f.estado.replace('error:','')
+                 :esDup?`Ya existe <a href="#" onclick="selRec('${f.dupId}');return false;" style="color:var(--acc);font-size:10px;">→ Abrir</a>`
+                 :f.estado==='ok'?'Creada':f.estado==='cargando'?'Creando...':'Lista';
+    return `<tr style="border-bottom:1px solid var(--brd);${esDup?'background:rgba(245,124,0,.05)':''}">
       <td style="padding:5px 10px;color:var(--tx3);font-family:var(--mono);">${f.num}</td>
       <td style="padding:5px 10px;font-weight:500;">${f.factura||'—'}</td>
       <td style="padding:5px 10px;font-family:var(--mono);">${f.consec||'—'}</td>
@@ -3228,8 +3276,26 @@ function renderPreview(){
 }
 
 window.cargarMasiva=async()=>{
+  // Marcar duplicados antes de subir
+  FILAS_EXCEL.forEach(f=>{
+    if(f.estado==='listo'){
+      const dup=RECS.find(r=>(r.factura||'').toUpperCase()===(f.factura||'').toUpperCase());
+      if(dup){ f.estado='duplicado'; f.dupId=dup.id; }
+    }
+  });
+
   const listos=FILAS_EXCEL.filter(f=>f.estado==='listo');
-  if(!listos.length){ toast('No hay filas válidas para cargar.','w'); return; }
+  const dups=FILAS_EXCEL.filter(f=>f.estado==='duplicado');
+
+  if(dups.length>0) renderPreview(); // mostrar duplicados en preview
+
+  if(!listos.length){
+    toast(`Sin facturas nuevas. ${dups.length} ya exist${dups.length===1?'e':'en'} en el sistema.`,'w');
+    return;
+  }
+  if(dups.length>0){
+    toast(`⚠️ ${dups.length} factura${dups.length>1?'s':''} duplicada${dups.length>1?'s':''} omitida${dups.length>1?'s':''}. Se crearán ${listos.length} nueva${listos.length>1?'s':''}.`,'w');
+  }
 
   const prog=g('mas-prog'), barra=g('mas-barra'), txt=g('mas-txt');
   if(prog) prog.classList.remove('hidden');
