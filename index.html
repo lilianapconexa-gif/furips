@@ -15,7 +15,32 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;}
 
+
+/* ── FILTROS AVANZADOS ── */
+.flt-bar{background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:10px 12px;margin-bottom:10px;}
+.flt-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;}
+.flt-row:last-child{margin-bottom:0;}
+.flt-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(0,178,226,.1);border:1px solid rgba(0,178,226,.3);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--acc);}
+.flt-chip button{background:none;border:none;color:var(--acc);cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;}
+.flt-lbl{font-size:10px;font-weight:700;color:var(--tx3);font-family:var(--mono);letter-spacing:.5px;white-space:nowrap;}
+.flt-sel{padding:4px 7px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur);color:var(--tx);font-size:11px;min-width:120px;}
+.flt-inp{padding:4px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur);color:var(--tx);font-size:11px;min-width:140px;}
+.flt-btn{padding:4px 10px;border-radius:4px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-size:11px;cursor:pointer;font-weight:600;}
+.flt-btn-clr{padding:4px 8px;border-radius:4px;border:1px solid var(--brd2);background:transparent;color:var(--tx3);font-size:11px;cursor:pointer;}
+
 /* LOGIN */
+/* FILTROS AVANZADOS */
+.flt-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:var(--sur2);border:1px solid var(--brd);border-radius:8px;margin-bottom:12px;}
+.flt-group{display:flex;align-items:center;gap:4px;background:var(--sur);border:1px solid var(--brd2);border-radius:6px;padding:3px 6px;}
+.flt-lbl{font-size:9px;font-weight:700;color:var(--tx3);font-family:var(--mono);letter-spacing:.5px;white-space:nowrap;}
+.flt-op{padding:3px 6px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx2);font-size:10px;cursor:pointer;}
+.flt-val{padding:3px 7px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;min-width:80px;max-width:140px;}
+.flt-val:focus{outline:none;border-color:var(--acc);}
+.flt-active .flt-lbl{color:var(--acc);}
+.flt-active{border-color:var(--acc);background:rgba(0,178,226,.06);}
+.flt-reset{font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx3);cursor:pointer;}
+.flt-reset:hover{background:rgba(211,47,47,.1);color:var(--red);border-color:var(--red);}
+
 .lscr{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 30%,rgba(0,178,226,.12),transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(157,180,85,.08),transparent 50%),var(--bg);}
 .lbox{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:36px 32px;width:390px;box-shadow:0 8px 40px rgba(0,178,226,.12);max-width:93vw;}
 .llogo{display:flex;align-items:center;gap:10px;margin-bottom:22px;}
@@ -374,11 +399,70 @@ select option{background:var(--sur2);}
         <!-- BARRA SUPERIOR -->
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
           <button class="btn bp" onclick="go('nueva')">✚ Nueva</button>
-          <div style="position:relative;flex:1;min-width:180px;">
-            <input id="buscar-fac" placeholder="🔍 Buscar factura, consecutivo o IPS..."
-              oninput="filtrarLista(this.value)"
-              style="width:100%;padding:7px 30px 7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
-            <span onclick="g('buscar-fac').value='';filtrarLista('')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tx3);">✕</span>
+          <button class="btn bs" onclick="window.toggleFiltros('lista')" style="font-size:11px;">🔍 Filtros avanzados</button>
+          <span id="lista-chips" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;"></span>
+        </div>
+        <!-- Panel filtros avanzados reclamaciones -->
+        <div id="flt-lista" class="flt-bar hidden">
+          <div class="flt-row">
+            <span class="flt-lbl">FACTURA</span>
+            <select class="flt-sel" id="fl-fac-op">
+              <option value="contiene">contiene</option>
+              <option value="empieza">empieza por</option>
+              <option value="termina">termina en</option>
+              <option value="no_contiene">no contiene</option>
+              <option value="igual">=</option>
+              <option value="vacio">está vacío</option>
+              <option value="no_vacio">no está vacío</option>
+            </select>
+            <input class="flt-inp" id="fl-fac-val" placeholder="Ej: FE100" oninput="window.aplicarFiltrosLista()">
+
+            <span class="flt-lbl" style="margin-left:8px;">IPS / CÓDIGO</span>
+            <select class="flt-sel" id="fl-ips-op">
+              <option value="contiene">contiene</option>
+              <option value="igual">=</option>
+              <option value="no_contiene">no contiene</option>
+              <option value="vacio">está vacío</option>
+              <option value="no_vacio">no está vacío</option>
+            </select>
+            <input class="flt-inp" id="fl-ips-val" placeholder="Ej: 760011" oninput="window.aplicarFiltrosLista()">
+          </div>
+          <div class="flt-row">
+            <span class="flt-lbl">CONSECUTIVO</span>
+            <select class="flt-sel" id="fl-con-op">
+              <option value="contiene">contiene</option>
+              <option value="igual">=</option>
+              <option value="empieza">empieza por</option>
+              <option value="vacio">está vacío</option>
+            </select>
+            <input class="flt-inp" id="fl-con-val" placeholder="Ej: 0001" oninput="window.aplicarFiltrosLista()">
+
+            <span class="flt-lbl" style="margin-left:8px;">RADICADO LOTE</span>
+            <select class="flt-sel" id="fl-rad-op">
+              <option value="contiene">contiene</option>
+              <option value="igual">=</option>
+              <option value="vacio">está vacío</option>
+              <option value="no_vacio">no está vacío</option>
+            </select>
+            <input class="flt-inp" id="fl-rad-val" placeholder="Ej: RAD-2024" oninput="window.aplicarFiltrosLista()">
+          </div>
+          <div class="flt-row">
+            <span class="flt-lbl">F1 FURIPS</span>
+            <select class="flt-sel" id="fl-f1-op" onchange="window.aplicarFiltrosLista()">
+              <option value="">Todos</option>
+              <option value="completo">Completo</option>
+              <option value="pendiente">Pendiente</option>
+            </select>
+            <span class="flt-lbl" style="margin-left:8px;">ESTADO RADICADO</span>
+            <select class="flt-sel" id="fl-est-op" onchange="window.aplicarFiltrosLista()">
+              <option value="">Todos</option>
+              <option value="sinradicar">Sin Radicar</option>
+              <option value="radicada">Radicada</option>
+              <option value="devuelta_parcial">Dev. Parcial</option>
+              <option value="devuelta_total">Dev. Total</option>
+              <option value="pagada">Pagada</option>
+            </select>
+            <button class="flt-btn-clr" onclick="window.limpiarFiltrosLista()">✕ Limpiar</button>
           </div>
         </div>
 
@@ -405,6 +489,8 @@ select option{background:var(--sur2);}
           <button class="btn btn-sm bb" onclick="abrirRadicadoGrupal()">📬 Radicar lote</button>
         </div>
 
+        <!-- Filtros avanzados LISTA (se construyen en JS) -->
+        <div id="flt-lista-bar" class="flt-bar" style="display:none;"></div>
         <div id="lista-wrap"></div>
       </div>
 
@@ -640,9 +726,44 @@ select option{background:var(--sur2);}
 
         <!-- TAB: Historial -->
         <div id="ptab-his-body" class="hidden">
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-            <input id="pag-buscar" placeholder="🔍 Buscar por factura, IPS o referencia..." oninput="renderHistorial()" style="flex:1;min-width:200px;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+          <div id="flt-pag-bar" class="flt-bar" style="display:none;"></div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+            <button class="btn bs" onclick="window.toggleFiltros('pagos')" style="font-size:11px;">🔍 Filtros avanzados</button>
+            <span id="pagos-chips" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;"></span>
             <button class="btn bs" onclick="expPagosExcel()" style="font-size:12px;">📊 Exportar Excel</button>
+          </div>
+          <div id="flt-pagos" class="flt-bar hidden">
+            <div class="flt-row">
+              <span class="flt-lbl">FACTURA</span>
+              <select class="flt-sel" id="fp-fac-op">
+                <option value="contiene">contiene</option><option value="igual">=</option>
+                <option value="empieza">empieza por</option><option value="no_contiene">no contiene</option>
+              </select>
+              <input class="flt-inp" id="fp-fac-val" placeholder="Ej: FE100" oninput="window.aplicarFiltrosPagos()">
+              <span class="flt-lbl" style="margin-left:8px;">IPS</span>
+              <select class="flt-sel" id="fp-ips-op">
+                <option value="contiene">contiene</option><option value="igual">=</option><option value="no_contiene">no contiene</option>
+              </select>
+              <input class="flt-inp" id="fp-ips-val" placeholder="Ej: 760011" oninput="window.aplicarFiltrosPagos()">
+            </div>
+            <div class="flt-row">
+              <span class="flt-lbl">TIPO PAGO</span>
+              <select class="flt-sel" id="fp-tipo-op" onchange="window.aplicarFiltrosPagos()">
+                <option value="">Todos</option><option value="total">Total</option><option value="parcial">Parcial</option>
+              </select>
+              <span class="flt-lbl" style="margin-left:8px;">VR PAGADO</span>
+              <select class="flt-sel" id="fp-vr-op">
+                <option value="">(sin filtro)</option><option value=">=">&gt;=</option>
+                <option value="<=">&lt;=</option><option value=">">&gt;</option><option value="<">&lt;</option>
+              </select>
+              <input class="flt-inp" id="fp-vr-val" placeholder="Ej: 500000" type="number" oninput="window.aplicarFiltrosPagos()" style="max-width:120px;">
+              <span class="flt-lbl" style="margin-left:8px;">REFERENCIA</span>
+              <select class="flt-sel" id="fp-ref-op">
+                <option value="contiene">contiene</option><option value="igual">=</option><option value="vacio">está vacío</option><option value="no_vacio">no está vacío</option>
+              </select>
+              <input class="flt-inp" id="fp-ref-val" placeholder="Ej: RES-2024" oninput="window.aplicarFiltrosPagos()">
+              <button class="flt-btn-clr" onclick="window.limpiarFiltrosPagos()">✕ Limpiar</button>
+            </div>
           </div>
           <div id="pag-lista"></div>
         </div>
@@ -742,22 +863,47 @@ select option{background:var(--sur2);}
         <!-- TAB: Responder -->
         <div id="gtab-resp-body" class="hidden">
           <!-- Barra de búsqueda y filtros -->
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-            <div style="position:relative;flex:1;min-width:220px;">
-              <input id="glo-buscar"
-                placeholder="🔍 Buscar por factura, radicado o documento..."
-                oninput="window.renderGlosasResp()"
-                style="width:100%;padding:7px 32px 7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
-              <span onclick="g('glo-buscar').value='';window.renderGlosasResp()"
-                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tx3);font-size:14px;">✕</span>
-            </div>
+          <div id="flt-glo-bar" class="flt-bar" style="display:none;"></div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+            <button class="btn bs" onclick="window.toggleFiltros('glosas')" style="font-size:11px;">🔍 Filtros avanzados</button>
+            <span id="glosas-chips" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;"></span>
             <select id="glo-filtro-est" onchange="window.renderGlosasResp()"
-              style="padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+              style="padding:5px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;">
               <option value="">Todas las facturas</option>
               <option value="pendiente">⏳ Con pendientes</option>
               <option value="respondida">✔ Completamente respondidas</option>
             </select>
             <span id="glo-resp-count" style="font-size:11px;color:var(--tx3);white-space:nowrap;"></span>
+          </div>
+          <div id="flt-glosas" class="flt-bar hidden">
+            <div class="flt-row">
+              <span class="flt-lbl">FACTURA</span>
+              <select class="flt-sel" id="fg-fac-op">
+                <option value="contiene">contiene</option><option value="igual">=</option>
+                <option value="empieza">empieza por</option><option value="termina">termina en</option>
+                <option value="no_contiene">no contiene</option>
+              </select>
+              <input class="flt-inp" id="fg-fac-val" placeholder="Ej: FE100" oninput="window.renderGlosasResp()">
+              <span class="flt-lbl" style="margin-left:8px;">RADICADO</span>
+              <select class="flt-sel" id="fg-rad-op">
+                <option value="contiene">contiene</option><option value="igual">=</option><option value="empieza">empieza por</option>
+              </select>
+              <input class="flt-inp" id="fg-rad-val" placeholder="Ej: 14124" oninput="window.renderGlosasResp()">
+            </div>
+            <div class="flt-row">
+              <span class="flt-lbl">DOCUMENTO</span>
+              <select class="flt-sel" id="fg-doc-op">
+                <option value="contiene">contiene</option><option value="igual">=</option>
+                <option value="empieza">empieza por</option><option value="no_contiene">no contiene</option>
+              </select>
+              <input class="flt-inp" id="fg-doc-val" placeholder="Ej: CC-1234" oninput="window.renderGlosasResp()">
+              <span class="flt-lbl" style="margin-left:8px;">DESCRIPCIÓN GLOSA</span>
+              <select class="flt-sel" id="fg-glo-op">
+                <option value="contiene">contiene</option><option value="no_contiene">no contiene</option><option value="vacio">está vacío</option>
+              </select>
+              <input class="flt-inp" id="fg-glo-val" placeholder="Ej: certificado" oninput="window.renderGlosasResp()">
+              <button class="flt-btn-clr" onclick="window.limpiarFiltrosGlosas()">✕ Limpiar</button>
+            </div>
           </div>
           <div id="glo-resp-lista"></div>
         </div>
@@ -1012,7 +1158,283 @@ window.delRec=(id)=>{
   confirm2('¿Eliminar reclamación?','No se puede deshacer.',async()=>{ await deleteDoc(doc(db,'reclamaciones',id)); if(CUR_ID===id)CUR_ID=null; toast('Eliminada','w'); });
 };
 
+// ── MOTOR DE FILTROS AVANZADOS ──
+// Aplica operador a valor de texto o número
+function aplicarOp(valorCampo, operador, valorFiltro){
+  const v = String(valorCampo||'').toLowerCase().trim();
+  const f = String(valorFiltro||'').toLowerCase().trim();
+  const vn = parseFloat(valorCampo)||0;
+  const fn = parseFloat(valorFiltro)||0;
+  switch(operador){
+    case 'contiene':    return f===''||v.includes(f);
+    case 'no_contiene': return f===''||!v.includes(f);
+    case 'empieza':     return f===''||v.startsWith(f);
+    case 'termina':     return f===''||v.endsWith(f);
+    case 'igual':       return f===''||v===f;
+    case '<>':          return f===''||v!==f;
+    case 'vacio':       return v==='';
+    case 'no_vacio':    return v!=='';
+    case '>=':          return fn===''||vn>=fn;
+    case '<=':          return fn===''||vn<=fn;
+    case '>':           return fn===''||vn>fn;
+    case '<':           return fn===''||vn<fn;
+    default: return true;
+  }
+}
+
+// Toggle panel de filtros
+window.toggleFiltros=(modulo)=>{
+  const panel=g('flt-'+modulo);
+  if(!panel) return;
+  const visible=!panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', visible);
+};
+
+// ── FILTROS RECLAMACIONES ──
+let FILTROS_LISTA={};
+window.aplicarFiltrosLista=()=>{
+  FILTROS_LISTA={
+    factura: {op:gv('fl-fac-op')||'contiene', val:g('fl-fac-val')?.value||''},
+    ips:     {op:gv('fl-ips-op')||'contiene', val:g('fl-ips-val')?.value||''},
+    consec:  {op:gv('fl-con-op')||'contiene', val:g('fl-con-val')?.value||''},
+    radicado:{op:gv('fl-rad-op')||'contiene', val:g('fl-rad-val')?.value||''},
+    f1:      {val:gv('fl-f1-op')||''},
+    estado:  {val:gv('fl-est-op')||''},
+  };
+  actualizarChips('lista-chips', FILTROS_LISTA);
+  renderLista();
+};
+
+window.limpiarFiltrosLista=()=>{
+  ['fl-fac-val','fl-ips-val','fl-con-val','fl-rad-val'].forEach(id=>{const e=g(id);if(e)e.value='';});
+  ['fl-fac-op','fl-ips-op','fl-con-op','fl-rad-op'].forEach(id=>{const e=g(id);if(e)e.value='contiene';});
+  ['fl-f1-op','fl-est-op'].forEach(id=>{const e=g(id);if(e)e.value='';});
+  FILTROS_LISTA={};
+  actualizarChips('lista-chips',{});
+  renderLista();
+};
+
+// Aplicar filtros avanzados sobre array de reclamaciones
+function aplicarFltLista(recs){
+  const f=FILTROS_LISTA; if(!Object.keys(f).length) return recs;
+  return recs.filter(r=>{
+    if(f.factura?.val||f.factura?.op==='vacio'||f.factura?.op==='no_vacio')
+      if(!aplicarOp(r.factura, f.factura.op, f.factura.val)) return false;
+    if(f.ips?.val||f.ips?.op==='vacio'||f.ips?.op==='no_vacio')
+      if(!aplicarOp(r.codHab, f.ips.op, f.ips.val)) return false;
+    if(f.consec?.val||f.consec?.op==='vacio')
+      if(!aplicarOp(r.consec, f.consec.op, f.consec.val)) return false;
+    if(f.radicado?.val||f.radicado?.op==='vacio'||f.radicado?.op==='no_vacio')
+      if(!aplicarOp(r.radicado?.lote||r.radicado?.numero, f.radicado.op, f.radicado.val)) return false;
+    if(f.f1?.val==='completo' && !r.furips1?.c83) return false;
+    if(f.f1?.val==='pendiente' && r.furips1?.c83) return false;
+    if(f.estado?.val && estadoRad(r)!==f.estado.val) return false;
+    return true;
+  });
+}
+
+// ── FILTROS PAGOS ──
+let FILTROS_PAGOS={};
+window.aplicarFiltrosPagos=()=>{
+  FILTROS_PAGOS={
+    factura:{op:gv('fp-fac-op')||'contiene',val:g('fp-fac-val')?.value||''},
+    ips:    {op:gv('fp-ips-op')||'contiene',val:g('fp-ips-val')?.value||''},
+    tipo:   {val:gv('fp-tipo-op')||''},
+    vr:     {op:g('fp-vr-op')?.value||'',val:g('fp-vr-val')?.value||''},
+    ref:    {op:gv('fp-ref-op')||'contiene',val:g('fp-ref-val')?.value||''},
+  };
+  actualizarChips('pagos-chips',FILTROS_PAGOS);
+  renderHistorial();
+};
+
+window.limpiarFiltrosPagos=()=>{
+  ['fp-fac-val','fp-ips-val','fp-vr-val','fp-ref-val'].forEach(id=>{const e=g(id);if(e)e.value='';});
+  ['fp-fac-op','fp-ips-op','fp-ref-op'].forEach(id=>{const e=g(id);if(e)e.value='contiene';});
+  ['fp-tipo-op','fp-vr-op'].forEach(id=>{const e=g(id);if(e)e.value='';});
+  FILTROS_PAGOS={};
+  actualizarChips('pagos-chips',{});
+  renderHistorial();
+};
+
+function aplicarFltPagos(pags){
+  const f=FILTROS_PAGOS; if(!Object.keys(f).length) return pags;
+  return pags.filter(p=>{
+    if(f.factura?.val||f.factura?.op==='vacio'||f.factura?.op==='no_vacio')
+      if(!aplicarOp(p.factura,f.factura.op,f.factura.val)) return false;
+    if(f.ips?.val) if(!aplicarOp(p.codHab,f.ips.op,f.ips.val)) return false;
+    if(f.tipo?.val) if(p.tipo!==f.tipo.val) return false;
+    if(f.vr?.op&&f.vr?.val) if(!aplicarOp(p.vrPagado,f.vr.op,f.vr.val)) return false;
+    if(f.ref?.val||f.ref?.op==='vacio'||f.ref?.op==='no_vacio')
+      if(!aplicarOp(p.ref,f.ref.op,f.ref.val)) return false;
+    return true;
+  });
+}
+
+// ── FILTROS GLOSAS ──
+function getGloFiltros(){
+  return {
+    factura: {op:gv('fg-fac-op')||'contiene', val:g('fg-fac-val')?.value||''},
+    radicado:{op:gv('fg-rad-op')||'contiene', val:g('fg-rad-val')?.value||''},
+    doc:     {op:gv('fg-doc-op')||'contiene', val:g('fg-doc-val')?.value||''},
+    glosa:   {op:gv('fg-glo-op')||'contiene', val:g('fg-glo-val')?.value||''},
+  };
+}
+
+window.limpiarFiltrosGlosas=()=>{
+  ['fg-fac-val','fg-rad-val','fg-doc-val','fg-glo-val'].forEach(id=>{const e=g(id);if(e)e.value='';});
+  ['fg-fac-op','fg-rad-op','fg-doc-op','fg-glo-op'].forEach(id=>{const e=g(id);if(e)e.value='contiene';});
+  actualizarChips('glosas-chips',{});
+  window.renderGlosasResp();
+};
+
+function aplicarFltGlosas(items){
+  const f=getGloFiltros();
+  actualizarChips('glosas-chips',f);
+  return items.filter(gl=>{
+    if(f.factura.val||f.factura.op==='vacio'||f.factura.op==='no_vacio')
+      if(!aplicarOp(gl.factura,f.factura.op,f.factura.val)) return false;
+    if(f.radicado.val) if(!aplicarOp(gl.radicado,f.radicado.op,f.radicado.val)) return false;
+    if(f.doc.val||f.doc.op==='vacio'||f.doc.op==='no_vacio')
+      if(!aplicarOp(gl.docVictima,f.doc.op,f.doc.val)) return false;
+    if(f.glosa.val||f.glosa.op==='vacio')
+      if(!aplicarOp(gl.descGlosa,f.glosa.op,f.glosa.val)) return false;
+    return true;
+  });
+}
+
+// Chips visuales de filtros activos
+function actualizarChips(containerId, filtros){
+  const el=g(containerId); if(!el) return;
+  const opLbl={'contiene':'~','no_contiene':'!~','empieza':'^','termina':'$','igual':'=','<>':'≠','vacio':'∅','no_vacio':'≠∅','>=':'≥','<=':'≤','>':'>','<':'<'};
+  const chips=Object.entries(filtros)
+    .filter(([,f])=>f?.val||f?.op==='vacio'||f?.op==='no_vacio')
+    .map(([campo,f])=>{
+      const lbl=campo.toUpperCase();
+      const opStr=opLbl[f.op]||f.op||'';
+      const valStr=f.val?` "${f.val}"`:f.op==='vacio'?' vacío':f.op==='no_vacio'?' ≠∅':'';
+      return `<span class="flt-chip">${lbl} ${opStr}${valStr}</span>`;
+    });
+  el.innerHTML=chips.join('');
+}
+
 // ── SELECCIÓN Y LISTA ──
+// ══════════════════════════════════════════════
+// MOTOR DE FILTROS AVANZADOS
+// ══════════════════════════════════════════════
+const OPS_TEXTO = ['contiene','no contiene','empieza por','termina en','= (igual)','<> (diferente)','está vacío','no está vacío'];
+const OPS_NUM   = ['= (igual)','<> (diferente)','>=','<=','>','<','está vacío','no está vacío','contiene'];
+const OPS_FECHA = ['= (igual)','<> (diferente)','>=','<=','>','<','está vacío','no está vacío'];
+
+// Genera el HTML de un grupo de filtro
+function fltGrupo(id, label, ops, tipo='texto'){
+  const opOpts = ops.map(o=>`<option value="${o}">${o}</option>`).join('');
+  const showVal = !['está vacío','no está vacío'].includes(ops[0]);
+  return `<div class="flt-group" id="fg-${id}">
+    <span class="flt-lbl">${label}</span>
+    <select class="flt-op" id="fop-${id}" onchange="window.onFltOp('${id}')">
+      <option value="">(filtrar...)</option>
+      ${opOpts}
+    </select>
+    <input class="flt-val" id="fval-${id}" placeholder="valor..."
+      style="display:none;"
+      oninput="window.aplicarFiltros('${id.split('-')[0]}')"
+      type="${tipo==='num'?'number':tipo==='fecha'?'date':'text'}">
+  </div>`;
+}
+
+window.onFltOp=(id)=>{
+  const op=g('fop-'+id)?.value||'';
+  const valEl=g('fval-'+id);
+  const grp=g('fg-'+id);
+  const sinVal=['está vacío','no está vacío',''].includes(op);
+  if(valEl) valEl.style.display=sinVal?'none':'inline-block';
+  if(grp) grp.classList.toggle('flt-active', op!=='');
+  const modulo=id.split('-')[0];
+  window.aplicarFiltros(modulo);
+};
+
+// Evalúa si un valor cumple el operador y término
+function fltMatch(op, valor, termino){
+  const v=String(valor||'').toLowerCase().trim();
+  const t=String(termino||'').toLowerCase().trim();
+  switch(op){
+    case 'contiene':       return v.includes(t);
+    case 'no contiene':    return !v.includes(t);
+    case 'empieza por':    return v.startsWith(t);
+    case 'termina en':     return v.endsWith(t);
+    case '= (igual)':      return v===t || parseFloat(v)===parseFloat(t);
+    case '<> (diferente)': return v!==t && parseFloat(v)!==parseFloat(t);
+    case '>=':             return parseFloat(v)>=parseFloat(t);
+    case '<=':             return parseFloat(v)<=parseFloat(t);
+    case '>':              return parseFloat(v)>parseFloat(t);
+    case '<':              return parseFloat(v)<parseFloat(t);
+    case 'está vacío':     return !v;
+    case 'no está vacío':  return !!v;
+    default: return true;
+  }
+}
+
+// Obtiene op y val de un filtro
+function getFlt(id){ return {op:g('fop-'+id)?.value||'', val:g('fval-'+id)?.value||''}; }
+
+// Aplica todos los filtros de un módulo
+window.aplicarFiltros=(modulo)=>{
+  if(modulo==='lista') renderLista();
+  else if(modulo==='pag') renderHistorial();
+  else if(modulo==='glo') window.renderGlosasResp();
+};
+
+// Resetea todos los filtros de un módulo
+window.resetFiltros=(modulo)=>{
+  document.querySelectorAll(`[id^="fop-${modulo}-"],[id^="fval-${modulo}-"]`).forEach(el=>{
+    el.value=''; if(el.classList.contains('flt-val')) el.style.display='none';
+  });
+  document.querySelectorAll(`[id^="fg-${modulo}-"]`).forEach(el=>el.classList.remove('flt-active'));
+  window.aplicarFiltros(modulo);
+};
+
+// ── CONSTRUIR BARRAS DE FILTROS ──
+function buildFiltros(){
+  const bars={
+    'flt-lista-bar': [
+      ['lista-fac',   'Factura',       OPS_TEXTO,'texto'],
+      ['lista-consec','Consecutivo',   OPS_TEXTO,'texto'],
+      ['lista-ips',   'Cód. IPS',      OPS_TEXTO,'texto'],
+      ['lista-rad',   'N° Radicado',   OPS_TEXTO,'texto'],
+      ['lista-fecha', 'Fecha Creación',OPS_FECHA,'fecha'],
+      ['lista-est',   'Estado Rad.',   OPS_TEXTO,'texto'],
+    ],
+    'flt-pag-bar': [
+      ['pag-fac',   'Factura',         OPS_TEXTO,'texto'],
+      ['pag-ips',   'Cód. IPS',        OPS_TEXTO,'texto'],
+      ['pag-tipo',  'Tipo Pago',       OPS_TEXTO,'texto'],
+      ['pag-fecha', 'Fecha Pago',      OPS_FECHA,'fecha'],
+      ['pag-vrpag', 'Vr Pagado',       OPS_NUM,  'num'],
+      ['pag-vrglo', 'Vr Glosado',      OPS_NUM,  'num'],
+      ['pag-pct',   '% Comisión',      OPS_NUM,  'num'],
+    ],
+    'flt-glo-bar': [
+      ['glo-fac',   'Factura',         OPS_TEXTO,'texto'],
+      ['glo-rad',   'Radicado',        OPS_TEXTO,'texto'],
+      ['glo-doc',   'Documento',       OPS_TEXTO,'texto'],
+      ['glo-vr',    'Vr Glosado',      OPS_NUM,  'num'],
+      ['glo-resp',  'Respuesta',       OPS_TEXTO,'texto'],
+    ],
+  };
+
+  Object.entries(bars).forEach(([barId, filtros])=>{
+    const bar=g(barId); if(!bar) return;
+    if(bar.innerHTML.trim()) return; // ya construida
+    const modulo=barId.replace('flt-','').replace('-bar','');
+    bar.innerHTML=`<span class="flt-lbl" style="font-size:10px;white-space:nowrap;">🔽 FILTROS:</span>`
+      + filtros.map(([id,lbl,ops,tipo])=>fltGrupo(id,lbl,ops,tipo)).join('')
+      + `<button class="flt-reset" onclick="window.resetFiltros('${modulo}')">✕ Limpiar</button>`;
+    bar.style.display='flex';
+  });
+}
+
+// ── FIN MOTOR ──
+
 let FILTRO_ESTADO='todas', BUSQUEDA='', SEL_IDS=new Set();
 
 const ESTADOS_RAD={
@@ -1045,13 +1467,15 @@ window.deselTodas=()=>{ SEL_IDS.clear(); updSelBar(); renderLista(); };
 
 function recsFiltrados(){
   let recs=[...RECS];
-  if(BUSQUEDA) recs=recs.filter(r=>(r.factura||'').toLowerCase().includes(BUSQUEDA)||(r.consec||'').toLowerCase().includes(BUSQUEDA)||(r.codHab||'').toLowerCase().includes(BUSQUEDA));
+  // Filtros rápidos de estado
   if(FILTRO_ESTADO==='pend')   recs=recs.filter(r=>!r.furips1?.c83);
   else if(FILTRO_ESTADO==='comp')   recs=recs.filter(r=>!!r.furips1?.c83);
   else if(FILTRO_ESTADO==='sinrad') recs=recs.filter(r=>estadoRad(r)==='sinradicar');
   else if(FILTRO_ESTADO==='rad')    recs=recs.filter(r=>estadoRad(r)==='radicada');
   else if(FILTRO_ESTADO==='dev')    recs=recs.filter(r=>estadoRad(r).startsWith('devuelta'));
   else if(FILTRO_ESTADO==='pag')    recs=recs.filter(r=>estadoRad(r)==='pagada');
+  // Filtros avanzados
+  recs=aplicarFltLista(recs);
   return recs;
 }
 
@@ -1366,13 +1790,7 @@ window.limpiarFormPago = () => {
 };
 
 function renderHistorial(){
-  const busq = gv('pag-buscar').toLowerCase();
-  let pags = [...PAGOS_CACHE];
-  if(busq) pags = pags.filter(p =>
-    (p.factura||'').toLowerCase().includes(busq)||
-    (p.codHab||'').toLowerCase().includes(busq)||
-    (p.ref||'').toLowerCase().includes(busq)
-  );
+  let pags = aplicarFltPagos([...PAGOS_CACHE]);
   const lista = g('pag-lista'); if(!lista) return;
   if(!pags.length){ lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay pagos registrados.</div>'; return; }
 
@@ -1731,7 +2149,6 @@ window.limpiarGlosas = () => {
 };
 
 window.renderGlosasResp = function(){
-  const busq = (g('glo-buscar')?.value||'').toLowerCase().trim();
   const filtEst = g('glo-filtro-est')?.value||'';
   const lista = g('glo-resp-lista'); if(!lista) return;
 
@@ -1748,17 +2165,12 @@ window.renderGlosasResp = function(){
     porFactura[k].push(gl);
   });
 
-  // Filtrar facturas según búsqueda y estado
+  // Filtrar facturas según filtros avanzados y estado
   let facturasFiltradas = Object.entries(porFactura).filter(([key, items])=>{
     const [fac,rad,doc]=key.split('|||');
-    // Filtro búsqueda
-    if(busq){
-      const match = fac.toLowerCase().includes(busq)
-        || rad.toLowerCase().includes(busq)
-        || doc.toLowerCase().includes(busq)
-        || (items[0]?.codHab||'').toLowerCase().includes(busq);
-      if(!match) return false;
-    }
+    // Aplicar filtros avanzados a nivel de factura
+    const itemsFiltrados=aplicarFltGlosas(items);
+    if(!itemsFiltrados.length) return false;
     // Filtro estado
     if(filtEst==='pendiente'){
       const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
@@ -2621,7 +3033,7 @@ window.go=(id)=>{
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('active'));
   const ni=g('n-'+id); if(ni) ni.classList.add('active');
   if(id==='nueva') prepNueva();
-  if(id==='lista') renderLista();
+  if(id==='lista'){ buildFiltros(); renderLista(); }
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
   if(id==='adm'){
@@ -2634,9 +3046,9 @@ window.go=(id)=>{
   }
   if(id==='pagos'){
     if(USER.rol!=='superadmin'){ toast('Solo el Super Admin puede acceder a Pagos y Comisiones.','w'); return; }
-    loadPagos();
+    buildFiltros(); loadPagos();
   }
-  if(id==='glosas'){ loadGlosas(); }
+  if(id==='glosas'){ buildFiltros(); loadGlosas(); }
 };
 
 // ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
