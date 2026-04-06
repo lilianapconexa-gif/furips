@@ -282,7 +282,9 @@ select option{background:var(--sur2);}
           <div class="stat"><div class="sv" id="sd-f1">0</div><div class="sl">FURIPS 1 completos</div></div>
           <div class="stat"><div class="sv" id="sd-it">0</div><div class="sl">Ítems FURIPS 2</div></div>
           <div class="stat"><div class="sv" id="sd-vl">$0</div><div class="sl">Total Facturado</div></div>
+          <div class="stat" style="cursor:pointer;" onclick="go('lista')" title="Ver reclamaciones próximas a vencer"><div class="sv" id="sd-venc" style="color:var(--warn);">0</div><div class="sl">Por vencer ⏰</div></div>
         </div>
+        <div id="dash-vencimiento"></div>
         <div class="alert ai">☁️ Los datos se sincronizan automáticamente. Todos los usuarios ven los cambios en tiempo real.</div>
         <div class="alert as">✔ <strong>Fase 3 activa:</strong> Multiusuario · Login seguro · Nube · Roles Admin/Digitador</div>
         <div style="margin-top:16px;">
@@ -314,6 +316,17 @@ select option{background:var(--sur2);}
             </div>
             <div class="field"><label class="fl">Consecutivo <span class="req">*</span></label><input id="n-con" maxlength="12"></div>
             <div class="field"><label class="fl">Radicado Anterior (RGO)</label><input id="n-rgo" maxlength="10" placeholder="Vacío = nueva"><span class="hint">Solo RGO: 0=total · 1=parcial · 6=transversal</span></div>
+            <div class="field">
+              <label class="fl">Fecha del Evento <span class="req">*</span></label>
+              <input id="n-fev" type="date" onchange="window.chkVencNueva()">
+              <span class="hint">Fecha del accidente o evento. Define el plazo máximo de radicación.</span>
+              <div id="n-venc-info" style="display:none;margin-top:5px;padding:7px 10px;border-radius:5px;font-size:11px;"></div>
+            </div>
+            <div class="field">
+              <label class="fl">Fecha de Egreso</label>
+              <input id="n-feg" type="date" onchange="window.chkVencNueva()">
+              <span class="hint">Si ya tiene fecha de egreso del paciente. Más precisa para calcular vencimiento.</span>
+            </div>
             <div class="field">
               <label class="fl">IPS Prestadora <span class="req">*</span></label>
               <select id="n-cod-sel" onchange="selIPSp1(this.value)" style="margin-bottom:4px;">
@@ -381,6 +394,8 @@ select option{background:var(--sur2);}
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">CONSECUTIVO</th>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">COD. HABILITACIÓN</th>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">RGO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">F.EVENTO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">VENCE</th>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);color:var(--tx2);border-bottom:1px solid var(--brd);">ESTADO</th>
                   </tr>
                 </thead>
@@ -1136,6 +1151,50 @@ async function saveRec(id,data){
 }
 
 // ── RECLAMACIONES ──
+
+window.chkVencNueva=()=>{
+  const fev=g('n-fev')?.value||'';
+  const feg=g('n-feg')?.value||'';
+  const info=g('n-venc-info'); if(!info) return;
+
+  // Usar egreso si existe, si no evento
+  const fStr=feg||fev; if(!fStr){ info.style.display='none'; return; }
+  const [y,m,d]=fStr.split('-').map(Number);
+  const fechaBase=new Date(y,m-1,d);
+
+  // Determinar plazo
+  let meses=18,norma='Ley 2294/2023';
+  if(fechaBase < new Date('2012-01-10'))      { meses=6;  norma='D.L. 1281/2002'; }
+  else if(fechaBase < new Date('2015-06-09')) { meses=12; norma='D.L. 019/2012'; }
+  else if(fechaBase < new Date('2023-05-19')) { meses=36; norma='Ley 1753/2015'; }
+
+  const limite=new Date(fechaBase);
+  limite.setMonth(limite.getMonth()+meses);
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const dias=Math.ceil((limite-hoy)/86400000);
+  const fmtD=d=>d.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+
+  let color,ico,msg;
+  if(dias<=0){
+    color='var(--red)'; ico='⚠️';
+    msg=`<strong>VENCIDA</strong> — Esta reclamación venció hace ${Math.abs(dias)} días. No puede radicarse.`;
+  } else if(dias<=30){
+    color='var(--red)'; ico='🔴';
+    msg=`<strong>${dias} días para vencer.</strong> Radica cuanto antes. Límite: ${fmtD(limite)}`;
+  } else if(dias<=90){
+    color='var(--warn)'; ico='🟡';
+    msg=`<strong>${dias} días para vencer.</strong> Límite: ${fmtD(limite)}`;
+  } else {
+    color='var(--green)'; ico='✔';
+    msg=`Plazo OK — ${dias} días disponibles. Límite: ${fmtD(limite)}`;
+  }
+
+  info.style.display='block';
+  info.style.background=dias<=0?'rgba(211,47,47,.08)':dias<=90?'rgba(245,124,0,.06)':'rgba(157,180,85,.06)';
+  info.style.border=`1px solid ${color}`;
+  info.style.color=color;
+  info.innerHTML=`${ico} Plazo <strong>${meses===36?'3 años':meses+'m'}</strong> (${norma}) · ${msg}`;
+};
 // ── VALIDACIÓN DE FACTURAS DUPLICADAS ──
 window.chkDupFac=(val)=>{
   const fac=(val||'').trim().toUpperCase();
@@ -1156,7 +1215,9 @@ window.chkDupFac=(val)=>{
 
 window.crearRec = async ()=>{
   const fac=gv('n-fac'),con=gv('n-con'),cod=gv('n-cod'),rgo=gv('n-rgo');
+  const fev_v=gv('n-fev');
   if(!fac||!con||!cod){ialert('n-alr','aw','Complete Factura, Consecutivo y Código Habilitación.');return;}
+  if(!fev_v){ialert('n-alr','aw','La Fecha del Evento es obligatoria para controlar el vencimiento.');return;}
 
   // ── VALIDAR DUPLICADO ──
   const dup = RECS.find(r => r.factura?.toUpperCase()===fac.toUpperCase());
@@ -1172,10 +1233,11 @@ window.crearRec = async ()=>{
 
   loader(true);
   try{
-    const data={factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre',creado:serverTimestamp(),actualizado:serverTimestamp()};
+    const fev=gv('n-fev'),feg=gv('n-feg');
+    const data={factura:fac,consec:con,codHab:cod,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre',creado:serverTimestamp(),actualizado:serverTimestamp()};
     const ref=await addDoc(collection(db,'reclamaciones'),data);
     CUR_ID=ref.id;
-    const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,furips1:{c1:rgo,c2:fac,c3:con,c4:cod},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
+    const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
     localStorage.setItem('furips_p2_rec',JSON.stringify(recLocal));
     localStorage.setItem('furips_p2_rol',USER.rol);
     loader(false);
@@ -1366,6 +1428,131 @@ function actualizarChips(containerId, filtros){
   el.innerHTML=chips.join('');
 }
 
+
+// ── CONTROL DE VENCIMIENTO DE RECLAMACIONES ──
+// Según manual ADRES V10 / Ley 2294 de 2023:
+//   Eventos desde 19/may/2023 → 18 meses desde egreso
+//   Eventos entre 09/jun/2015 y 18/may/2023 → 3 años desde egreso
+//   Eventos entre 10/ene/2012 y 08/jun/2015 → 1 año
+//   Eventos antes del 10/ene/2012 → 6 meses
+const CORTE_18M = new Date('2023-05-19'); // Ley 2294
+const CORTE_3A  = new Date('2015-06-09'); // Ley 1753
+const CORTE_1A  = new Date('2012-01-10'); // DL 019
+
+function calcVencimiento(rec){
+  // Prioridad: fechaEgreso directo → c12 FURIPS1 → fechaEvento directo → c22 FURIPS1 → creado
+  const d=rec.furips1||{};
+  const egresoStr  = rec.fechaEgreso||d.c12||d.c11||'';
+  const eventoStr  = rec.fechaEvento||d.c22||'';
+
+  let fechaBase = null;
+  const parseF=s=>{ if(!s||s.length!==10) return null; const [y,m,dy]=s.split('-').map(Number); return new Date(y,m-1,dy); };
+  fechaBase = parseF(egresoStr) || parseF(eventoStr) || (rec.creado?.toDate?rec.creado.toDate():null);
+  if(!fechaBase) return null;
+
+  // Determinar plazo según fecha del evento
+  let meses = 18; // por defecto (norma vigente desde may 2023)
+  if(fechaBase < CORTE_1A)        meses = 6;   // antes ene 2012
+  else if(fechaBase < CORTE_3A)   meses = 12;  // ene2012–jun2015 (1 año = 12m)
+  else if(fechaBase < CORTE_18M)  meses = 36;  // jun2015–may2023 (3 años = 36m)
+  // desde may2023: 18 meses
+
+  // Calcular fecha límite
+  const limite = new Date(fechaBase);
+  limite.setMonth(limite.getMonth() + meses);
+
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  const diffMs = limite - hoy;
+  const diffDias = Math.ceil(diffMs / 86400000);
+
+  return { fechaBase, limite, meses, diasRestantes: diffDias, vencida: diffDias <= 0 };
+}
+
+function badgeVencimiento(rec){
+  const v = calcVencimiento(rec);
+  if(!v) return '';
+  if(v.vencida){
+    return `<span style="background:rgba(211,47,47,.2);color:var(--red);font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;font-family:var(--mono);">⚠ VENCIDA</span>`;
+  }
+  if(v.diasRestantes <= 30){
+    return `<span style="background:rgba(211,47,47,.15);color:var(--red);font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;font-family:var(--mono);">🔴 ${v.diasRestantes}d</span>`;
+  }
+  if(v.diasRestantes <= 90){
+    return `<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;font-family:var(--mono);">🟡 ${v.diasRestantes}d</span>`;
+  }
+  if(v.diasRestantes <= 180){
+    return `<span style="background:rgba(157,180,85,.12);color:var(--green);font-size:9px;padding:2px 7px;border-radius:4px;font-family:var(--mono);">${v.diasRestantes}d</span>`;
+  }
+  return ''; // más de 180 días: no mostrar, no hay urgencia
+}
+
+function tooltipVencimiento(rec){
+  const v=calcVencimiento(rec); if(!v) return '';
+  const fmtD=d=>d.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+  return `Plazo: ${v.meses}m · Egreso: ${fmtD(v.fechaBase)} · Límite: ${fmtD(v.limite)}`;
+}
+
+// ── PANEL DE ALERTAS DE VENCIMIENTO EN DASHBOARD ──
+function renderAlertasVencimiento(){
+  const panel = g('dash-vencimiento'); if(!panel) return;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  const criticas = []; // <= 30 días o vencidas
+  const urgentes = []; // 31-90 días
+  const proximas = []; // 91-180 días
+
+  RECS.forEach(r=>{
+    const v=calcVencimiento(r); if(!v) return;
+    if(v.vencida || v.diasRestantes<=30) criticas.push({r,v});
+    else if(v.diasRestantes<=90) urgentes.push({r,v});
+    else if(v.diasRestantes<=180) proximas.push({r,v});
+  });
+
+  // Ordenar por días restantes ASC
+  [criticas,urgentes,proximas].forEach(arr=>arr.sort((a,b)=>a.v.diasRestantes-b.v.diasRestantes));
+
+  if(!criticas.length && !urgentes.length && !proximas.length){
+    panel.innerHTML='<div class="alert as" style="margin-top:10px;">✔ No hay reclamaciones próximas a vencer en los próximos 6 meses.</div>';
+    return;
+  }
+
+  const rowHtml=(item,color,bg)=>{
+    const {r,v}=item;
+    const fmtD=d=>d.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    const plazoLbl = v.meses===18?'18m':v.meses===36?'3a':v.meses===12?'1a':'6m';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--brd);cursor:pointer;" onclick="selRec('${r.id}')" title="${tooltipVencimiento(r)}">
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${color};min-width:50px;">${v.vencida?'VENCIÓ':v.diasRestantes+'d'}</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--acc);min-width:90px;">${r.factura}</span>
+      <span style="font-size:11px;color:var(--tx2);flex:1;">${r.codHab} · ${r.consec}</span>
+      <span style="font-size:10px;color:var(--tx3);font-family:var(--mono);">Límite: ${fmtD(v.limite)}</span>
+      <span style="font-size:9px;background:${bg};color:${color};padding:1px 6px;border-radius:3px;font-family:var(--mono);">Plazo ${plazoLbl}</span>
+    </div>`;
+  };
+
+  let html = `<div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;margin-top:14px;overflow:hidden;">
+    <div style="padding:10px 14px;background:var(--sur2);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);">⏰ CONTROL DE VENCIMIENTOS</span>
+      <span style="font-size:10px;color:var(--tx3);">Ley 2294/2023 · 18m desde egreso (norma vigente)</span>
+    </div>`;
+
+  if(criticas.length){
+    html+=`<div style="padding:6px 12px;background:rgba(211,47,47,.06);font-size:10px;font-weight:700;color:var(--red);font-family:var(--mono);">🔴 CRÍTICAS — ${criticas.length} reclamación${criticas.length>1?'es':''} (≤30 días o vencidas)</div>`;
+    html+=criticas.map(i=>rowHtml(i,'var(--red)','rgba(211,47,47,.1)')).join('');
+  }
+  if(urgentes.length){
+    html+=`<div style="padding:6px 12px;background:rgba(245,124,0,.06);font-size:10px;font-weight:700;color:var(--warn);font-family:var(--mono);">🟡 URGENTES — ${urgentes.length} reclamación${urgentes.length>1?'es':''} (31–90 días)</div>`;
+    html+=urgentes.map(i=>rowHtml(i,'var(--warn)','rgba(245,124,0,.1)')).join('');
+  }
+  if(proximas.length){
+    html+=`<div style="padding:6px 12px;background:rgba(157,180,85,.06);font-size:10px;font-weight:700;color:var(--green);font-family:var(--mono);">🟢 PRÓXIMAS — ${proximas.length} reclamación${proximas.length>1?'es':''} (91–180 días)</div>`;
+    html+=proximas.map(i=>rowHtml(i,'var(--green)','rgba(157,180,85,.1)')).join('');
+  }
+
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
 // ── SELECCIÓN Y LISTA ──
 let FILTRO_ESTADO='todas', BUSQUEDA='', SEL_IDS=new Set();
 
@@ -1426,6 +1613,8 @@ function renderLista(){
   w.innerHTML=recs.map(r=>{
     const f1ok=!!r.furips1?.c83, items=(r.furips2||[]).length;
     const ts=r.creado?.toDate?r.creado.toDate().toLocaleDateString('es-CO'):'—';
+    const vBadge=badgeVencimiento(r);
+    const vTip=tooltipVencimiento(r);
     const canEdit=USER.rol==='admin'||USER.rol==='superadmin'||r.creadoPor===USER.uid;
     const sel=SEL_IDS.has(r.id);
     const estRad=estadoRad(r);
@@ -1442,7 +1631,7 @@ function renderLista(){
       <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:24px;">#${r.id.slice(-4)}</div>
       <div style="flex:1;cursor:pointer;" onclick="selRec('${r.id}')">
         <div style="font-weight:500;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          ${r.factura} <span class="badge bb2">${r.consec}</span> ${radBadge} ${loteTag} ${radNum}
+          ${r.factura} <span class="badge bb2">${r.consec}</span> ${radBadge} ${loteTag} ${radNum} ${vBadge}
         </div>
         <div style="font-size:11px;color:var(--tx2);margin-top:2px;">
           IPS:${r.codHab} · ${items} ítems ·
@@ -2821,7 +3010,11 @@ function buildInformeCliente(cod){
 
 // ── STATS ──
 function updStats(){
+  renderAlertasVencimiento();
   const n=RECS.length,f1=RECS.filter(r=>r.furips1?.c83).length,it=RECS.reduce((a,r)=>a+(r.furips2||[]).length,0),vl=RECS.reduce((a,r)=>a+(parseInt(r.furips1?.c96||0)||0),0);
+  const porVencer=RECS.filter(r=>{ const v=calcVencimiento(r); return v&&!v.vencida&&v.diasRestantes<=90; }).length;
+  const vencidas=RECS.filter(r=>{ const v=calcVencimiento(r); return v&&v.vencida; }).length;
+  const sdv=g('sd-venc'); if(sdv){ sdv.textContent=porVencer+(vencidas>0?'+'+vencidas:''); sdv.style.color=vencidas>0?'var(--red)':porVencer>0?'var(--warn)':'var(--green)'; }
   _s('sd-tot',n);_s('sd-f1',f1);_s('sd-it',it);_s('sd-vl','$'+vl.toLocaleString('es-CO'));_s('rec-badge',n+' reclamaciones');
 }
 
@@ -3189,15 +3382,14 @@ window.descargarPlantilla=()=>{
   if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); setTimeout(descargarPlantilla,1500); return; }
   const wb=XLSX.utils.book_new();
   const data=[
-    ['factura','consecutivo','codHab','rgo'],
-    ['FE-001','0001','760011259501',''],
-    ['FE-002','0002','760011259501',''],
-    ['FE-003','0003','157590080301',''],
+    ['factura','consecutivo','codHab','rgo','fechaEvento','fechaEgreso'],
+    ['FE-001','0001','760011259501','','2024-03-15','2024-03-17'],
+    ['FE-002','0002','760011259501','','2024-05-20',''],
+    ['FE-003','0003','157590080301','','2023-11-10','2023-11-12'],
   ];
   const ws=XLSX.utils.aoa_to_sheet(data);
-  ws['!cols']=[{wch:15},{wch:12},{wch:18},{wch:12}];
-  // Estilo encabezado
-  ['A1','B1','C1','D1'].forEach(cell=>{ if(ws[cell]) ws[cell].s={font:{bold:true},fill:{fgColor:{rgb:'1A7F64'}}}; });
+  ws['!cols']=[{wch:15},{wch:12},{wch:18},{wch:12},{wch:14},{wch:14}];
+  ['A1','B1','C1','D1','E1','F1'].forEach(cell=>{ if(ws[cell]) ws[cell].s={font:{bold:true},fill:{fgColor:{rgb:'1A7F64'}}}; });
   XLSX.utils.book_append_sheet(wb,ws,'Reclamaciones');
   XLSX.writeFile(wb,'Plantilla_FURIPS_Reclamaciones.xlsx');
   toast('Plantilla descargada ✔','ok');
@@ -3217,10 +3409,12 @@ window.procesarExcel=(file)=>{
       // Normalizar columnas (mayúsculas/minúsculas)
       FILAS_EXCEL=rows.map((r,i)=>({
         num: i+1,
-        factura: (r.factura||r.Factura||r.FACTURA||'').toString().trim(),
-        consec:  (r.consecutivo||r.Consecutivo||r.CONSECUTIVO||r.consec||'').toString().trim(),
-        codHab:  (r.codHab||r.CodHab||r.CODHAB||r.cod_hab||r.codigo||'').toString().trim(),
-        rgo:     (r.rgo||r.RGO||r.radicado||'').toString().trim(),
+        factura:      (r.factura||r.Factura||r.FACTURA||'').toString().trim(),
+        consec:       (r.consecutivo||r.Consecutivo||r.CONSECUTIVO||r.consec||'').toString().trim(),
+        codHab:       (r.codHab||r.CodHab||r.CODHAB||r.cod_hab||r.codigo||'').toString().trim(),
+        rgo:          (r.rgo||r.RGO||r.radicado||'').toString().trim(),
+        fechaEvento:  (r.fechaEvento||r.FechaEvento||r.FECHAEVENTO||r.fecha_evento||'').toString().trim(),
+        fechaEgreso:  (r.fechaEgreso||r.FechaEgreso||r.FECHAEGRESO||r.fecha_egreso||'').toString().trim(),
         estado:  'pendiente',
       }));
 
@@ -3270,6 +3464,8 @@ function renderPreview(){
       <td style="padding:5px 10px;font-family:var(--mono);">${f.consec||'—'}</td>
       <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${f.codHab||'—'}</td>
       <td style="padding:5px 10px;color:var(--tx3);">${f.rgo||'—'}</td>
+      <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${f.fechaEvento||'—'}</td>
+      <td style="padding:5px 10px;">${(()=>{ if(!f.fechaEvento) return '<span style="color:var(--tx3);font-size:10px;">—</span>'; const tmp={fechaEvento:f.fechaEvento,fechaEgreso:f.fechaEgreso}; const v=calcVencimiento(tmp); if(!v) return '—'; const d=v.diasRestantes; const col=v.vencida?'var(--red)':d<=30?'var(--red)':d<=90?'var(--warn)':'var(--green)'; return `<span style="font-size:10px;font-family:var(--mono);font-weight:700;color:${col};">${v.vencida?'VENCIÓ':d+'d'}</span>`; })()}</td>
       <td style="padding:5px 10px;color:${color};font-weight:500;">${ico} ${lbl}</td>
     </tr>`;
   }).join('');
@@ -3312,7 +3508,9 @@ window.cargarMasiva=async()=>{
     try{
       await addDoc(collection(db,'reclamaciones'),{
         factura:f.factura, consec:f.consec, codHab:f.codHab,
-        furips1:{c1:f.rgo,c2:f.factura,c3:f.consec,c4:f.codHab},
+        fechaEvento:f.fechaEvento||null,
+        fechaEgreso:f.fechaEgreso||null,
+        furips1:{c1:f.rgo,c2:f.factura,c3:f.consec,c4:f.codHab,c22:f.fechaEvento||'',c12:f.fechaEgreso||''},
         furips2:[], creadoPor:USER.uid,
         creadoPorNombre:USER.nombre||USER.email||'Sin nombre',
         creado:serverTimestamp(), actualizado:serverTimestamp()
