@@ -1419,8 +1419,8 @@ function renderLista(){
       </div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
         ${canEdit?`
-          <button class="btn btn-sm bs" onclick="selRec('${r.id}')">✏</button>
-          <button class="btn btn-sm" style="background:rgba(31,111,235,.15);border-color:var(--blue);color:#79c0ff;padding:4px 9px;font-size:11px;" onclick="abrirRadicadoGrupal('${r.id}')">📬</button>
+          <button class="btn btn-sm bs" onclick="selRec('${r.id}')" title="Abrir y editar FURIPS 1 y 2" style="font-size:11px;">✏ Editar FURIPS</button>
+          <button class="btn btn-sm" style="background:rgba(31,111,235,.15);border-color:var(--blue);color:#79c0ff;padding:4px 9px;font-size:11px;" onclick="abrirRadicadoGrupal('${r.id}')">📬 Radicar</button>
           <button class="btn btn-sm bd" onclick="delRec('${r.id}')">✕</button>
         `:'<span style="font-size:10px;color:var(--tx3);">Solo lectura</span>'}
       </div>
