@@ -415,7 +415,7 @@ select option{background:var(--sur2);}
               <option value="vacio">está vacío</option>
               <option value="no_vacio">no está vacío</option>
             </select>
-            <input class="flt-inp" id="fl-fac-val" placeholder="Ej: FE100" oninput="window.aplicarFiltrosLista()">
+            <input class="flt-inp" id="fl-fac-val" placeholder="Ej: FE100" onkeydown="if(event.key==='Enter') window.aplicarFiltrosLista()">
 
             <span class="flt-lbl" style="margin-left:8px;">IPS / CÓDIGO</span>
             <select class="flt-sel" id="fl-ips-op">
@@ -425,7 +425,7 @@ select option{background:var(--sur2);}
               <option value="vacio">está vacío</option>
               <option value="no_vacio">no está vacío</option>
             </select>
-            <input class="flt-inp" id="fl-ips-val" placeholder="Ej: 760011" oninput="window.aplicarFiltrosLista()">
+            <input class="flt-inp" id="fl-ips-val" placeholder="Ej: 760011" onkeydown="if(event.key==='Enter') window.aplicarFiltrosLista()">
           </div>
           <div class="flt-row">
             <span class="flt-lbl">CONSECUTIVO</span>
@@ -435,7 +435,7 @@ select option{background:var(--sur2);}
               <option value="empieza">empieza por</option>
               <option value="vacio">está vacío</option>
             </select>
-            <input class="flt-inp" id="fl-con-val" placeholder="Ej: 0001" oninput="window.aplicarFiltrosLista()">
+            <input class="flt-inp" id="fl-con-val" placeholder="Ej: 0001" onkeydown="if(event.key==='Enter') window.aplicarFiltrosLista()">
 
             <span class="flt-lbl" style="margin-left:8px;">RADICADO LOTE</span>
             <select class="flt-sel" id="fl-rad-op">
@@ -444,10 +444,11 @@ select option{background:var(--sur2);}
               <option value="vacio">está vacío</option>
               <option value="no_vacio">no está vacío</option>
             </select>
-            <input class="flt-inp" id="fl-rad-val" placeholder="Ej: RAD-2024" oninput="window.aplicarFiltrosLista()">
+            <input class="flt-inp" id="fl-rad-val" placeholder="Ej: RAD-2024" onkeydown="if(event.key==='Enter') window.aplicarFiltrosLista()">
           </div>
           <div class="flt-row">
             <span class="flt-lbl">F1 FURIPS</span>
+            <button class="flt-btn" onclick="window.aplicarFiltrosLista()" style="margin-left:8px;">▶ Filtrar</button>
             <select class="flt-sel" id="fl-f1-op" onchange="window.aplicarFiltrosLista()">
               <option value="">Todos</option>
               <option value="completo">Completo</option>
@@ -462,6 +463,7 @@ select option{background:var(--sur2);}
               <option value="devuelta_total">Dev. Total</option>
               <option value="pagada">Pagada</option>
             </select>
+            <button class="flt-btn" onclick="window.aplicarFiltrosLista()">▶ Filtrar</button>
             <button class="flt-btn-clr" onclick="window.limpiarFiltrosLista()">✕ Limpiar</button>
           </div>
         </div>
@@ -490,7 +492,7 @@ select option{background:var(--sur2);}
         </div>
 
         <!-- Filtros avanzados LISTA (se construyen en JS) -->
-        <div id="flt-lista-bar" class="flt-bar" style="display:none;"></div>
+        
         <div id="lista-wrap"></div>
       </div>
 
@@ -726,7 +728,7 @@ select option{background:var(--sur2);}
 
         <!-- TAB: Historial -->
         <div id="ptab-his-body" class="hidden">
-          <div id="flt-pag-bar" class="flt-bar" style="display:none;"></div>
+          
           <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
             <button class="btn bs" onclick="window.toggleFiltros('pagos')" style="font-size:11px;">🔍 Filtros avanzados</button>
             <span id="pagos-chips" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;"></span>
@@ -739,12 +741,12 @@ select option{background:var(--sur2);}
                 <option value="contiene">contiene</option><option value="igual">=</option>
                 <option value="empieza">empieza por</option><option value="no_contiene">no contiene</option>
               </select>
-              <input class="flt-inp" id="fp-fac-val" placeholder="Ej: FE100" oninput="window.aplicarFiltrosPagos()">
+              <input class="flt-inp" id="fp-fac-val" placeholder="Ej: FE100" onkeydown="if(event.key==='Enter') window.aplicarFiltrosPagos()">
               <span class="flt-lbl" style="margin-left:8px;">IPS</span>
               <select class="flt-sel" id="fp-ips-op">
                 <option value="contiene">contiene</option><option value="igual">=</option><option value="no_contiene">no contiene</option>
               </select>
-              <input class="flt-inp" id="fp-ips-val" placeholder="Ej: 760011" oninput="window.aplicarFiltrosPagos()">
+              <input class="flt-inp" id="fp-ips-val" placeholder="Ej: 760011" onkeydown="if(event.key==='Enter') window.aplicarFiltrosPagos()">
             </div>
             <div class="flt-row">
               <span class="flt-lbl">TIPO PAGO</span>
@@ -756,12 +758,13 @@ select option{background:var(--sur2);}
                 <option value="">(sin filtro)</option><option value=">=">&gt;=</option>
                 <option value="<=">&lt;=</option><option value=">">&gt;</option><option value="<">&lt;</option>
               </select>
-              <input class="flt-inp" id="fp-vr-val" placeholder="Ej: 500000" type="number" oninput="window.aplicarFiltrosPagos()" style="max-width:120px;">
+              <input class="flt-inp" id="fp-vr-val" placeholder="Ej: 500000" type="number" onkeydown="if(event.key==='Enter') window.aplicarFiltrosPagos()" style="max-width:120px;">
               <span class="flt-lbl" style="margin-left:8px;">REFERENCIA</span>
               <select class="flt-sel" id="fp-ref-op">
                 <option value="contiene">contiene</option><option value="igual">=</option><option value="vacio">está vacío</option><option value="no_vacio">no está vacío</option>
               </select>
-              <input class="flt-inp" id="fp-ref-val" placeholder="Ej: RES-2024" oninput="window.aplicarFiltrosPagos()">
+              <input class="flt-inp" id="fp-ref-val" placeholder="Ej: RES-2024" onkeydown="if(event.key==='Enter') window.aplicarFiltrosPagos()">
+              <button class="flt-btn" onclick="window.aplicarFiltrosPagos()">▶ Filtrar</button>
               <button class="flt-btn-clr" onclick="window.limpiarFiltrosPagos()">✕ Limpiar</button>
             </div>
           </div>
@@ -863,7 +866,7 @@ select option{background:var(--sur2);}
         <!-- TAB: Responder -->
         <div id="gtab-resp-body" class="hidden">
           <!-- Barra de búsqueda y filtros -->
-          <div id="flt-glo-bar" class="flt-bar" style="display:none;"></div>
+          
           <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
             <button class="btn bs" onclick="window.toggleFiltros('glosas')" style="font-size:11px;">🔍 Filtros avanzados</button>
             <span id="glosas-chips" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;"></span>
@@ -883,12 +886,12 @@ select option{background:var(--sur2);}
                 <option value="empieza">empieza por</option><option value="termina">termina en</option>
                 <option value="no_contiene">no contiene</option>
               </select>
-              <input class="flt-inp" id="fg-fac-val" placeholder="Ej: FE100" oninput="window.renderGlosasResp()">
+              <input class="flt-inp" id="fg-fac-val" placeholder="Ej: FE100" onkeydown="if(event.key==='Enter') window.renderGlosasResp()">
               <span class="flt-lbl" style="margin-left:8px;">RADICADO</span>
               <select class="flt-sel" id="fg-rad-op">
                 <option value="contiene">contiene</option><option value="igual">=</option><option value="empieza">empieza por</option>
               </select>
-              <input class="flt-inp" id="fg-rad-val" placeholder="Ej: 14124" oninput="window.renderGlosasResp()">
+              <input class="flt-inp" id="fg-rad-val" placeholder="Ej: 14124" onkeydown="if(event.key==='Enter') window.renderGlosasResp()">
             </div>
             <div class="flt-row">
               <span class="flt-lbl">DOCUMENTO</span>
@@ -896,12 +899,13 @@ select option{background:var(--sur2);}
                 <option value="contiene">contiene</option><option value="igual">=</option>
                 <option value="empieza">empieza por</option><option value="no_contiene">no contiene</option>
               </select>
-              <input class="flt-inp" id="fg-doc-val" placeholder="Ej: CC-1234" oninput="window.renderGlosasResp()">
+              <input class="flt-inp" id="fg-doc-val" placeholder="Ej: CC-1234" onkeydown="if(event.key==='Enter') window.renderGlosasResp()">
               <span class="flt-lbl" style="margin-left:8px;">DESCRIPCIÓN GLOSA</span>
               <select class="flt-sel" id="fg-glo-op">
                 <option value="contiene">contiene</option><option value="no_contiene">no contiene</option><option value="vacio">está vacío</option>
               </select>
-              <input class="flt-inp" id="fg-glo-val" placeholder="Ej: certificado" oninput="window.renderGlosasResp()">
+              <input class="flt-inp" id="fg-glo-val" placeholder="Ej: certificado" onkeydown="if(event.key==='Enter') window.renderGlosasResp()">
+              <button class="flt-btn" onclick="window.renderGlosasResp()">▶ Filtrar</button>
               <button class="flt-btn-clr" onclick="window.limpiarFiltrosGlosas()">✕ Limpiar</button>
             </div>
           </div>
@@ -1159,7 +1163,6 @@ window.delRec=(id)=>{
 };
 
 // ── MOTOR DE FILTROS AVANZADOS ──
-// Aplica operador a valor de texto o número
 function aplicarOp(valorCampo, operador, valorFiltro){
   const v = String(valorCampo||'').toLowerCase().trim();
   const f = String(valorFiltro||'').toLowerCase().trim();
@@ -1216,15 +1219,19 @@ window.limpiarFiltrosLista=()=>{
 
 // Aplicar filtros avanzados sobre array de reclamaciones
 function aplicarFltLista(recs){
-  const f=FILTROS_LISTA; if(!Object.keys(f).length) return recs;
+  const f=FILTROS_LISTA;
+  const activo=f.factura?.val||f.ips?.val||f.consec?.val||f.radicado?.val||f.f1?.val||f.estado?.val
+    ||['vacio','no_vacio'].includes(f.factura?.op)||['vacio','no_vacio'].includes(f.ips?.op)
+    ||['vacio','no_vacio'].includes(f.radicado?.op);
+  if(!activo) return recs;
   return recs.filter(r=>{
-    if(f.factura?.val||f.factura?.op==='vacio'||f.factura?.op==='no_vacio')
+    if(f.factura?.val||['vacio','no_vacio'].includes(f.factura?.op))
       if(!aplicarOp(r.factura, f.factura.op, f.factura.val)) return false;
-    if(f.ips?.val||f.ips?.op==='vacio'||f.ips?.op==='no_vacio')
+    if(f.ips?.val||['vacio','no_vacio'].includes(f.ips?.op))
       if(!aplicarOp(r.codHab, f.ips.op, f.ips.val)) return false;
-    if(f.consec?.val||f.consec?.op==='vacio')
+    if(f.consec?.val)
       if(!aplicarOp(r.consec, f.consec.op, f.consec.val)) return false;
-    if(f.radicado?.val||f.radicado?.op==='vacio'||f.radicado?.op==='no_vacio')
+    if(f.radicado?.val||['vacio','no_vacio'].includes(f.radicado?.op))
       if(!aplicarOp(r.radicado?.lote||r.radicado?.numero, f.radicado.op, f.radicado.val)) return false;
     if(f.f1?.val==='completo' && !r.furips1?.c83) return false;
     if(f.f1?.val==='pendiente' && r.furips1?.c83) return false;
@@ -1257,7 +1264,9 @@ window.limpiarFiltrosPagos=()=>{
 };
 
 function aplicarFltPagos(pags){
-  const f=FILTROS_PAGOS; if(!Object.keys(f).length) return pags;
+  const f=FILTROS_PAGOS;
+  const activo=f.factura?.val||f.ips?.val||f.tipo?.val||(f.vr?.op&&f.vr?.val)||f.ref?.val;
+  if(!activo) return pags;
   return pags.filter(p=>{
     if(f.factura?.val||f.factura?.op==='vacio'||f.factura?.op==='no_vacio')
       if(!aplicarOp(p.factura,f.factura.op,f.factura.val)) return false;
@@ -1318,123 +1327,6 @@ function actualizarChips(containerId, filtros){
 }
 
 // ── SELECCIÓN Y LISTA ──
-// ══════════════════════════════════════════════
-// MOTOR DE FILTROS AVANZADOS
-// ══════════════════════════════════════════════
-const OPS_TEXTO = ['contiene','no contiene','empieza por','termina en','= (igual)','<> (diferente)','está vacío','no está vacío'];
-const OPS_NUM   = ['= (igual)','<> (diferente)','>=','<=','>','<','está vacío','no está vacío','contiene'];
-const OPS_FECHA = ['= (igual)','<> (diferente)','>=','<=','>','<','está vacío','no está vacío'];
-
-// Genera el HTML de un grupo de filtro
-function fltGrupo(id, label, ops, tipo='texto'){
-  const opOpts = ops.map(o=>`<option value="${o}">${o}</option>`).join('');
-  const showVal = !['está vacío','no está vacío'].includes(ops[0]);
-  return `<div class="flt-group" id="fg-${id}">
-    <span class="flt-lbl">${label}</span>
-    <select class="flt-op" id="fop-${id}" onchange="window.onFltOp('${id}')">
-      <option value="">(filtrar...)</option>
-      ${opOpts}
-    </select>
-    <input class="flt-val" id="fval-${id}" placeholder="valor..."
-      style="display:none;"
-      oninput="window.aplicarFiltros('${id.split('-')[0]}')"
-      type="${tipo==='num'?'number':tipo==='fecha'?'date':'text'}">
-  </div>`;
-}
-
-window.onFltOp=(id)=>{
-  const op=g('fop-'+id)?.value||'';
-  const valEl=g('fval-'+id);
-  const grp=g('fg-'+id);
-  const sinVal=['está vacío','no está vacío',''].includes(op);
-  if(valEl) valEl.style.display=sinVal?'none':'inline-block';
-  if(grp) grp.classList.toggle('flt-active', op!=='');
-  const modulo=id.split('-')[0];
-  window.aplicarFiltros(modulo);
-};
-
-// Evalúa si un valor cumple el operador y término
-function fltMatch(op, valor, termino){
-  const v=String(valor||'').toLowerCase().trim();
-  const t=String(termino||'').toLowerCase().trim();
-  switch(op){
-    case 'contiene':       return v.includes(t);
-    case 'no contiene':    return !v.includes(t);
-    case 'empieza por':    return v.startsWith(t);
-    case 'termina en':     return v.endsWith(t);
-    case '= (igual)':      return v===t || parseFloat(v)===parseFloat(t);
-    case '<> (diferente)': return v!==t && parseFloat(v)!==parseFloat(t);
-    case '>=':             return parseFloat(v)>=parseFloat(t);
-    case '<=':             return parseFloat(v)<=parseFloat(t);
-    case '>':              return parseFloat(v)>parseFloat(t);
-    case '<':              return parseFloat(v)<parseFloat(t);
-    case 'está vacío':     return !v;
-    case 'no está vacío':  return !!v;
-    default: return true;
-  }
-}
-
-// Obtiene op y val de un filtro
-function getFlt(id){ return {op:g('fop-'+id)?.value||'', val:g('fval-'+id)?.value||''}; }
-
-// Aplica todos los filtros de un módulo
-window.aplicarFiltros=(modulo)=>{
-  if(modulo==='lista') renderLista();
-  else if(modulo==='pag') renderHistorial();
-  else if(modulo==='glo') window.renderGlosasResp();
-};
-
-// Resetea todos los filtros de un módulo
-window.resetFiltros=(modulo)=>{
-  document.querySelectorAll(`[id^="fop-${modulo}-"],[id^="fval-${modulo}-"]`).forEach(el=>{
-    el.value=''; if(el.classList.contains('flt-val')) el.style.display='none';
-  });
-  document.querySelectorAll(`[id^="fg-${modulo}-"]`).forEach(el=>el.classList.remove('flt-active'));
-  window.aplicarFiltros(modulo);
-};
-
-// ── CONSTRUIR BARRAS DE FILTROS ──
-function buildFiltros(){
-  const bars={
-    'flt-lista-bar': [
-      ['lista-fac',   'Factura',       OPS_TEXTO,'texto'],
-      ['lista-consec','Consecutivo',   OPS_TEXTO,'texto'],
-      ['lista-ips',   'Cód. IPS',      OPS_TEXTO,'texto'],
-      ['lista-rad',   'N° Radicado',   OPS_TEXTO,'texto'],
-      ['lista-fecha', 'Fecha Creación',OPS_FECHA,'fecha'],
-      ['lista-est',   'Estado Rad.',   OPS_TEXTO,'texto'],
-    ],
-    'flt-pag-bar': [
-      ['pag-fac',   'Factura',         OPS_TEXTO,'texto'],
-      ['pag-ips',   'Cód. IPS',        OPS_TEXTO,'texto'],
-      ['pag-tipo',  'Tipo Pago',       OPS_TEXTO,'texto'],
-      ['pag-fecha', 'Fecha Pago',      OPS_FECHA,'fecha'],
-      ['pag-vrpag', 'Vr Pagado',       OPS_NUM,  'num'],
-      ['pag-vrglo', 'Vr Glosado',      OPS_NUM,  'num'],
-      ['pag-pct',   '% Comisión',      OPS_NUM,  'num'],
-    ],
-    'flt-glo-bar': [
-      ['glo-fac',   'Factura',         OPS_TEXTO,'texto'],
-      ['glo-rad',   'Radicado',        OPS_TEXTO,'texto'],
-      ['glo-doc',   'Documento',       OPS_TEXTO,'texto'],
-      ['glo-vr',    'Vr Glosado',      OPS_NUM,  'num'],
-      ['glo-resp',  'Respuesta',       OPS_TEXTO,'texto'],
-    ],
-  };
-
-  Object.entries(bars).forEach(([barId, filtros])=>{
-    const bar=g(barId); if(!bar) return;
-    if(bar.innerHTML.trim()) return; // ya construida
-    const modulo=barId.replace('flt-','').replace('-bar','');
-    bar.innerHTML=`<span class="flt-lbl" style="font-size:10px;white-space:nowrap;">🔽 FILTROS:</span>`
-      + filtros.map(([id,lbl,ops,tipo])=>fltGrupo(id,lbl,ops,tipo)).join('')
-      + `<button class="flt-reset" onclick="window.resetFiltros('${modulo}')">✕ Limpiar</button>`;
-    bar.style.display='flex';
-  });
-}
-
-// ── FIN MOTOR ──
-
 let FILTRO_ESTADO='todas', BUSQUEDA='', SEL_IDS=new Set();
 
 const ESTADOS_RAD={
@@ -3061,7 +2953,7 @@ window.go=(id)=>{
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('active'));
   const ni=g('n-'+id); if(ni) ni.classList.add('active');
   if(id==='nueva') prepNueva();
-  if(id==='lista'){ buildFiltros(); renderLista(); }
+  if(id==='lista'){ renderLista(); }
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
   if(id==='adm'){
@@ -3074,9 +2966,9 @@ window.go=(id)=>{
   }
   if(id==='pagos'){
     if(USER.rol!=='superadmin'){ toast('Solo el Super Admin puede acceder a Pagos y Comisiones.','w'); return; }
-    buildFiltros(); loadPagos();
+    loadPagos();
   }
-  if(id==='glosas'){ buildFiltros(); loadGlosas(); }
+  if(id==='glosas'){ loadGlosas(); }
 };
 
 // ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
