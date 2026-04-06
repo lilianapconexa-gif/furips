@@ -2423,9 +2423,37 @@ function agruparGlosPorFactura(){
   return pf;
 }
 
+// Versión con filtros avanzados aplicados — usada en Exportar
+function agruparGlosFiltered(){
+  // Aplicar filtros avanzados igual que en la vista Responder
+  const filtEst = g('glo-filtro-est')?.value||'';
+  const glosFiltradas = aplicarFltGlosas([...GLOSAS_DB]);
+
+  const pf={};
+  glosFiltradas.forEach(gl=>{
+    const k=gl.factura+'|||'+gl.radicado+'|||'+(gl.docVictima||'');
+    if(!pf[k]) pf[k]=[];
+    pf[k].push(gl);
+  });
+
+  // Aplicar filtro de estado de factura
+  if(filtEst==='pendiente'){
+    Object.keys(pf).forEach(k=>{
+      const pend=pf[k].filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+      if(pend===0) delete pf[k];
+    });
+  } else if(filtEst==='respondida'){
+    Object.keys(pf).forEach(k=>{
+      const pend=pf[k].filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+      if(pend>0) delete pf[k];
+    });
+  }
+  return pf;
+}
+
 window.verResumenGlosas = () => {
   if(!GLOSAS_DB.length){ return; }
-  const pf=agruparGlosPorFactura();
+  const pf=agruparGlosFiltered();
   const facturasCount=Object.keys(pf).length;
   const totGlo=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
   const totNoAc=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
@@ -2556,7 +2584,7 @@ function htmlRespuesta(fac, rad, doc, items){
 
 // ── DESCARGAR PDF DE UNA FACTURA ──
 window.expGlosaPDF=(fac,rad,doc)=>{
-  const pf=agruparGlosPorFactura();
+  const pf=agruparGlosFiltered();
   const key=Object.keys(pf).find(k=>k.startsWith(fac+'|||'));
   if(!key){ toast('Factura no encontrada.','w'); return; }
   const items=pf[key];
@@ -2577,7 +2605,7 @@ window.expGlosaPDF=(fac,rad,doc)=>{
 // ── DESCARGAR EXCEL DE UNA FACTURA ──
 window.expGlosaExcel1=(fac,rad,doc)=>{
   if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); return; }
-  const pf=agruparGlosPorFactura();
+  const pf=agruparGlosFiltered();
   const key=Object.keys(pf).find(k=>k.startsWith(fac+'|||'));
   if(!key){ toast('Factura no encontrada.','w'); return; }
   const items=pf[key];
@@ -2608,7 +2636,7 @@ window.expGlosaExcel1=(fac,rad,doc)=>{
 window.expGlosasExcelMasivo=()=>{
   if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); setTimeout(expGlosasExcelMasivo,1500); return; }
   if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
-  const pf=agruparGlosPorFactura();
+  const pf=agruparGlosFiltered();
   const wb=XLSX.utils.book_new();
   Object.entries(pf).forEach(([key,items],idx)=>{
     const [fac,rad,doc]=key.split('|||');
@@ -2640,7 +2668,7 @@ window.expGlosasExcelMasivo=()=>{
 // ── PDF MASIVO (abre ventana con todas las facturas para imprimir) ──
 window.expGlosasPDFMasivo=()=>{
   if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
-  const pf=agruparGlosPorFactura();
+  const pf=agruparGlosFiltered();
   const partes=Object.entries(pf).map(([key,items])=>{
     const [fac,rad,doc]=key.split('|||');
     return htmlRespuesta(fac,rad,doc,items).replace('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">','').replace('</body></html>','<div style="page-break-after:always;"></div>');
