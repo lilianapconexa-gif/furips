@@ -12,6 +12,12 @@
   --tx:#1a2e3b;--tx2:#4a7a96;--tx3:#7aafc8;
   --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
 }
+
+/* ── INPUTS SIEMPRE MAYÚSCULAS ── */
+input[type="text"], input:not([type="date"]):not([type="number"]):not([type="password"]):not([type="email"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea {
+  text-transform: uppercase;
+}
+
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;}
 
@@ -3288,6 +3294,27 @@ setInterval(()=>{ const e=g('clk'); if(e) e.textContent=new Date().toLocaleTimeS
 
 // Aplicar tema guardado (aquí g ya está definida)
 aplicarTema(TEMA_ACTUAL);
+
+// ── MAYÚSCULAS Y BLOQUEO CARACTERES ESPECIALES ──
+const REGEX_NO_PERM = /[^A-ZÁÉÍÓÚA-Z0-9 /\-_:.]/gi;
+document.addEventListener('input', ev=>{
+  const el=ev.target;
+  if(!['INPUT','TEXTAREA'].includes(el.tagName)) return;
+  if(['date','time','number','checkbox','radio','file','password','email'].includes(el.type)) return;
+  const pos=el.selectionStart, orig=el.value;
+  const clean=orig.toUpperCase().replace(REGEX_NO_PERM,'');
+  if(clean!==orig){ el.value=clean; const d=orig.length-clean.length; try{el.setSelectionRange(Math.max(0,pos-d),Math.max(0,pos-d));}catch(e){} }
+  REGEX_NO_PERM.lastIndex=0;
+},true);
+document.addEventListener('keypress',ev=>{
+  const el=ev.target;
+  if(!['INPUT','TEXTAREA'].includes(el.tagName)) return;
+  if(['date','time','number','checkbox','radio','file','password','email'].includes(el.type)) return;
+  const ch=ev.key; if(ch.length>1) return;
+  if(REGEX_NO_PERM.test(ch.toUpperCase())){ev.preventDefault();}
+  REGEX_NO_PERM.lastIndex=0;
+},true);
+
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
