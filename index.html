@@ -259,6 +259,7 @@ select option{background:var(--sur2);}
       <div class="ni" id="n-inf"    onclick="go('inf')">   <span class="ndot"></span>Informes</div>
       <div class="ni" id="n-pagos"  onclick="go('pagos')"> <span class="ndot"></span>💰 Pagos y Comisiones</div>
       <div class="ni" id="n-glosas" onclick="go('glosas')"><span class="ndot"></span>⚡ Gestión de Glosas</div>
+      <div class="ni" id="n-chequeo" onclick="go('chequeo')"><span class="ndot"></span>✅ Chequeo de Soportes</div>
       <div class="ng">Formularios</div>
       <div class="ni" id="n-f1"     onclick="abrirF1()">   <span class="ndot"></span>FURIPS 1 — Detalle</div>
       <div class="ni" id="n-f2"     onclick="abrirF2()">   <span class="ndot"></span>FURIPS 2 — Factura</div>
@@ -293,6 +294,86 @@ select option{background:var(--sur2);}
             <div><strong>Abrir FURIPS 1 y FURIPS 2</strong><br><span style="font-size:11px;opacity:.8;">Haz clic para abrir el formulario completo con validaciones condicionales (Parte 2)</span></div>
           </a>
         </div>
+      </div>
+
+
+      <!-- CHEQUEO DE SOPORTES -->
+      <div class="page hidden" id="p-chequeo">
+        <div class="ptitle">✅ Chequeo de Soportes</div>
+        <div class="psub">Revisión documental por ítem antes de radicar · Glosas serie 3101–3112</div>
+
+        <!-- Selector de reclamación -->
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--tx2);margin-bottom:10px;">SELECCIONAR RECLAMACIÓN A REVISAR</div>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">Buscar por factura o consecutivo</label>
+              <input id="chq-buscar" placeholder="Ej: FE100 ó 0001" oninput="window.chqBuscar(this.value)"
+                style="width:100%;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">O seleccionar de la lista</label>
+              <select id="chq-sel" onchange="window.chqSelRec(this.value)"
+                style="width:100%;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+                <option value="">-- Seleccione reclamación --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel principal (oculto hasta seleccionar) -->
+        <div id="chq-panel" style="display:none;">
+
+          <!-- Cabecera reclamación -->
+          <div id="chq-header" style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:12px 14px;margin-bottom:12px;"></div>
+
+          <!-- Progreso -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="flex:1;height:8px;border-radius:4px;background:var(--sur2);overflow:hidden;">
+              <div id="chq-barra" style="height:100%;border-radius:4px;background:var(--acc);width:0%;transition:width .3s;"></div>
+            </div>
+            <span id="chq-pct" style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc);white-space:nowrap;">0 / 0</span>
+            <button class="btn bp" onclick="window.chqGuardar()" style="font-size:11px;padding:5px 12px;">💾 Guardar revisión</button>
+          </div>
+
+          <!-- Tabs: Por servicio / Resumen -->
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--brd);margin-bottom:14px;">
+            <div id="chq-tab-items" onclick="window.chqTab('items')"
+              style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--acc);border-bottom:2px solid var(--acc);font-family:var(--mono);">
+              📋 Soportes por servicio
+            </div>
+            <div id="chq-tab-resumen" onclick="window.chqTab('resumen')"
+              style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx2);border-bottom:2px solid transparent;font-family:var(--mono);">
+              📊 Resumen y observaciones
+            </div>
+          </div>
+
+          <!-- TAB: Soportes por servicio -->
+          <div id="chq-pane-items">
+            <div id="chq-lista-soportes" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+
+          <!-- TAB: Resumen -->
+          <div id="chq-pane-resumen" style="display:none;">
+            <div id="chq-resumen-html"></div>
+            <div style="margin-top:14px;">
+              <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px;">Observaciones generales del revisor</label>
+              <textarea id="chq-obs" rows="4" placeholder="Ej: Falta epicrisis de UCI, soporte de radiología sin firma de especialista..."
+                style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;resize:vertical;"></textarea>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;">
+              <button class="btn bp" onclick="window.chqGuardar()" style="font-size:12px;">💾 Guardar revisión completa</button>
+              <button class="btn bs" onclick="window.chqTab('items')" style="font-size:12px;">← Volver a soportes</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="chq-empty" style="text-align:center;padding:40px 0;color:var(--tx3);font-size:13px;">
+          Selecciona una reclamación para iniciar la revisión de soportes.
+        </div>
+
       </div>
 
       <!-- NUEVA -->
@@ -1615,6 +1696,13 @@ function renderLista(){
     const ts=r.creado?.toDate?r.creado.toDate().toLocaleDateString('es-CO'):'—';
     const vBadge=badgeVencimiento(r);
     const vTip=tooltipVencimiento(r);
+    const chqBadge=(()=>{
+      const c=r.chequeo_soportes;
+      if(!c) return '';
+      if(c.totalNok>0) return `<span style="background:rgba(211,47,47,.15);color:var(--red);font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);">✕${c.totalNok} soporte${c.totalNok>1?'s':''}</span>`;
+      if(c.totalPend>0) return `<span style="background:rgba(245,124,0,.12);color:var(--warn);font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);">⏳${c.totalPend} pendiente${c.totalPend>1?'s':''}</span>`;
+      return `<span style="background:rgba(157,180,85,.12);color:var(--green);font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);">✔ Soportes OK</span>`;
+    })();
     const canEdit=USER.rol==='admin'||USER.rol==='superadmin'||r.creadoPor===USER.uid;
     const sel=SEL_IDS.has(r.id);
     const estRad=estadoRad(r);
@@ -1631,7 +1719,7 @@ function renderLista(){
       <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:24px;">#${r.id.slice(-4)}</div>
       <div style="flex:1;cursor:pointer;" onclick="selRec('${r.id}')">
         <div style="font-weight:500;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          ${r.factura} <span class="badge bb2">${r.consec}</span> ${radBadge} ${loteTag} ${radNum} ${vBadge}
+          ${r.factura} <span class="badge bb2">${r.consec}</span> ${radBadge} ${loteTag} ${radNum} ${vBadge} ${chqBadge}
         </div>
         <div style="font-size:11px;color:var(--tx2);margin-top:2px;">
           IPS:${r.codHab} · ${items} ítems ·
@@ -3179,6 +3267,408 @@ window.elimUser=(uid,nom)=>{
 };
 
 // ── NAVEGACIÓN ──
+
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO: CHEQUEO DE SOPORTES (Revisión documental independiente)
+// Glosas preventivas serie 3101–3112 · Manual ADRES V10
+// ══════════════════════════════════════════════════════════════════
+let CHQ_REC = null;  // Reclamación actualmente en revisión
+let CHQ_ESTADO = {}; // { key: { ok: bool, obs: string } }
+
+// Catálogo completo de soportes con condición de aplicabilidad
+// cada entrada: { lbl, glosa, hint, req, condicion(rec)→bool }
+const CHQ_SOPORTES = [
+  {
+    key:'epicrisis',
+    lbl:'Epicrisis o resumen clínico completo y legible',
+    glosa:'3111',
+    req:true,
+    hint:'Debe cumplir Art.31/32 Decreto 056/2015. Sin epicrisis → NO APROBADO para toda la reclamación.',
+    aplica:(r)=>true  // siempre
+  },
+  {
+    key:'estancia',
+    lbl:'Soporte de estancia hospitalaria (fechas ingreso/egreso, diagnóstico, evolución)',
+    glosa:'3101',
+    req:true,
+    hint:'Fechas de ingreso y egreso legibles, diagnóstico y notas de evolución completas.',
+    aplica:(r)=> r.furips1_flags?.hayEst || r.furips1?.c41==='1'
+  },
+  {
+    key:'consulta',
+    lbl:'Soporte de consulta o urgencias ambulatoria (hoja de atención con identificación de la víctima)',
+    glosa:'3102',
+    req:true,
+    hint:'Identifica a la víctima y establece el nexo causal con el evento.',
+    aplica:(r)=> !r.furips1_flags?.hayEst
+  },
+  {
+    key:'honorarios_med',
+    lbl:'Soporte de honorarios médicos (registro con nombre, firma y RETHUS del profesional)',
+    glosa:'3103',
+    req:true,
+    hint:'Nombre completo, firma y número de registro RETHUS visible en cada soporte.',
+    aplica:(r)=> chqTipos(r).has('2') || chqTipos(r).has('8') || r.furips1_flags?.hayQx
+  },
+  {
+    key:'honorarios_prof',
+    lbl:'Soporte de honorarios de profesionales no médicos (fisioterapeuta, fonoaudiólogo, etc.)',
+    glosa:'3104',
+    req:true,
+    hint:'Mismo requisito que honorarios médicos pero para profesionales de salud no médicos.',
+    aplica:(r)=> chqTipos(r).has('2') && chqTerapias(r)
+  },
+  {
+    key:'sala',
+    lbl:'Soporte de derechos de sala (registro de uso de quirófano, sala de procedimientos)',
+    glosa:'3105',
+    req:true,
+    hint:'Confirma el uso del espacio físico facturable.',
+    aplica:(r)=> r.furips1_flags?.hayQx
+  },
+  {
+    key:'material',
+    lbl:'Soporte de materiales e insumos (relación ítem a ítem con referencia y valor unitario)',
+    glosa:'3106',
+    req:true,
+    hint:'Cada material debe estar individualizado con su referencia, cantidad y valor.',
+    aplica:(r)=> chqTipos(r).has('5') || chqTipos(r).has('6') || chqTipos(r).has('7')
+  },
+  {
+    key:'medicamentos',
+    lbl:'Soporte de medicamentos (fórmula médica + registro de administración con nombre/doc del paciente)',
+    glosa:'3107',
+    req:true,
+    hint:'Desde ene/2021: debe constar nombre y documento del paciente o quien recibe en la fórmula o certificado.',
+    aplica:(r)=> chqTipos(r).has('1')
+  },
+  {
+    key:'diagnostica',
+    lbl:'Soporte de ayuda diagnóstica con resultado firmado (imagen, laboratorio, paraclínico)',
+    glosa:'3108',
+    req:true,
+    hint:'El resultado debe ser legible e identificar al paciente. Sin resultado → NO APROBADO al ítem.',
+    aplica:(r)=> chqEsDiag(r)
+  },
+  {
+    key:'lectura_rad',
+    lbl:'Lectura oficial de especialista radiólogo (para imágenes diagnósticas: RX, TAC, eco, RMN)',
+    glosa:'3109',
+    req:false,
+    hint:'Sin lectura oficial → descuento del 25% sobre el valor del ítem (ADRES reconoce solo el 75%).',
+    aplica:(r)=> chqEsDiag(r)
+  },
+  {
+    key:'procedimiento',
+    lbl:'Soporte de procedimiento quirúrgico (protocolo quirúrgico + registro de anestesia + nota post-op)',
+    glosa:'3110',
+    req:true,
+    hint:'Protocolo firmado por cirujano, registro de anestesia y nota post-operatoria completos.',
+    aplica:(r)=> r.furips1_flags?.hayQx
+  },
+  {
+    key:'facturado',
+    lbl:'Todo lo facturado en FURIPS 2 está respaldado en los soportes clínicos (ítem a ítem)',
+    glosa:'3112',
+    req:true,
+    hint:'El auditor compara cada ítem de la factura vs los soportes. Cobros sin soporte → NO APROBADO por ítem.',
+    aplica:(r)=> true
+  },
+  {
+    key:'terapias',
+    lbl:'Soporte de cada sesión de terapia física (firmada por fisioterapeuta Y por el paciente)',
+    glosa:'3103',
+    req:true,
+    hint:'Cada sesión debe tener firma del profesional y nombre/apellido legible del usuario que recibe.',
+    aplica:(r)=> chqTerapias(r)
+  },
+  {
+    key:'transporte',
+    lbl:'Hoja de traslado asistencial (placa de ambulancia, origen, destino, fecha, firma de quien recibe)',
+    glosa:'3115',
+    req:true,
+    hint:'Placa del vehículo debe coincidir con el REPS de la IPS. Sin bitácora → NO APROBADO al ítem.',
+    aplica:(r)=> r.furips1_flags?.hayTrp || r.furips1_flags?.hayRem
+  },
+  {
+    key:'terceros',
+    lbl:'Factura y soporte de pago a tercero (si la IPS cobró servicios prestados por laboratorio o radiología externa)',
+    glosa:'3113',
+    req:true,
+    hint:'La IPS debe acreditar que pagó al tercero que prestó el servicio para poder cobrarlo a ADRES.',
+    aplica:(r)=> chqEsDiag(r) && chqTipos(r).has('2')
+  },
+];
+
+// Helpers
+function chqTipos(r){
+  return new Set((r.furips2||[]).map(i=>i.tipo).filter(Boolean));
+}
+function chqEsDiag(r){
+  const kw=/radio|rx |imagen|eco |tomograf|resonan|scinti|mamograf|densitom|endoscop|laborator|patolog|biopsia|ecograf|rayos|gammagraf/i;
+  return (r.furips2||[]).some(i=> kw.test(i.descripcion||'') || kw.test(i.codigo||''));
+}
+function chqTerapias(r){
+  const kw=/terapia|fisioterapia|rehabilitac|fisioterap|fonoaudiol|terapia ocupac/i;
+  return (r.furips2||[]).some(i=>kw.test(i.descripcion||''));
+}
+function chqSoportesAplican(r){
+  return CHQ_SOPORTES.filter(s=>s.aplica(r));
+}
+
+// ── Cargar módulo ──
+function loadChequeo(){
+  const sel=g('chq-sel'); if(!sel) return;
+  sel.innerHTML='<option value="">-- Seleccione reclamación --</option>' +
+    RECS.map(r=>`<option value="${r.id}">${r.factura} · ${r.consec} · ${r.codHab}</option>`).join('');
+  g('chq-panel').style.display='none';
+  g('chq-empty').style.display='block';
+}
+
+window.chqBuscar=(q)=>{
+  const sel=g('chq-sel'); if(!sel) return;
+  const qt=q.trim().toLowerCase();
+  sel.innerHTML='<option value="">-- Seleccione reclamación --</option>' +
+    RECS.filter(r=>(r.factura||'').toLowerCase().includes(qt)||(r.consec||'').toLowerCase().includes(qt))
+        .map(r=>`<option value="${r.id}">${r.factura} · ${r.consec} · ${r.codHab}</option>`).join('');
+};
+
+window.chqSelRec=(id)=>{
+  if(!id){ g('chq-panel').style.display='none'; g('chq-empty').style.display='block'; return; }
+  CHQ_REC = RECS.find(r=>r.id===id);
+  if(!CHQ_REC) return;
+  // Cargar estado previo si existe
+  CHQ_ESTADO = {};
+  if(CHQ_REC.chequeo_soportes?.items){
+    CHQ_ESTADO = CHQ_REC.chequeo_soportes.items;
+  }
+  g('chq-empty').style.display='none';
+  g('chq-panel').style.display='block';
+  chqRenderHeader();
+  chqRenderItems();
+  chqTab('items');
+  // Cargar obs guardadas
+  const obs=g('chq-obs');
+  if(obs) obs.value = CHQ_REC.chequeo_soportes?.obs||'';
+};
+
+function chqRenderHeader(){
+  const r=CHQ_REC; if(!r) return;
+  const f1=r.furips1||{};
+  const f2=r.furips2||[];
+  const fmtM=v=>v?new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(v):'—';
+  const tipos=[...new Set(f2.map(i=>i.tipo).filter(Boolean))];
+  const tipoLbls={'1':'Medicamentos','2':'Procedimientos','3':'Transp.Prim','4':'Transp.Sec','5':'Insumos','6':'Dispositivos','7':'Osteosíntesis','8':'Proc.no manual'};
+  const vt=r.furips1?.c96?fmtM(parseInt(r.furips1.c96)):'—';
+  const vtr=r.furips1?.c98?fmtM(parseInt(r.furips1.c98)):'—';
+  const vic=`${f1.c5||''} ${f1.c6||''}, ${f1.c7||''} ${f1.c8||''}`.trim()||'—';
+  const med=f1.c83||'—';
+  const est=r.furips1_flags?.hayEst?'✔ Hospitalización':'Ambulatorio';
+  const qx=r.furips1_flags?.hayQx?'✔ Qx':'';
+  const uci=f1.c41==='1'?`✔ UCI ${f1.c42||''}d`:'';
+  const trp=r.furips1_flags?.hayTrp||r.furips1_flags?.hayRem?'✔ Transporte':'';
+  const srvs=[est,qx,uci,trp].filter(Boolean).join(' · ');
+  g('chq-header').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+      <div><div style="font-size:9px;font-family:var(--mono);color:var(--tx3);">FACTURA</div>
+        <div style="font-size:14px;font-weight:700;color:var(--acc);">${r.factura}</div>
+        <div style="font-size:10px;color:var(--tx2);">${r.consec} · ${r.codHab}</div></div>
+      <div><div style="font-size:9px;font-family:var(--mono);color:var(--tx3);">VÍCTIMA</div>
+        <div style="font-size:12px;font-weight:500;">${vic}</div>
+        <div style="font-size:10px;color:var(--tx2);">${f1.c9||''} ${f1.c10||''}</div></div>
+      <div><div style="font-size:9px;font-family:var(--mono);color:var(--tx3);">MÉDICO TRATANTE</div>
+        <div style="font-size:12px;font-weight:500;">${med}</div></div>
+      <div><div style="font-size:9px;font-family:var(--mono);color:var(--tx3);">SERVICIOS</div>
+        <div style="font-size:11px;">${srvs||'—'}</div>
+        <div style="font-size:10px;color:var(--tx2);">${tipos.map(t=>tipoLbls[t]||t).join(' · ')||'Sin ítems F2'}</div></div>
+      <div><div style="font-size:9px;font-family:var(--mono);color:var(--tx3);">TOTAL FACTURADO</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green);">${vt}</div>
+        <div style="font-size:10px;color:var(--tx2);">Transporte: ${vtr}</div></div>
+      <div><div style="font-size:9px;font-family:var(--mono);color:var(--tx3);">ÍTEMS F2</div>
+        <div style="font-size:13px;font-weight:700;">${f2.length}</div>
+        <div style="font-size:10px;color:var(--tx2);">Creado por: ${r.creadoPorNombre||'—'}</div></div>
+    </div>`;
+}
+
+function chqRenderItems(){
+  const r=CHQ_REC; if(!r) return;
+  const soportes=chqSoportesAplican(r);
+  const lista=g('chq-lista-soportes'); if(!lista) return;
+
+  lista.innerHTML=soportes.map(s=>{
+    const est=CHQ_ESTADO[s.key]||{};
+    const ok=est.ok===true, nok=est.ok===false, obs=est.obs||'';
+    const bgColor = ok?'rgba(157,180,85,.07)': nok?'rgba(211,47,47,.06)':'var(--sur2)';
+    const borderColor = ok?'rgba(157,180,85,.5)': nok?'rgba(211,47,47,.3)':'var(--brd)';
+    return `
+    <div id="chq-s-${s.key}" style="border:1px solid ${borderColor};border-radius:8px;padding:12px 14px;background:${bgColor};transition:all .2s;">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <!-- Botones OK / No OK -->
+        <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
+          <button onclick="window.chqMarca('${s.key}',true)"
+            style="padding:5px 10px;font-size:11px;border-radius:5px;cursor:pointer;font-weight:600;
+            border:1px solid ${ok?'var(--green)':'var(--brd2)'};
+            background:${ok?'rgba(157,180,85,.2)':'var(--sur)'};
+            color:${ok?'var(--green)':'var(--tx2)'};">✔ OK</button>
+          <button onclick="window.chqMarca('${s.key}',false)"
+            style="padding:5px 10px;font-size:11px;border-radius:5px;cursor:pointer;font-weight:600;
+            border:1px solid ${nok?'var(--red)':'var(--brd2)'};
+            background:${nok?'rgba(211,47,47,.15)':'var(--sur)'};
+            color:${nok?'var(--red)':'var(--tx2)'};">✕ Falta</button>
+        </div>
+        <!-- Contenido -->
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:600;color:var(--tx);">${s.lbl}</span>
+            ${s.req?'':'<span style="font-size:9px;background:rgba(0,178,226,.15);color:var(--acc);padding:1px 6px;border-radius:3px;font-family:var(--mono);">Recomendado</span>'}
+            <span style="font-size:9px;font-family:var(--mono);background:var(--sur);border:1px solid var(--brd);padding:1px 6px;border-radius:3px;color:var(--tx3);">Glosa ${s.glosa}</span>
+          </div>
+          <div style="font-size:10px;color:var(--tx3);margin-bottom:8px;line-height:1.4;">${s.hint}</div>
+          <!-- Observación -->
+          <textarea id="chq-obs-${s.key}" rows="1" placeholder="Observación (opcional)"
+            oninput="window.chqSetObs('${s.key}',this.value)"
+            style="width:100%;padding:5px 8px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur);color:var(--tx);font-size:11px;resize:vertical;">${obs}</textarea>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  chqUpdProgreso();
+}
+
+window.chqMarca=(key,val)=>{
+  if(!CHQ_ESTADO[key]) CHQ_ESTADO[key]={};
+  CHQ_ESTADO[key].ok=val;
+  // Re-render solo esa fila
+  const r=CHQ_REC; if(!r) return;
+  const s=CHQ_SOPORTES.find(x=>x.key===key); if(!s) return;
+  const ok=val===true, nok=val===false;
+  const row=g('chq-s-'+key); if(!row) return;
+  row.style.background = ok?'rgba(157,180,85,.07)': nok?'rgba(211,47,47,.06)':'var(--sur2)';
+  row.style.borderColor= ok?'rgba(157,180,85,.5)': nok?'rgba(211,47,47,.3)':'var(--brd)';
+  // Update buttons
+  const btns=row.querySelectorAll('button');
+  if(btns[0]){
+    btns[0].style.borderColor = ok?'var(--green)':'var(--brd2)';
+    btns[0].style.background  = ok?'rgba(157,180,85,.2)':'var(--sur)';
+    btns[0].style.color       = ok?'var(--green)':'var(--tx2)';
+  }
+  if(btns[1]){
+    btns[1].style.borderColor = nok?'var(--red)':'var(--brd2)';
+    btns[1].style.background  = nok?'rgba(211,47,47,.15)':'var(--sur)';
+    btns[1].style.color       = nok?'var(--red)':'var(--tx2)';
+  }
+  chqUpdProgreso();
+};
+
+window.chqSetObs=(key,val)=>{
+  if(!CHQ_ESTADO[key]) CHQ_ESTADO[key]={};
+  CHQ_ESTADO[key].obs=val;
+};
+
+function chqUpdProgreso(){
+  const r=CHQ_REC; if(!r) return;
+  const soportes=chqSoportesAplican(r);
+  const total=soportes.length;
+  const ok=soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===true).length;
+  const nok=soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===false).length;
+  const pct=total?Math.round(ok/total*100):0;
+  const barra=g('chq-barra'); if(barra) barra.style.width=pct+'%';
+  const pctEl=g('chq-pct');
+  if(pctEl) pctEl.textContent=`${ok}/${total} ✔ · ${nok} ✕`;
+}
+
+window.chqTab=(tab)=>{
+  g('chq-pane-items').style.display   = tab==='items'?'block':'none';
+  g('chq-pane-resumen').style.display = tab==='resumen'?'block':'none';
+  g('chq-tab-items').style.color      = tab==='items'?'var(--acc)':'var(--tx2)';
+  g('chq-tab-items').style.borderBottomColor  = tab==='items'?'var(--acc)':'transparent';
+  g('chq-tab-resumen').style.color    = tab==='resumen'?'var(--acc)':'var(--tx2)';
+  g('chq-tab-resumen').style.borderBottomColor= tab==='resumen'?'var(--acc)':'transparent';
+  if(tab==='resumen') chqBuildResumen();
+};
+
+function chqBuildResumen(){
+  const r=CHQ_REC; if(!r) return;
+  const soportes=chqSoportesAplican(r);
+  const ok=soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===true);
+  const nok=soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===false);
+  const pend=soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===undefined);
+  const el=g('chq-resumen-html'); if(!el) return;
+
+  const rowHtml=(s,color,ico)=>{
+    const obs=CHQ_ESTADO[s.key]?.obs||'';
+    return `<tr>
+      <td style="padding:6px 10px;font-size:11px;font-weight:500;color:${color};">${ico} ${s.lbl}</td>
+      <td style="padding:6px 10px;font-size:10px;font-family:var(--mono);color:var(--tx3);">${s.glosa}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--tx2);font-style:${obs?'normal':'italic'};opacity:${obs?1:.5};">${obs||'—'}</td>
+    </tr>`;
+  };
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+      <div style="background:rgba(157,180,85,.1);border:1px solid rgba(157,180,85,.3);border-radius:7px;padding:10px 14px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--green);">${ok.length}</div>
+        <div style="font-size:10px;color:var(--tx2);">Soportes OK</div>
+      </div>
+      <div style="background:rgba(211,47,47,.08);border:1px solid rgba(211,47,47,.3);border-radius:7px;padding:10px 14px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--red);">${nok.length}</div>
+        <div style="font-size:10px;color:var(--tx2);">Soportes faltantes</div>
+      </div>
+      <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:7px;padding:10px 14px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--tx2);">${pend.length}</div>
+        <div style="font-size:10px;color:var(--tx2);">Sin revisar</div>
+      </div>
+    </div>
+    ${nok.length>0?`
+    <div style="font-size:11px;font-weight:700;color:var(--red);font-family:var(--mono);margin-bottom:6px;">🔴 SOPORTES FALTANTES — Riesgo de glosa</div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid var(--brd);border-radius:6px;overflow:hidden;margin-bottom:12px;font-size:11px;">
+      <thead><tr style="background:var(--sur2);">
+        <th style="padding:7px 10px;text-align:left;color:var(--tx2);">Soporte</th>
+        <th style="padding:7px 10px;text-align:left;color:var(--tx2);font-family:var(--mono);">Glosa</th>
+        <th style="padding:7px 10px;text-align:left;color:var(--tx2);">Observación</th>
+      </tr></thead>
+      <tbody>${nok.map(s=>rowHtml(s,'var(--red)','✕')).join('')}</tbody>
+    </table>`:''}
+    ${ok.length>0?`
+    <div style="font-size:11px;font-weight:700;color:var(--green);font-family:var(--mono);margin-bottom:6px;">✔ SOPORTES CONFIRMADOS</div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid var(--brd);border-radius:6px;overflow:hidden;margin-bottom:12px;font-size:11px;">
+      <thead><tr style="background:var(--sur2);">
+        <th style="padding:7px 10px;text-align:left;color:var(--tx2);">Soporte</th>
+        <th style="padding:7px 10px;text-align:left;color:var(--tx2);font-family:var(--mono);">Glosa</th>
+        <th style="padding:7px 10px;text-align:left;color:var(--tx2);">Observación</th>
+      </tr></thead>
+      <tbody>${ok.map(s=>rowHtml(s,'var(--green)','✔')).join('')}</tbody>
+    </table>`:''}`;
+}
+
+window.chqGuardar=async()=>{
+  if(!CHQ_REC){ toast('No hay reclamación seleccionada.','w'); return; }
+  const soportes=chqSoportesAplican(CHQ_REC);
+  const obs=g('chq-obs')?.value||'';
+  const payload={
+    chequeo_soportes:{
+      items: CHQ_ESTADO,
+      obs,
+      revisadoPor: USER.nombre||USER.email||'',
+      revisadoPorUid: USER.uid,
+      fecha: new Date().toISOString(),
+      totalOk:   soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===true).length,
+      totalNok:  soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===false).length,
+      totalPend: soportes.filter(s=>CHQ_ESTADO[s.key]?.ok===undefined).length,
+    }
+  };
+  loader(true);
+  try{
+    await updateDoc(doc(db,'reclamaciones',CHQ_REC.id),{...payload,actualizado:serverTimestamp()});
+    const idx=RECS.findIndex(r=>r.id===CHQ_REC.id);
+    if(idx>=0){ RECS[idx]={...RECS[idx],...payload}; CHQ_REC=RECS[idx]; }
+    loader(false);
+    toast('✔ Revisión de soportes guardada en Firebase','ok');
+    chqBuildResumen();
+  } catch(e){ loader(false); toast('Error al guardar: '+e.message,'e'); }
+};
+// ── fin módulo chequeo ──
+
 window.go=(id)=>{
   document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display=''; });
   const pg=g('p-'+id);
@@ -3202,6 +3692,7 @@ window.go=(id)=>{
     loadPagos();
   }
   if(id==='glosas'){ loadGlosas(); }
+  if(id==='chequeo'){ loadChequeo(); }
 };
 
 // ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
