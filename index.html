@@ -252,24 +252,47 @@ select option{background:var(--sur2);}
 
   <div class="appl">
     <nav class="sidebar">
-      <div class="ng">Principal</div>
-      <div class="ni" id="n-dash"   onclick="go('dash')">  <span class="ndot"></span>Dashboard</div>
-      <div class="ni" id="n-nueva"  onclick="go('nueva')"> <span class="ndot"></span>Nueva Reclamación</div>
-      <div class="ni" id="n-lista"  onclick="go('lista')"> <span class="ndot"></span>Reclamaciones</div>
-      <div class="ni" id="n-inf"    onclick="go('inf')">   <span class="ndot"></span>Informes</div>
-      <div class="ni" id="n-pagos"  onclick="go('pagos')"> <span class="ndot"></span>💰 Pagos y Comisiones</div>
-      <div class="ni" id="n-glosas" onclick="go('glosas')"><span class="ndot"></span>⚡ Gestión de Glosas</div>
-      <div class="ni" id="n-chequeo" onclick="go('chequeo')"><span class="ndot"></span>✅ Chequeo de Soportes</div>
-      <div class="ng">Formularios</div>
-      <div class="ni" id="n-f1"     onclick="abrirF1()">   <span class="ndot"></span>FURIPS 1 — Detalle</div>
-      <div class="ni" id="n-f2"     onclick="abrirF2()">   <span class="ndot"></span>FURIPS 2 — Factura</div>
+
+      <!-- ETAPA 1: INICIO -->
+      <div class="ng">Inicio</div>
+      <div class="ni" id="n-dash"    onclick="go('dash')">  <span class="ndot"></span>Dashboard</div>
+
+      <!-- ETAPA 2: INGRESAR RECLAMACIÓN -->
+      <div class="ng">1 · Ingresar</div>
+      <div class="ni" id="n-nueva"   onclick="go('nueva')"> <span class="ndot"></span>Nueva Reclamación</div>
+      <div class="ni" id="n-lista"   onclick="go('lista')"> <span class="ndot"></span>Lista de Reclamaciones</div>
+
+      <!-- ETAPA 3: DILIGENCIAR FURIPS -->
+      <div class="ng">2 · Diligenciar</div>
+      <div class="ni" id="n-f1"      onclick="abrirF1()">   <span class="ndot"></span>FURIPS 1 — Reclamación</div>
+      <div class="ni" id="n-f2"      onclick="abrirF2()">   <span class="ndot"></span>FURIPS 2 — Factura</div>
+
+      <!-- ETAPA 4: REVISAR Y RADICAR -->
+      <div class="ng">3 · Revisar y Radicar</div>
+      <div class="ni" id="n-chequeo" onclick="go('chequeo')"><span class="ndot"></span>Chequeo de Soportes</div>
+      <div class="ni" id="n-txt"     onclick="go('txt')">   <span class="ndot"></span>Archivos Planos .txt</div>
+
+      <!-- ETAPA 5: GLOSAS Y RESPUESTAS -->
+      <div class="ng">4 · Glosas</div>
+      <div class="ni" id="n-glosas"  onclick="go('glosas')"><span class="ndot"></span>Gestión de Glosas</div>
+
+      <!-- ETAPA 6: PAGOS E INFORMES (superadmin) -->
+      <div id="nav-sa" style="display:none;">
+        <div class="ng">5 · Pagos e Informes</div>
+        <div class="ni" id="n-pagos" onclick="go('pagos')"> <span class="ndot"></span>Pagos y Comisiones</div>
+        <div class="ni" id="n-inf"   onclick="go('inf')">   <span class="ndot"></span>Informes</div>
+      </div>
+
+      <!-- EXPORTAR -->
       <div class="ng">Exportar</div>
-      <div class="ni" id="n-txt"    onclick="go('txt')">   <span class="ndot"></span>Archivos Planos .txt</div>
-      <div class="ni" id="n-xl"     onclick="go('xl')">    <span class="ndot"></span>Exportar Excel</div>
+      <div class="ni" id="n-xl"      onclick="go('xl')">    <span class="ndot"></span>Exportar Excel</div>
+
+      <!-- ADMINISTRACIÓN (admin+) -->
       <div id="nav-adm" style="display:none;">
         <div class="ng">Administración</div>
-        <div class="ni" id="n-adm"  onclick="go('adm')">  <span class="ndot"></span>Gestión Usuarios</div>
+        <div class="ni" id="n-adm"   onclick="go('adm')">  <span class="ndot"></span>Gestión Usuarios</div>
       </div>
+
     </nav>
 
     <div class="main">
@@ -1208,9 +1231,7 @@ function showApp(){
   const isSA=USER.rol==='superadmin', isAdm=USER.rol==='admin'||isSA;
   // Mostrar/ocultar nav items según rol
   const na=g('nav-adm'); if(na) na.style.display=isAdm?'block':'none';
-  // Pagos e Informes: solo superadmin
-  const nPagos=g('n-pagos'); if(nPagos) nPagos.style.display=isSA?'flex':'none';
-  const nInf=g('n-inf');     if(nInf)   nInf.style.display=isSA?'flex':'none';
+  const nsa=g('nav-sa'); if(nsa) nsa.style.display=isSA?'block':'none';
   _s('dash-rol',isAdm?'Vista: todas las reclamaciones':'Vista: solo mis reclamaciones');
   // Asegurar que todas las páginas estén ocultas primero
   document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display=''; });
