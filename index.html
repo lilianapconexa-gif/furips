@@ -3427,6 +3427,47 @@ const CHQ_SOPORTES = [
     hint:'La IPS debe acreditar que pagó al tercero que prestó el servicio para poder cobrarlo a ADRES.',
     aplica:(r)=> chqEsDiag(r) && chqTipos(r).has('2')
   },
+  // ── SOPORTES ESPECIALES (antes en FURIPS 1, ahora en el chequeo) ──
+  {
+    key:'policia',
+    lbl:'Informe de policía o aviso a autoridad — Art. 149 Ley 769/2002 (Res. 0199844/2024)',
+    glosa:'3122',
+    req:true,
+    hint:'Obligatorio desde 01/02/2025 para AT con vehículo no asegurado o no identificado (estados 2, 3, 7, 8). La IPS debe acreditar que dio aviso a la policía judicial o primera autoridad del lugar.',
+    aplica:(r)=>{
+      const nat   = r.furips1?.c19;
+      const estado= parseInt(r.furips1?.c27)||0;
+      const fecha = r.furips1?.c22||r.fechaEvento||'';
+      if(nat!=='01') return false;
+      if(![2,3,7,8].includes(estado)) return false;
+      if(!fecha) return false;
+      return new Date(fecha) >= new Date('2025-02-01');
+    }
+  },
+  {
+    key:'agotamiento_cert',
+    lbl:'Certificado de agotamiento de cobertura SOAT — acredita 300 smldv pagados por la aseguradora',
+    glosa:'3120',
+    req:true,
+    hint:'Solo para estado 6 — Asegurado D.2497 (rango diferencial). La aseguradora cubre hasta 300 smldv; ADRES cubre el excedente hasta 800 smldv. Sin este certificado no procede el pago del excedente.',
+    aplica:(r)=>{
+      const estado= parseInt(r.furips1?.c27)||0;
+      const c36   = r.furips1?.c36;
+      return estado===6 && c36==='1';
+    }
+  },
+  {
+    key:'agotamiento_detalle',
+    lbl:'Detalle de servicios reconocidos por la aseguradora con valor en pesos y en UVT (Res. 326/2023)',
+    glosa:'3121',
+    req:true,
+    hint:'El certificado debe desglosar cada servicio reconocido por la aseguradora con su valor en pesos y en UVT. Sin el detalle → glosa 3121.',
+    aplica:(r)=>{
+      const estado= parseInt(r.furips1?.c27)||0;
+      const c36   = r.furips1?.c36;
+      return estado===6 && c36==='1';
+    }
+  },
 ];
 
 // Helpers
@@ -3635,7 +3676,8 @@ function chqRenderItems(){
           </div>
           <div style="font-size:10px;color:var(--tx3);margin-bottom:8px;line-height:1.4;">${s.hint}</div>
           <!-- Observación -->
-          <textarea id="chq-obs-${s.key}" rows="1" placeholder="Observación (opcional)"
+          <textarea id="chq-obs-${s.key}" rows="1"
+            placeholder="${s.key==='policia'?'N° radicado del informe policial (opcional)':s.key==='agotamiento_cert'?'Referencia del certificado de la aseguradora':'Observación (opcional)'}"
             oninput="window.chqSetObs('${s.key}',this.value)"
             style="width:100%;padding:5px 8px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur);color:var(--tx);font-size:11px;resize:vertical;">${obs}</textarea>
         </div>
