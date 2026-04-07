@@ -1348,8 +1348,7 @@ window.crearRec = async ()=>{
     const ref=await addDoc(collection(db,'reclamaciones'),data);
     CUR_ID=ref.id;
     const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
-    localStorage.setItem('furips_p2_rec',JSON.stringify(recLocal));
-    localStorage.setItem('furips_p2_rol',USER.rol);
+    const rl2=JSON.stringify(recLocal); try{sessionStorage.setItem('furips_p2_rec',rl2);}catch(e){} try{localStorage.setItem('furips_p2_rec',rl2);}catch(e){} try{sessionStorage.setItem('furips_p2_rol',USER.rol);}catch(e){} try{localStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
     loader(false);
     ialert('n-alr','as','✔ Reclamación creada correctamente.');
     setTimeout(()=>{ window.open(`FURIPS_Fase3_Parte2.html?id=${ref.id}&rol=${USER.rol}`,'_blank'); },1000);
@@ -1360,8 +1359,12 @@ window.selRec=(id)=>{
   CUR_ID=id;
   const rec=RECS.find(r=>r.id===id);
   if(rec){
-    localStorage.setItem('furips_p2_rec',JSON.stringify(rec));
-    localStorage.setItem('furips_p2_rol',USER.rol);
+    // Guardar en AMBOS storages para máxima compatibilidad
+    const recStr=JSON.stringify(rec);
+    try{ sessionStorage.setItem('furips_p2_rec',recStr); }catch(e){}
+    try{ localStorage.setItem('furips_p2_rec',recStr); }catch(e){}
+    try{ sessionStorage.setItem('furips_p2_rol',USER.rol); }catch(e){}
+    try{ localStorage.setItem('furips_p2_rol',USER.rol); }catch(e){}
     window.open(`FURIPS_Fase3_Parte2.html?id=${id}&rol=${USER.rol}`,'_blank');
   } else {
     toast('Reclamación no encontrada. Espera un momento y reintenta.','w');
@@ -3874,9 +3877,8 @@ window.abrirF1=()=>{
   if(RECS.length===1){
     const rec=RECS[0];
     CUR_ID=rec.id;
-    localStorage.setItem('furips_p2_rec',JSON.stringify(rec));
-    localStorage.setItem('furips_p2_rol',USER.rol);
-    window.open('FURIPS_Fase3_Parte2.html','_blank');
+    const rs=JSON.stringify(rec); try{sessionStorage.setItem('furips_p2_rec',rs);}catch(e){} try{localStorage.setItem('furips_p2_rec',rs);}catch(e){} try{sessionStorage.setItem('furips_p2_rol',USER.rol);}catch(e){} try{localStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
+    window.open(`FURIPS_Fase3_Parte2.html?id=${rec.id}&rol=${USER.rol}`,'_blank');
     return;
   }
 
@@ -3946,9 +3948,12 @@ window._abrirSelF1=(id)=>{
   const overlay=g('modal-sel-f1'); if(overlay) overlay.remove();
   const rec=RECS.find(r=>r.id===id); if(!rec) return;
   CUR_ID=id;
-  localStorage.setItem('furips_p2_rec',JSON.stringify(rec));
-  localStorage.setItem('furips_p2_rol',USER.rol);
-  window.open('FURIPS_Fase3_Parte2.html','_blank');
+  const rs=JSON.stringify(rec);
+  try{sessionStorage.setItem('furips_p2_rec',rs);}catch(e){}
+  try{localStorage.setItem('furips_p2_rec',rs);}catch(e){}
+  try{sessionStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
+  try{localStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
+  window.open(`FURIPS_Fase3_Parte2.html?id=${id}&rol=${USER.rol}`,'_blank');
 };
 
 window.abrirF2=()=>abrirF1();
