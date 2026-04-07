@@ -1170,7 +1170,7 @@ service cloud.firestore {
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── CONFIG ──
@@ -1178,6 +1178,11 @@ const FB = { apiKey:"AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g", authDomain:"conex
 const app  = initializeApp(FB);
 const auth = getAuth(app);
 const db   = getFirestore(app);
+
+// Persistencia LOCAL — debe aplicarse ANTES del primer login
+// Envolver en promesa para garantizar orden
+const _persistenceReady = setPersistence(auth, browserLocalPersistence)
+  .catch(e=>console.warn('setPersistence error:',e));
 
 // ── ESTADO ──
 let USER=null, RECS=[], CUR_ID=null, unsub=null;
@@ -1197,7 +1202,10 @@ window.login = async ()=>{
   const em=gv('l-email'),ps=gv('l-pass');
   if(!em||!ps){lerr('Complete correo y contraseña.');return;}
   g('l-spin').classList.remove('hidden');
-  try{ await signInWithEmailAndPassword(auth,em,ps); }
+  try{
+    await _persistenceReady; // Garantizar que la persistencia LOCAL está activa
+    await signInWithEmailAndPassword(auth,em,ps);
+  }
   catch(e){ const m={'auth/user-not-found':'Usuario no encontrado.','auth/wrong-password':'Contraseña incorrecta.','auth/invalid-credential':'Credenciales inválidas.','auth/too-many-requests':'Demasiados intentos. Espera unos minutos.'}; lerr(m[e.code]||'Error: '+e.message); g('l-spin').classList.add('hidden'); }
 };
 window.logout = async ()=>{ if(unsub){unsub();unsub=null;} await signOut(auth); };
@@ -1351,7 +1359,7 @@ window.crearRec = async ()=>{
     const rl2=JSON.stringify(recLocal); try{sessionStorage.setItem('furips_p2_rec',rl2);}catch(e){} try{localStorage.setItem('furips_p2_rec',rl2);}catch(e){} try{sessionStorage.setItem('furips_p2_rol',USER.rol);}catch(e){} try{localStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
     loader(false);
     ialert('n-alr','as','✔ Reclamación creada correctamente.');
-    setTimeout(()=>{ window.open(`FURIPS_Fase3_Parte2.html?id=${ref.id}&rol=${USER.rol}`,'_blank'); },1000);
+    setTimeout(()=>{ abrirParte2ConDatos(recLocal, USER.rol); },1000);
   } catch(e){loader(false);toast('Error al crear: '+e.message,'e');}
 };
 
@@ -1365,7 +1373,7 @@ window.selRec=(id)=>{
     try{ localStorage.setItem('furips_p2_rec',recStr); }catch(e){}
     try{ sessionStorage.setItem('furips_p2_rol',USER.rol); }catch(e){}
     try{ localStorage.setItem('furips_p2_rol',USER.rol); }catch(e){}
-    window.open(`FURIPS_Fase3_Parte2.html?id=${id}&rol=${USER.rol}`,'_blank');
+    abrirParte2ConDatos(rec, USER.rol);
   } else {
     toast('Reclamación no encontrada. Espera un momento y reintenta.','w');
   }
@@ -3824,6 +3832,30 @@ window.chqGuardar=async()=>{
 };
 // ── fin módulo chequeo ──
 
+
+// ── ABRIR PARTE2 PASANDO DATOS DIRECTAMENTE ──
+// Codifica la reclamación en el hash de la URL como JSON
+// Parte2 lo leerá antes de intentar Firebase — funciona sin sesión
+function abrirParte2ConDatos(rec, rol){
+  if(!rec) return;
+  try{
+    const json = JSON.stringify(rec);
+    // Usar btoa (base64) — suficientemente pequeño para registros típicos
+    const b64  = btoa(unescape(encodeURIComponent(json)));
+    const url  = `FURIPS_Fase3_Parte2.html?id=${rec.id}&rol=${rol}#d=${b64}`;
+    // También guardar en storage como respaldo
+    try{ sessionStorage.setItem('furips_p2_rec', json); }catch(e){}
+    try{ localStorage.setItem('furips_p2_rec', json); }catch(e){}
+    try{ sessionStorage.setItem('furips_p2_rol', rol); }catch(e){}
+    try{ localStorage.setItem('furips_p2_rol', rol); }catch(e){}
+    window.open(url, '_blank');
+  } catch(e){
+    // Si el JSON es demasiado grande para la URL, abrir sin hash
+    const url = `FURIPS_Fase3_Parte2.html?id=${rec.id}&rol=${rol}`;
+    window.open(url, '_blank');
+  }
+}
+
 window.go=(id)=>{
   document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display=''; });
   const pg=g('p-'+id);
@@ -3878,7 +3910,7 @@ window.abrirF1=()=>{
     const rec=RECS[0];
     CUR_ID=rec.id;
     const rs=JSON.stringify(rec); try{sessionStorage.setItem('furips_p2_rec',rs);}catch(e){} try{localStorage.setItem('furips_p2_rec',rs);}catch(e){} try{sessionStorage.setItem('furips_p2_rol',USER.rol);}catch(e){} try{localStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
-    window.open(`FURIPS_Fase3_Parte2.html?id=${rec.id}&rol=${USER.rol}`,'_blank');
+    abrirParte2ConDatos(rec, USER.rol);
     return;
   }
 
@@ -3948,12 +3980,7 @@ window._abrirSelF1=(id)=>{
   const overlay=g('modal-sel-f1'); if(overlay) overlay.remove();
   const rec=RECS.find(r=>r.id===id); if(!rec) return;
   CUR_ID=id;
-  const rs=JSON.stringify(rec);
-  try{sessionStorage.setItem('furips_p2_rec',rs);}catch(e){}
-  try{localStorage.setItem('furips_p2_rec',rs);}catch(e){}
-  try{sessionStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
-  try{localStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
-  window.open(`FURIPS_Fase3_Parte2.html?id=${id}&rol=${USER.rol}`,'_blank');
+  abrirParte2ConDatos(rec, USER.rol);
 };
 
 window.abrirF2=()=>abrirF1();
