@@ -306,13 +306,21 @@ select option{background:var(--sur2);}
         <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--tx2);margin-bottom:10px;">SELECCIONAR RECLAMACIÓN A REVISAR</div>
           <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">Buscar por factura o consecutivo</label>
-              <input id="chq-buscar" placeholder="Ej: FE100 ó 0001" oninput="window.chqBuscar(this.value)"
-                style="width:100%;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+            <div style="flex:1;min-width:280px;position:relative;">
+              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">Buscar por factura, consecutivo o IPS</label>
+              <div style="display:flex;gap:6px;">
+                <input id="chq-buscar" placeholder="Ej: FE100 · Enter para cargar"
+                  oninput="window.chqBuscar(this.value)"
+                  onkeydown="if(event.key==='Enter') window.chqBuscarEnter()"
+                  autocomplete="off"
+                  style="flex:1;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
+                <button onclick="window.chqBuscarEnter()" class="btn bp" style="font-size:12px;padding:6px 14px;flex-shrink:0;">🔍</button>
+              </div>
+              <!-- Dropdown de resultados -->
+              <div id="chq-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:var(--sur);border:1px solid var(--brd);border-radius:6px;z-index:200;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.2);"></div>
             </div>
             <div style="flex:1;min-width:180px;">
-              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">O seleccionar de la lista</label>
+              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">O seleccionar de la lista completa</label>
               <select id="chq-sel" onchange="window.chqSelRec(this.value)"
                 style="width:100%;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
                 <option value="">-- Seleccione reclamación --</option>
@@ -3426,14 +3434,95 @@ function loadChequeo(){
 }
 
 window.chqBuscar=(q)=>{
-  const sel=g('chq-sel'); if(!sel) return;
-  const qt=q.trim().toLowerCase();
-  sel.innerHTML='<option value="">-- Seleccione reclamación --</option>' +
-    RECS.filter(r=>(r.factura||'').toLowerCase().includes(qt)||(r.consec||'').toLowerCase().includes(qt))
-        .map(r=>`<option value="${r.id}">${r.factura} · ${r.consec} · ${r.codHab}</option>`).join('');
+  const dd=g('chq-dropdown'); if(!dd) return;
+  const qt=(q||'').trim().toLowerCase();
+
+  // Actualizar select completo también
+  const sel=g('chq-sel');
+  if(sel){
+    const filtrados = qt
+      ? RECS.filter(r=>(r.factura||'').toLowerCase().includes(qt)||(r.consec||'').toLowerCase().includes(qt)||(r.codHab||'').toLowerCase().includes(qt))
+      : RECS;
+    sel.innerHTML='<option value="">-- Seleccione reclamación --</option>'+
+      filtrados.map(r=>`<option value="${r.id}">${r.factura} · ${r.consec} · ${r.codHab}</option>`).join('');
+  }
+
+  if(!qt){ dd.style.display='none'; return; }
+
+  const matches=RECS.filter(r=>
+    (r.factura||'').toLowerCase().includes(qt)||
+    (r.consec||'').toLowerCase().includes(qt)||
+    (r.codHab||'').toLowerCase().includes(qt)
+  ).slice(0,8);
+
+  if(!matches.length){
+    dd.style.display='block';
+    dd.innerHTML='<div style="padding:10px 14px;font-size:11px;color:var(--tx3);">Sin resultados para "'+q+'"</div>';
+    return;
+  }
+
+  // Si hay exactamente una coincidencia exacta de factura → cargar directamente
+  const exacta=RECS.find(r=>(r.factura||'').toLowerCase()===qt);
+  if(exacta){
+    dd.style.display='none';
+    chqCargarRec(exacta.id);
+    const inp=g('chq-buscar'); if(inp) inp.value=exacta.factura;
+    return;
+  }
+
+  dd.style.display='block';
+  dd.innerHTML=matches.map(r=>{
+    const chq=r.chequeo_soportes;
+    const badge=chq
+      ? (chq.totalNok>0
+          ? `<span style="font-size:9px;color:var(--red);font-family:var(--mono);">✕${chq.totalNok}</span>`
+          : chq.totalPend>0
+            ? `<span style="font-size:9px;color:var(--warn);font-family:var(--mono);">⏳${chq.totalPend}</span>`
+            : `<span style="font-size:9px;color:var(--green);">✔</span>`)
+      : '<span style="font-size:9px;color:var(--tx3);">Sin revisar</span>';
+    return `<div onclick="window.chqPickDrop('${r.id}')"
+      style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:10px;"
+      onmouseover="this.style.background='var(--sur2)'" onmouseout="this.style.background=''">
+      <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--acc);min-width:80px;">${r.factura}</span>
+      <span style="font-size:11px;color:var(--tx2);flex:1;">${r.consec} · ${r.codHab}</span>
+      ${badge}
+    </div>`;
+  }).join('');
 };
 
-window.chqSelRec=(id)=>{
+window.chqPickDrop=(id)=>{
+  g('chq-dropdown').style.display='none';
+  const r=RECS.find(x=>x.id===id);
+  if(r){ const inp=g('chq-buscar'); if(inp) inp.value=r.factura; }
+  chqCargarRec(id);
+  const sel=g('chq-sel'); if(sel) sel.value=id;
+};
+
+window.chqBuscarEnter=()=>{
+  const q=(g('chq-buscar')?.value||'').trim().toLowerCase();
+  if(!q) return;
+  // Buscar coincidencia exacta primero, luego primera parcial
+  const exacta=RECS.find(r=>(r.factura||'').toLowerCase()===q||(r.consec||'').toLowerCase()===q);
+  const primera=RECS.find(r=>(r.factura||'').toLowerCase().includes(q)||(r.consec||'').toLowerCase().includes(q)||(r.codHab||'').toLowerCase().includes(q));
+  const rec=exacta||primera;
+  if(!rec){ toast('No se encontró ninguna reclamación con ese criterio.','w'); return; }
+  g('chq-dropdown').style.display='none';
+  const inp=g('chq-buscar'); if(inp) inp.value=rec.factura;
+  chqCargarRec(rec.id);
+  const sel=g('chq-sel'); if(sel) sel.value=rec.id;
+};
+
+// Cerrar dropdown al hacer clic fuera
+document.addEventListener('click', e=>{
+  const dd=g('chq-dropdown');
+  if(dd && !g('chq-buscar')?.contains(e.target) && !dd.contains(e.target)){
+    dd.style.display='none';
+  }
+});
+
+window.chqSelRec=(id)=>{ chqCargarRec(id); };
+
+function chqCargarRec(id){
   if(!id){ g('chq-panel').style.display='none'; g('chq-empty').style.display='block'; return; }
   CHQ_REC = RECS.find(r=>r.id===id);
   if(!CHQ_REC) return;
