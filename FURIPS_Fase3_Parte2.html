@@ -2696,8 +2696,6 @@ document.addEventListener("input", function(e) {
 
       // Reemplazos
       let newValue = el.value
-        .normalize("NFD") // separa tildes
-        .replace(/[\u0300-\u036f]/g, "") // elimina tildes
         .replace(/ñ/g, "n")
         .replace(/Ñ/g, "N");
 
