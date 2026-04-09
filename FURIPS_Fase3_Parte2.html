@@ -449,7 +449,7 @@ function buildF1(){
     <div class="field" id="ff-c10">
       <span class="fl"><span class="fn">C10</span>Número Documento<span class="req">*</span></span>
       <div style="display:flex;gap:4px;">
-        <input id="c10" maxlength="16" oninput="fv('c10');fp()" style="flex:1;">
+        <input id="c10" maxlength="16" oninput="fv('c10');fp()" onblur="cargarFURIPS1Previos(this.value)" style="flex:1;">
         <button type="button" onclick="consultarDoc('bdua','c9','c10')" title="Consultar afiliación en ADRES/BDUA"
           style="padding:4px 7px;border-radius:4px;border:1px solid rgba(31,111,235,.4);background:rgba(31,111,235,.12);color:#79c0ff;cursor:pointer;font-size:11px;white-space:nowrap;flex-shrink:0;">🔵 BDUA</button>
         <button type="button" onclick="consultarDoc('rnec','c9','c10')" title="Verificar vigencia cédula en Registraduría"
@@ -2423,12 +2423,221 @@ window.confirmarChequeo = async () => {
 
 
 
+
+// ═════════════════════════════════════════════════════════════
+// CARGAR FURIPS1 PREVIOS POR CÉDULA DE VÍCTIMA
+// ═════════════════════════════════════════════════════════════
+
+window.cargarFURIPS1Previos = async function(cedula) {
+  if (!cedula || cedula.trim() === '') {
+    return;
+  }
+
+  console.log('🔍 Buscando FURIPS1 previos para cédula:', cedula);
+  
+  try {
+    // Buscar en base de datos todos los registros con esta cédula
+    const registrosPrevios = RECS.filter(rec => {
+      const c10 = rec.furips1?.c10 || '';
+      return c10.trim() === cedula.trim();
+    });
+
+    console.log('Registros encontrados:', registrosPrevios.length);
+
+    if (registrosPrevios.length === 0) {
+      return; // Sin registros previos
+    }
+
+    if (registrosPrevios.length === 1) {
+      // Si solo hay uno, cargarlo directamente
+      cargarFURIPS1Item(0, registrosPrevios);
+      return;
+    }
+
+    // Mostrar opciones si hay múltiples registros
+    mostrarDialogoCargarFURIPS1(registrosPrevios, cedula);
+
+  } catch (error) {
+    console.error('Error al cargar FURIPS1 previos:', error);
+  }
+};
+
+// DIÁLOGO PARA SELECCIONAR CUAL FURIPS1 CARGAR
+window.mostrarDialogoCargarFURIPS1 = function(registros, cedula) {
+  // Crear HTML del diálogo
+  let html = `
+    <div style="padding: 15px; background: #fff; border-radius: 8px; max-height: 400px; overflow-y: auto;">
+      <h3 style="margin-top: 0; font-size: 16px; color: #1a2e3b;">Se encontraron ${registros.length} registros previos</h3>
+      <p style="color: #4a7a96; font-size: 13px; margin: 0 0 15px;">Selecciona el que deseas cargar para evitar digitación repetida:</p>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+  `;
+
+  registros.forEach((rec, idx) => {
+    const c5 = rec.furips1?.c5 || '?';
+    const c7 = rec.furips1?.c7 || '?';
+    const c1 = rec.furips1?.c1 || '?';
+    const c3 = rec.furips1?.c3 || '?';
+    const fecha = rec.creado?.toDate?.() 
+      ? rec.creado.toDate().toLocaleDateString('es-CO') 
+      : 'sin fecha';
+
+    html += `
+      <div style="
+        border: 1px solid #cde6f5; 
+        padding: 12px; 
+        border-radius: 6px; 
+        cursor: pointer;
+        background: #f9fafb;
+        transition: all 0.2s;
+      " 
+      onmouseover="this.style.background='#e8f4fb'; this.style.borderColor='#00B2E2'; this.style.boxShadow='0 2px 8px rgba(0,178,226,0.15)';"
+      onmouseout="this.style.background='#f9fafb'; this.style.borderColor='#cde6f5'; this.style.boxShadow='none';"
+      onclick="cargarFURIPS1Item(${idx}, window._furips1Registros)">
+        <strong style="color: #1a2e3b;">${c5} ${c7}</strong>
+        <br><small style="color: #7aafc8;">
+          Radicado: ${c1} | Consec: ${c3} | ${fecha}
+        </small>
+      </div>
+    `;
+  });
+
+  html += `
+    </div>
+    <div style="margin-top: 15px; display: flex; gap: 10px;">
+      <button onclick="ocultarDialogoFURIPS1()" style="
+        padding: 8px 16px; 
+        border: 1px solid #cde6f5; 
+        background: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #1a2e3b;
+        font-weight: 500;
+      ">Cancelar</button>
+    </div>
+  `;
+
+  // Mostrar diálogo modal
+  const overlay = document.createElement('div');
+  overlay.id = 'furips1-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    max-width: 500px;
+    width: 90%;
+    padding: 20px;
+  `;
+  modal.innerHTML = html;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Guardar registros para usar después
+  window._furips1Registros = registros;
+};
+
+// CARGAR UN FURIPS1 SELECCIONADO
+window.cargarFURIPS1Item = function(idx, registros) {
+  if (!registros) registros = window._furips1Registros;
+  if (!registros || !registros[idx]) return;
+
+  const rec = registros[idx];
+  const d = rec.furips1 || {};
+
+  console.log('📥 Cargando FURIPS1 previo:', rec.id);
+
+  // Lista de campos a cargar (excluye factura, radicado, consecutivo)
+  const F1K = ['c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19','c20','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','c31','c32','c33','c34','c35','c36','c37','c38','c39','c40','c41','c42','c43','c44','c45','c46','c47','c48','c49','c50','c51','c52','c53','c54','c55','c56','c57','c58','c59','c60','c61','c62','c63','c64','c65','c66','c67','c68','c69','c70','c71','c72','c73','c74','c75','c76','c77','c78','c79','c80','c81','c82','c83','c84','c85','c86','c87','c88','c89','c90','c91','c92','c93','c94','c95'];
+
+  let cargados = 0;
+  F1K.forEach(k => {
+    const valor = d[k];
+    const el = document.getElementById(k);
+    
+    if (el && valor !== undefined && valor !== null && valor !== '') {
+      el.value = valor;
+      el.dispatchEvent(new Event('change'));
+      el.dispatchEvent(new Event('input'));
+      cargados++;
+    }
+  });
+
+  // Cerrar diálogo
+  ocultarDialogoFURIPS1();
+
+  // Mostrar confirmación
+  toast(`✅ Cargados ${cargados} campos del FURIPS anterior`, 'ok');
+  
+  // Hacer scroll arriba
+  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+};
+
+// CERRAR DIÁLOGO
+window.ocultarDialogoFURIPS1 = function() {
+  const el = document.getElementById('furips1-overlay');
+  if (el) {
+    el.style.animation = 'fadeOut 0.2s';
+    setTimeout(() => el.remove(), 200);
+  }
+};
+
+// ═════════════════════════════════════════════════════════════
+// DEBUG PARA REEMPLAZO DE Ñ
+// ═════════════════════════════════════════════════════════════
+
+window.debugCleanN = function() {
+  console.log("=== DEBUG cleanN ===");
+  
+  // Prueba 1: Variable simple
+  const test1 = 'PEÑA';
+  console.log("Input test1:", test1);
+  console.log("Output test1:", test1.replace(/ñ/g,'n').replace(/Ñ/g,'N'));
+  
+  // Prueba 2: Variable FURIPS
+  if (window.RECS && window.RECS.length > 0) {
+    const test2 = RECS[0]?.furips1?.c5 || 'sin datos';
+    console.log("FURIPS c5 (Apellido):", test2);
+    console.log("Limpiado:", test2.replace(/ñ/g,'n').replace(/Ñ/g,'N'));
+  }
+  
+  // Prueba 3: Verificar encode
+  console.log("Char code Ñ:", 'Ñ'.charCodeAt(0));
+  console.log("Char code ñ:", 'ñ'.charCodeAt(0));
+  
+  // Prueba 4: Test completo
+  const testCases = ['PEÑA', 'peña', 'ESPAÑA', 'niño', 'ENSEÑANZA'];
+  console.log("=== Tests completos ===");
+  testCases.forEach(test => {
+    const result = test.replace(/ñ/g,'n').replace(/Ñ/g,'N');
+    console.log(`${test} → ${result}`);
+  });
+  
+  return true;
+};
+
 window.onAseg    = onAseg;
 window.rules     = rules;
 window.u2        = u2;
 window.delR2     = delR2;
 window.upSteps   = upSteps;
 window.valFechas = valFechas;
+window.cargarFURIPS1Previos = cargarFURIPS1Previos;
+window.debugCleanN = debugCleanN;
 
 </script>
 
