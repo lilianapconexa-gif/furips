@@ -1088,6 +1088,10 @@ select option{background:var(--sur2);}
             </div>
             <div class="field"><label class="fl">Fecha Generación <span class="req">*</span></label><input id="tx-fec" type="date"></div>
           </div>
+          <div class="g2" style="margin-bottom:14px;">
+            <div class="field"><label class="fl">Nro. Consecutivo Inicio</label><input id="tx-cons-ini" type="number" placeholder="Ej: 1" min="1"></div>
+            <div class="field"><label class="fl">Nro. Consecutivo Fin</label><input id="tx-cons-fin" type="number" placeholder="Ej: 50" min="1"></div>
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
             <button class="btn bp" onclick="expTxt('FURIPS1')">⬇ FURIPS 1 .txt</button>
             <button class="btn bb" onclick="expTxt('FURIPS2')">⬇ FURIPS 2 .txt</button>
@@ -3148,17 +3152,52 @@ function updStats(){
 
 // ── TXT ──
 const fd=s=>{if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;};
+const cleanN=s=>(s||'').replace(/Ñ/g,'N').replace(/ñ/g,'n'); // Reemplazar Ñ y ñ por N y n
 const F1K=['c1','c1t','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19','c20','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','c31','c32','c33','c34','c35','c36','c37','c38','c39','c40','c41','c42','c43','c44','c45','c46','c47','c48','c49','c50','c51','c52','c53','c54','c55','c56','c57','c58','c59','c60','c61','c62','c63','c64','c65','c66','c67','c68','c69','c70','c71','c72','c73','c74','c75','c76','c77','c78','c79','c80','c81','c82','c83','c84','c85','c86','c87','c88','c89','c90','c91','c92','c93','c94','c95','c96','c97','c98','c99','c100','c101'];
 const DATEF=['c11','c12','c22','c33','c34','c64','c69','c79','c81'];
-function bF1(){ return RECS.map(rec=>{ const d=rec.furips1||{}; return F1K.map(k=>{ const v=(d[k]||'').toString().replace(/,/g,' '); return DATEF.includes(k)?fd(v):v; }).join(','); }).join('\n'); }
-function bF2(){ const ls=[]; RECS.forEach(rec=>(rec.furips2||[]).forEach(r=>ls.push([r.factura||'',r.consec||'',r.tipo||'',r.codigo||'',(r.descripcion||'').replace(/,/g,' '),r.cantidad||'0',r.vrUnitario||'0',r.totalFact||'0',r.totalRec||'0'].join(',')))); return ls.join('\n'); }
+function bF1(){ return RECS.map(rec=>{ const d=rec.furips1||{}; return F1K.map(k=>{ const v=cleanN((d[k]||'').toString()).replace(/,/g,' '); return DATEF.includes(k)?fd(v):v; }).join(','); }).join('\n'); }
+function bF2(){ const ls=[]; RECS.forEach(rec=>(rec.furips2||[]).forEach(r=>ls.push([cleanN(r.factura||''),cleanN(r.consec||''),cleanN(r.tipo||''),cleanN(r.codigo||''),cleanN((r.descripcion||'').replace(/,/g,' ')),r.cantidad||'0',r.vrUnitario||'0',r.totalFact||'0',r.totalRec||'0'].join(',')))); return ls.join('\n'); }
 function nom(t,c,f){ const p=f.split('-'); const d=p.length===3?`${p[2]}${p[1]}${p[0]}`:f.replace(/-/g,''); return `${t}${c}${d}.txt`; }
 
 window.expTxt=(t)=>{
   const c=gv('tx-cod'),f=gv('tx-fec'); if(!c||!f){toast('Complete Código y Fecha','w');return;}
-  dl(t==='FURIPS1'?bF1():bF2(),nom(t,c,f),'text/plain'); toast(t+' descargado ✔','ok');
+  const ini=parseInt(gv('tx-cons-ini'))||0;
+  const fin=parseInt(gv('tx-cons-fin'))||999999;
+  
+  // Filtrar registros por rango de consecutivo (c3)
+  const recsFiltered=RECS.filter((rec,idx)=>{
+    const consec=parseInt(rec.furips1?.c3)||0;
+    if(ini>0 && fin>0) return consec>=ini && consec<=fin;
+    if(ini>0) return consec>=ini;
+    if(fin>0) return consec<=fin;
+    return true;
+  });
+  
+  if(recsFiltered.length===0){toast('No hay registros en ese rango','w');return;}
+  
+  const bF1Filtered=()=>recsFiltered.map(rec=>{ const d=rec.furips1||{}; return F1K.map(k=>{ const v=(d[k]||'').toString().replace(/,/g,' '); return DATEF.includes(k)?fd(v):v; }).join(','); }).join('\n');
+  const bF2Filtered=()=>{ const ls=[]; recsFiltered.forEach(rec=>(rec.furips2||[]).forEach(r=>ls.push([r.factura||'',r.consec||'',r.tipo||'',r.codigo||'',(r.descripcion||'').replace(/,/g,' '),r.cantidad||'0',r.vrUnitario||'0',r.totalFact||'0',r.totalRec||'0'].join(',')))); return ls.join('\n'); };
+  
+  dl(t==='FURIPS1'?bF1Filtered():bF2Filtered(),nom(t,c,f),'text/plain'); 
+  const rng=ini>0&&fin>0?` (rango ${ini}-${fin})`:ini>0?` (desde ${ini})`:fin>0?` (hasta ${fin})`:'';
+  toast(t+' descargado ✔ '+recsFiltered.length+' registros'+rng,'ok');
 };
-window.prevTxt=()=>{ show('prev-w'); _s2('pv-f1',bF1()||'(sin datos)'); _s2('pv-f2',bF2()||'(sin datos)'); };
+window.prevTxt=()=>{ 
+  const ini=parseInt(gv('tx-cons-ini'))||0;
+  const fin=parseInt(gv('tx-cons-fin'))||999999;
+  const recsFiltered=RECS.filter((rec)=>{
+    const consec=parseInt(rec.furips1?.c3)||0;
+    if(ini>0 && fin>0) return consec>=ini && consec<=fin;
+    if(ini>0) return consec>=ini;
+    if(fin>0) return consec<=fin;
+    return true;
+  });
+  const bF1Filtered=()=>recsFiltered.map(rec=>{ const d=rec.furips1||{}; return F1K.map(k=>{ const v=(d[k]||'').toString().replace(/,/g,' '); return DATEF.includes(k)?fd(v):v; }).join(','); }).join('\n');
+  const bF2Filtered=()=>{ const ls=[]; recsFiltered.forEach(rec=>(rec.furips2||[]).forEach(r=>ls.push([r.factura||'',r.consec||'',r.tipo||'',r.codigo||'',(r.descripcion||'').replace(/,/g,' '),r.cantidad||'0',r.vrUnitario||'0',r.totalFact||'0',r.totalRec||'0'].join(',')))); return ls.join('\n'); };
+  show('prev-w'); 
+  _s2('pv-f1',bF1Filtered()||'(sin datos)'); 
+  _s2('pv-f2',bF2Filtered()||'(sin datos)'); 
+};
 
 window.selIPSTxt=(val)=>{
   const el=g('tx-cod'); if(!el) return;
