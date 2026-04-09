@@ -2682,33 +2682,32 @@ window.debugCleanN = debugCleanN;
 
 <script>
 // ─────────────────────────────────────────────
-// CORRECCIÓN Ñ → N (ANTES de que se pierda)
+// NORMALIZACIÓN FINAL (ANTI-CONFLICTOS)
 // ─────────────────────────────────────────────
-document.addEventListener("beforeinput", function(e) {
+document.addEventListener("input", function(e) {
   const el = e.target;
 
   if (
     (el.tagName === "INPUT" || el.tagName === "TEXTAREA") &&
-    typeof e.data === "string"
+    typeof el.value === "string"
   ) {
-    if (e.data === "ñ" || e.data === "Ñ") {
-      e.preventDefault();
+    // Ejecutar después de que otros scripts actúen
+    setTimeout(() => {
+      let start = el.selectionStart;
+      let end = el.selectionEnd;
 
-      const start = el.selectionStart;
-      const end = el.selectionEnd;
+      let newValue = el.value
+        .replace(/ñ/g, "n")
+        .replace(/Ñ/g, "N");
 
-      const nuevaLetra = e.data === "ñ" ? "n" : "N";
-
-      el.value =
-        el.value.substring(0, start) +
-        nuevaLetra +
-        el.value.substring(end);
-
-      el.setSelectionRange(start + 1, start + 1);
-    }
+      if (el.value !== newValue) {
+        el.value = newValue;
+        el.setSelectionRange(start, end);
+      }
+    }, 0);
   }
 });
-</script> 
+</script>
 
 </body>  
 </html>
