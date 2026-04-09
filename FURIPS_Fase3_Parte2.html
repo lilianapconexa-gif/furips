@@ -9,9 +9,9 @@
 :root{--bg:#f0f7fc;--sur:#ffffff;--sur2:#e8f4fb;--brd:#cde6f5;--brd2:#a8d4ea;--acc:#00B2E2;--acc2:#0090C0;--blue:#00B2E2;--green:#9DB455;--red:#d32f2f;--warn:#f57c00;--tx:#1a2e3b;--tx2:#4a7a96;--tx3:#7aafc8;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;}
 
 /* ── INPUTS SIEMPRE MAYÚSCULAS ── */
-input[type="text"], input:not([type]), input[type="search"],
-input[type="email"], input[type="tel"], textarea {
-  text-transform: uppercase;
+input, textarea {
+  text-transform: none;
+}
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -2681,9 +2681,6 @@ window.debugCleanN = debugCleanN;
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-// NORMALIZACIÓN FINAL (ANTI-CONFLICTOS)
-// ─────────────────────────────────────────────
 document.addEventListener("input", function(e) {
   const el = e.target;
 
@@ -2691,20 +2688,18 @@ document.addEventListener("input", function(e) {
     (el.tagName === "INPUT" || el.tagName === "TEXTAREA") &&
     typeof el.value === "string"
   ) {
-    // Ejecutar después de que otros scripts actúen
-    setTimeout(() => {
-      let start = el.selectionStart;
-      let end = el.selectionEnd;
+    let start = el.selectionStart;
+    let end = el.selectionEnd;
 
-      let newValue = el.value
-        .replace(/ñ/g, "n")
-        .replace(/Ñ/g, "N");
+    let newValue = el.value
+      .replace(/ñ/g, "n")
+      .replace(/Ñ/g, "N")
+      .toUpperCase(); // AQUÍ haces mayúscula correctamente
 
-      if (el.value !== newValue) {
-        el.value = newValue;
-        el.setSelectionRange(start, end);
-      }
-    }, 0);
+    if (el.value !== newValue) {
+      el.value = newValue;
+      el.setSelectionRange(start, end);
+    }
   }
 });
 </script>
