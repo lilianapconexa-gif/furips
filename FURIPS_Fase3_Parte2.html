@@ -14,7 +14,34 @@ input[type="email"], input[type="tel"], textarea {
   text-transform: uppercase;
 }
 
-*{box-sizing:border-box;margin:0;padding:0;}
+</style>
+
+<!-- SCRIPT GLOBAL: REEMPLAZAR Ñ POR N EN TIEMPO REAL -->
+<script>
+// Esta función se ejecuta INMEDIATAMENTE al cargar el página
+(function() {
+  // Interceptar el evento de input en TODOS los elementos
+  document.addEventListener('input', function(event) {
+    const el = event.target;
+    
+    // Si es un input o textarea
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      // Reemplazar Ñ por N
+      const original = el.value;
+      el.value = original.replace(/ñ/g, 'n').replace(/Ñ/g, 'N');
+      
+      // Si el valor cambió, registrar
+      if (original !== el.value) {
+        console.log('✅ Reemplazado:', original, '→', el.value);
+      }
+    }
+  }, true); // Captura en fase de captura (antes que otros listeners)
+  
+  console.log('✅ Script de Ñ→N inicializado en el HEAD');
+})();
+</script>
+
+</head>
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;}
 
 .hdr{background:var(--sur);border-bottom:2px solid var(--acc);padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:50px;position:sticky;top:0;z-index:200;}
@@ -2639,31 +2666,6 @@ window.valFechas = valFechas;
 window.cargarFURIPS1Previos = cargarFURIPS1Previos;
 window.debugCleanN = debugCleanN;
 
-</script>
-
-<!-- SCRIPT SIMPLE: REEMPLAZAR Ñ POR N AL ESCRIBIR -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Esperar a que cargue el DOM
-  setTimeout(function() {
-    // Encontrar todos los inputs y textareas
-    const elementos = document.querySelectorAll('input[type="text"], input:not([type]), textarea');
-    
-    elementos.forEach(el => {
-      // Cuando se escribe
-      el.addEventListener('input', function() {
-        this.value = this.value.replace(/ñ/g, 'n').replace(/Ñ/g, 'N');
-      });
-      
-      // Al pegar (ctrl+v)
-      el.addEventListener('paste', function() {
-        setTimeout(() => {
-          this.value = this.value.replace(/ñ/g, 'n').replace(/Ñ/g, 'N');
-        }, 10);
-      });
-    });
-  }, 1000);
-});
 </script>
 
 <!-- ══════════════════════════════════════════════════════════
