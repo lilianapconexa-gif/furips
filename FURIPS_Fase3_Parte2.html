@@ -2679,5 +2679,39 @@ window.debugCleanN = debugCleanN;
     </div>
   </div>
 </div>
-</body>
+
+<script>
+// ─────────────────────────────────────────────
+// NORMALIZACIÓN DE TEXTO (Ñ → N)
+// ─────────────────────────────────────────────
+document.addEventListener("input", function(e) {
+  const el = e.target;
+
+  if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+    if (typeof el.value === "string") {
+
+      // Guardar posición del cursor
+      let start = el.selectionStart;
+      let end = el.selectionEnd;
+
+      // Reemplazos
+      let newValue = el.value
+        .normalize("NFD") // separa tildes
+        .replace(/[\u0300-\u036f]/g, "") // elimina tildes
+        .replace(/ñ/g, "n")
+        .replace(/Ñ/g, "N");
+
+      // Solo actualiza si hubo cambio (evita bugs)
+      if (el.value !== newValue) {
+        el.value = newValue;
+
+        // Restaurar cursor
+        el.setSelectionRange(start, end);
+      }
+    }
+  }
+});
+</script>  
+
+</body>  
 </html>
