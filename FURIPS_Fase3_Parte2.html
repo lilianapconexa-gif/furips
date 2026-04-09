@@ -2682,34 +2682,33 @@ window.debugCleanN = debugCleanN;
 
 <script>
 // ─────────────────────────────────────────────
-// NORMALIZACIÓN DE TEXTO (Ñ → N)
+// CORRECCIÓN Ñ → N (ANTES de que se pierda)
 // ─────────────────────────────────────────────
-document.addEventListener("input", function(e) {
+document.addEventListener("beforeinput", function(e) {
   const el = e.target;
 
-  if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
-    if (typeof el.value === "string") {
+  if (
+    (el.tagName === "INPUT" || el.tagName === "TEXTAREA") &&
+    typeof e.data === "string"
+  ) {
+    if (e.data === "ñ" || e.data === "Ñ") {
+      e.preventDefault();
 
-      // Guardar posición del cursor
-      let start = el.selectionStart;
-      let end = el.selectionEnd;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
 
-      // Reemplazos
-      let newValue = el.value
-        .replace(/ñ/g, "n")
-        .replace(/Ñ/g, "N");
+      const nuevaLetra = e.data === "ñ" ? "n" : "N";
 
-      // Solo actualiza si hubo cambio (evita bugs)
-      if (el.value !== newValue) {
-        el.value = newValue;
+      el.value =
+        el.value.substring(0, start) +
+        nuevaLetra +
+        el.value.substring(end);
 
-        // Restaurar cursor
-        el.setSelectionRange(start, end);
-      }
+      el.setSelectionRange(start + 1, start + 1);
     }
   }
 });
-</script>  
+</script> 
 
 </body>  
 </html>
