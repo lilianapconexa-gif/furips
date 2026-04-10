@@ -2163,7 +2163,7 @@ aplicarTema2(TEMA2_ACTUAL);
 // ── MAYÚSCULAS Y BLOQUEO DE CARACTERES ESPECIALES ──
 // Caracteres permitidos: letras (incluyendo vocales con tilde), números, espacios, / - _ : .
 // Se excluyen: # Ñ ñ , ; ! @ $ % & * ( ) + = [ ] { } | \ " ' < > ? ¿ ¡
-const REGEX_PERMITIDO = /[^A-ZÁÉÍÓÚÑ0-9 /\-_:.]/gi;
+const REGEX_PERMITIDO = /[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9 /\-_:.]/g;
 
 document.addEventListener('input', e=>{
   const el = e.target;
