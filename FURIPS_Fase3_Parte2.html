@@ -241,7 +241,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── HELPERS GLOBALES (deben definirse antes de cualquier uso) ──
 const g   = id => document.getElementById(id);
@@ -2425,123 +2425,132 @@ window.confirmarChequeo = async () => {
 
 
 // ═════════════════════════════════════════════════════════════
-// CARGAR FURIPS1 PREVIOS POR CÉDULA DE VÍCTIMA
+// CARGAR FURIPS1 PREVIOS POR CÉDULA — CONSULTA DIRECTA FIRESTORE
+// Se activa al salir del campo C10 (cédula de la víctima)
 // ═════════════════════════════════════════════════════════════
 
 window.cargarFURIPS1Previos = async function(cedula) {
-  if (!cedula || cedula.trim() === '') {
-    return;
-  }
+  if (!cedula || cedula.trim() === '') return;
+  const ced = cedula.trim().toUpperCase();
 
-  console.log('🔍 Buscando FURIPS1 previos para cédula:', cedula);
-  
+  // Mostrar indicador mientras busca
+  const hint = document.querySelector('#ff-c10 .hint');
+  if (hint) hint.innerHTML = '⏳ Buscando registros anteriores en Firebase...';
+
   try {
-    // Buscar en base de datos todos los registros con esta cédula
-    const registrosPrevios = RECS.filter(rec => {
-      const c10 = rec.furips1?.c10 || '';
-      return c10.trim() === cedula.trim();
+    // Intentar query con orderBy (requiere índice compuesto en Firestore)
+    let snap;
+    try {
+      const q = query(
+        collection(db, 'reclamaciones'),
+        where('furips1.c10', '==', ced),
+        orderBy('creado', 'desc'),
+        limit(20)
+      );
+      snap = await getDocs(q);
+    } catch(e) {
+      // Fallback sin orderBy si no existe el índice
+      const q2 = query(
+        collection(db, 'reclamaciones'),
+        where('furips1.c10', '==', ced)
+      );
+      snap = await getDocs(q2);
+    }
+
+    // Restaurar hint
+    if (hint) hint.innerHTML = '🔵 BDUA valida afiliación · 🟡 RNEC valida cédula · 📋 Copia el número';
+
+    // Excluir el registro actual
+    const registrosPrevios = [];
+    snap.forEach(docSnap => {
+      if (docSnap.id !== REC?.id) {
+        registrosPrevios.push({ id: docSnap.id, ...docSnap.data() });
+      }
     });
 
-    console.log('Registros encontrados:', registrosPrevios.length);
+    if (registrosPrevios.length === 0) return; // Primera vez
 
-    if (registrosPrevios.length === 0) {
-      return; // Sin registros previos
-    }
-
-    if (registrosPrevios.length === 1) {
-      // Si solo hay uno, cargarlo directamente
-      cargarFURIPS1Item(0, registrosPrevios);
-      return;
-    }
-
-    // Mostrar opciones si hay múltiples registros
-    mostrarDialogoCargarFURIPS1(registrosPrevios, cedula);
+    // Mostrar diálogo de selección
+    mostrarDialogoCargarFURIPS1(registrosPrevios, ced);
 
   } catch (error) {
-    console.error('Error al cargar FURIPS1 previos:', error);
+    const hint2 = document.querySelector('#ff-c10 .hint');
+    if (hint2) hint2.innerHTML = '🔵 BDUA valida afiliación · 🟡 RNEC valida cédula · 📋 Copia el número';
+    console.error('Error búsqueda cédula Firebase:', error.message);
   }
 };
 
 // DIÁLOGO PARA SELECCIONAR CUAL FURIPS1 CARGAR
 window.mostrarDialogoCargarFURIPS1 = function(registros, cedula) {
-  // Crear HTML del diálogo
   let html = `
-    <div style="padding: 15px; background: #fff; border-radius: 8px; max-height: 400px; overflow-y: auto;">
-      <h3 style="margin-top: 0; font-size: 16px; color: #1a2e3b;">Se encontraron ${registros.length} registros previos</h3>
-      <p style="color: #4a7a96; font-size: 13px; margin: 0 0 15px;">Selecciona el que deseas cargar para evitar digitación repetida:</p>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-  `;
+    <div style="padding:0;">
+      <div style="background:linear-gradient(135deg,#00B2E2,#0090C0);padding:14px 18px;border-radius:8px 8px 0 0;margin:-20px -20px 14px;">
+        <div style="font-size:13px;font-weight:700;color:#fff;">🔍 Víctima con FURIPS anteriores</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:2px;">
+          Cédula <strong>${cedula}</strong> — ${registros.length} registro${registros.length>1?'s':''} encontrado${registros.length>1?'s':''}
+        </div>
+      </div>
+      <div style="background:rgba(0,178,226,.07);border:1px solid rgba(0,178,226,.25);border-radius:6px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#0090C0;line-height:1.5;">
+        <strong>💡 ¿Qué hace esto?</strong> Carga nombre, documento, dirección, vehículo, médico y más del registro anterior. Factura, consecutivo y fechas de atención <strong>no se tocan</strong>.
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);font-family:monospace;letter-spacing:.5px;margin-bottom:8px;">SELECCIONA EL FURIPS A COPIAR:</div>
+      <div style="display:flex;flex-direction:column;gap:7px;max-height:300px;overflow-y:auto;padding-right:3px;">`;
 
   registros.forEach((rec, idx) => {
-    const c5 = rec.furips1?.c5 || '?';
-    const c7 = rec.furips1?.c7 || '?';
-    const c1 = rec.furips1?.c1 || '?';
-    const c3 = rec.furips1?.c3 || '?';
-    const fecha = rec.creado?.toDate?.() 
-      ? rec.creado.toDate().toLocaleDateString('es-CO') 
-      : 'sin fecha';
+    const f1 = rec.furips1 || {};
+    const nombre = [f1.c5, f1.c6, f1.c7, f1.c8].filter(Boolean).join(' ') || 'Sin nombre';
+    const factura = f1.c2 || rec.factura || '?';
+    const consec  = f1.c3 || rec.consec  || '?';
+    const nat     = f1.c19 === '01' ? '🚗 AT' : f1.c19 ? 'Evento' : '';
+    const fechaOcurr = f1.c22 ? f1.c22.split('-').reverse().join('/') : '';
+    const pct = Math.min(100, Math.round(Object.values(f1).filter(v=>v&&v!=='').length / 90 * 100));
+    const pctColor = pct>=70?'#9DB455':pct>=40?'#f57c00':'#d32f2f';
+    let fechaCreado = '';
+    try {
+      if (rec.creado?.toDate) fechaCreado = rec.creado.toDate().toLocaleDateString('es-CO');
+      else if (rec.creado?.seconds) fechaCreado = new Date(rec.creado.seconds*1000).toLocaleDateString('es-CO');
+    } catch(e) {}
 
     html += `
-      <div style="
-        border: 1px solid #cde6f5; 
-        padding: 12px; 
-        border-radius: 6px; 
-        cursor: pointer;
-        background: #f9fafb;
-        transition: all 0.2s;
-      " 
-      onmouseover="this.style.background='#e8f4fb'; this.style.borderColor='#00B2E2'; this.style.boxShadow='0 2px 8px rgba(0,178,226,0.15)';"
-      onmouseout="this.style.background='#f9fafb'; this.style.borderColor='#cde6f5'; this.style.boxShadow='none';"
-      onclick="cargarFURIPS1Item(${idx}, window._furips1Registros)">
-        <strong style="color: #1a2e3b;">${c5} ${c7}</strong>
-        <br><small style="color: #7aafc8;">
-          Radicado: ${c1} | Consec: ${c3} | ${fecha}
-        </small>
-      </div>
-    `;
+      <div style="border:1px solid var(--brd);border-radius:8px;padding:11px 14px;background:var(--sur);cursor:pointer;transition:all .15s;position:relative;"
+        onmouseover="this.style.borderColor='var(--acc)';this.style.background='rgba(0,178,226,.04)';this.style.boxShadow='0 2px 8px rgba(0,178,226,.15)';"
+        onmouseout="this.style.borderColor='var(--brd)';this.style.background='var(--sur)';this.style.boxShadow='';"
+        onclick="cargarFURIPS1Item(${idx}, window._furips1Registros)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+          <span style="font-size:13px;font-weight:700;color:var(--tx);">👤 ${nombre}</span>
+          <span style="margin-left:auto;font-size:20px;color:var(--brd2);">›</span>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-family:monospace;font-size:10px;background:rgba(0,178,226,.1);color:var(--acc);padding:2px 7px;border-radius:10px;">📄 ${factura}</span>
+          <span style="font-family:monospace;font-size:10px;background:rgba(157,180,85,.1);color:#5a7a20;padding:2px 7px;border-radius:10px;">#${consec}</span>
+          ${nat?`<span style="font-size:10px;background:rgba(245,124,0,.1);color:#f57c00;padding:2px 7px;border-radius:10px;">${nat}</span>`:''}
+          ${fechaOcurr?`<span style="font-size:10px;color:var(--tx3);">📅 ${fechaOcurr}</span>`:''}
+          ${fechaCreado?`<span style="font-size:10px;color:var(--tx3);">🕐 ${fechaCreado}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="flex:1;height:3px;background:var(--sur2);border-radius:2px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${pctColor};border-radius:2px;"></div>
+          </div>
+          <span style="font-size:9px;font-family:monospace;color:${pctColor};font-weight:700;">${pct}% F1</span>
+        </div>
+      </div>`;
   });
 
   html += `
-    </div>
-    <div style="margin-top: 15px; display: flex; gap: 10px;">
-      <button onclick="ocultarDialogoFURIPS1()" style="
-        padding: 8px 16px; 
-        border: 1px solid #cde6f5; 
-        background: #fff;
-        border-radius: 6px;
-        cursor: pointer;
-        color: #1a2e3b;
-        font-weight: 500;
-      ">Cancelar</button>
-    </div>
-  `;
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--brd);display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+        <span style="font-size:10px;color:var(--tx3);margin-right:auto;">ℹ️ Factura, consec. y fechas no se sobreescriben</span>
+        <button onclick="ocultarDialogoFURIPS1()" style="padding:7px 14px;border:1px solid var(--brd2);background:var(--sur2);border-radius:6px;cursor:pointer;color:var(--tx2);font-size:11px;font-weight:500;">✕ Cancelar</button>
+      </div>
+    </div>`;
 
-  // Mostrar diálogo modal
   const overlay = document.createElement('div');
   overlay.id = 'furips1-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    animation: fadeIn 0.2s;
-  `;
+  overlay.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn .2s;backdrop-filter:blur(2px);padding:16px;`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) ocultarDialogoFURIPS1(); });
 
   const modal = document.createElement('div');
-  modal.style.cssText = `
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    max-width: 500px;
-    width: 90%;
-    padding: 20px;
-  `;
+  modal.style.cssText = `background:var(--sur);border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.3);max-width:500px;width:100%;padding:20px;max-height:90vh;overflow-y:auto;`;
   modal.innerHTML = html;
 
   overlay.appendChild(modal);
