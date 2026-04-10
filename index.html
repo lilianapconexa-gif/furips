@@ -420,6 +420,42 @@ select option{background:var(--sur2);}
 
         <!-- INDIVIDUAL -->
         <div id="n-ind">
+
+          <!-- ══ PASO 1: BÚSQUEDA DE CÉDULA ══ -->
+          <div id="n-paso1" style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:18px 20px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700;flex-shrink:0;">1</div>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--tx);">Verificar si la víctima tiene FURIPS anteriores</div>
+                <div style="font-size:11px;color:var(--tx2);">Ingresa la cédula para reutilizar datos ya digitados y evitar re-digitación.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="field" style="flex:1;min-width:200px;">
+                <label class="fl">Cédula / Documento de la Víctima</label>
+                <div style="display:flex;gap:6px;">
+                  <input id="n-cedula-buscar" maxlength="16" placeholder="Número de documento"
+                    style="flex:1;"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                    onkeydown="if(event.key==='Enter') window.buscarCedulaNueva()">
+                  <button class="btn bp" onclick="window.buscarCedulaNueva()" style="flex-shrink:0;padding:6px 14px;font-size:12px;">🔍 Buscar</button>
+                  <button class="btn bs" onclick="window.saltarBusquedaCedula()" style="flex-shrink:0;padding:6px 12px;font-size:11px;" title="Continuar sin buscar">Saltar →</button>
+                </div>
+              </div>
+            </div>
+            <div id="n-cedula-resultado" style="display:none;margin-top:12px;"></div>
+          </div>
+
+          <!-- ══ PASO 2: DATOS DE LA RECLAMACIÓN ══ -->
+          <div id="n-paso2" style="display:none;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px 18px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700;flex-shrink:0;">2</div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:700;color:var(--tx);">Datos de la nueva reclamación</div>
+                <div id="n-paso2-sub" style="font-size:11px;color:var(--tx2);margin-top:2px;">Completa los campos de la nueva reclamación.</div>
+              </div>
+              <button onclick="window.volverPaso1()" style="padding:5px 12px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx2);cursor:pointer;font-size:11px;flex-shrink:0;">← Cambiar cédula</button>
+            </div>
           <div class="g2">
             <div class="field"><label class="fl">Número de Factura <span class="req">*</span></label>
               <input id="n-fac" maxlength="20" placeholder="Según DIAN"
@@ -457,6 +493,7 @@ select option{background:var(--sur2);}
             <button class="btn bs" onclick="go('lista')">Ver lista</button>
           </div>
           <div id="n-alr" class="hidden" style="margin-top:10px;"></div>
+          </div><!-- /n-paso2 -->
         </div>
 
         <!-- CARGA MASIVA -->
@@ -1317,6 +1354,274 @@ window.chkVencNueva=()=>{
   info.style.color=color;
   info.innerHTML=`${ico} Plazo <strong>${meses===36?'3 años':meses+'m'}</strong> (${norma}) · ${msg}`;
 };
+// ══════════════════════════════════════════════════════════════
+// BÚSQUEDA DE CÉDULA — PASO 1 ANTES DE CREAR RECLAMACIÓN
+// ══════════════════════════════════════════════════════════════
+
+window._cedulaBuscada  = null;
+window._furips1Previo  = null;  // { furips1, furips1_flags } del registro elegido
+window._cedulaRegistros = [];
+
+window.buscarCedulaNueva = function() {
+  const ced = (document.getElementById('n-cedula-buscar')?.value || '').trim().toUpperCase();
+  if (!ced) { toast('Ingresa un número de documento primero.', 'w'); return; }
+  window._cedulaBuscada = ced;
+
+  // Buscar en RECS (ya en memoria — sin llamada extra a Firebase)
+  const encontrados = (window.RECS || []).filter(r =>
+    (r.furips1?.c10 || '').trim().toUpperCase() === ced
+  );
+
+  const resEl = document.getElementById('n-cedula-resultado');
+  if (!resEl) return;
+  resEl.style.display = 'block';
+
+  if (encontrados.length === 0) {
+    resEl.innerHTML = `
+      <div style="background:rgba(157,180,85,.08);border:1px solid rgba(157,180,85,.35);border-radius:8px;padding:13px 16px;display:flex;align-items:center;gap:14px;">
+        <div style="font-size:24px;flex-shrink:0;">🆕</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:#5a7a20;">Víctima nueva — sin FURIPS anteriores</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:3px;">Cédula <strong>${ced}</strong> no tiene registros en el sistema. Se digitará desde cero.</div>
+        </div>
+        <button onclick="window.continuarConCedula(null)" class="btn bp" style="flex-shrink:0;font-size:12px;">Continuar →</button>
+      </div>`;
+    window._furips1Previo = null;
+    window._cedulaRegistros = [];
+    return;
+  }
+
+  window._cedulaRegistros = encontrados;
+
+  let html = `
+    <div style="background:rgba(0,178,226,.07);border:1px solid rgba(0,178,226,.3);border-radius:8px;padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      <div style="font-size:20px;flex-shrink:0;">🔍</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--acc);">
+          ${encontrados.length} FURIPS encontrado${encontrados.length>1?'s':''} — cédula <strong>${ced}</strong>
+        </div>
+        <div style="font-size:11px;color:var(--tx2);">Selecciona uno para <strong>copiar los datos de la víctima</strong> al nuevo FURIPS.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;max-height:280px;overflow-y:auto;padding-right:3px;">`;
+
+  encontrados.forEach((rec, idx) => {
+    const f1 = rec.furips1 || {};
+    const nombre = [f1.c5, f1.c6, f1.c7, f1.c8].filter(Boolean).join(' ') || 'Sin nombre';
+    const factura = f1.c2 || rec.factura || '?';
+    const consec  = f1.c3 || rec.consec  || '?';
+    const nat     = f1.c19 === '01' ? '🚗 AT' : f1.c19 ? 'Evento' : '';
+    const fechaOcurr = f1.c22 ? f1.c22.split('-').reverse().join('/') : '';
+    const pct = Math.min(100, Math.round(Object.values(f1).filter(v=>v&&v!=='').length / 90 * 100));
+    const pctColor = pct>=70?'#9DB455':pct>=40?'#f57c00':'#d32f2f';
+    let fechaCreado = '';
+    try {
+      if (rec.creado?.toDate) fechaCreado = rec.creado.toDate().toLocaleDateString('es-CO');
+      else if (rec.creado?.seconds) fechaCreado = new Date(rec.creado.seconds*1000).toLocaleDateString('es-CO');
+    } catch(e) {}
+
+    html += `
+      <div style="border:1px solid var(--brd);border-radius:8px;padding:11px 14px;background:var(--sur);cursor:pointer;transition:all .15s;"
+        onmouseover="this.style.borderColor='var(--acc)';this.style.background='rgba(0,178,226,.04)';this.style.boxShadow='0 2px 8px rgba(0,178,226,.15)';"
+        onmouseout="this.style.borderColor='var(--brd)';this.style.background='var(--sur)';this.style.boxShadow='';"
+        onclick="window.continuarConCedula(${idx})">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+          <span style="font-size:13px;font-weight:700;color:var(--tx);">👤 ${nombre}</span>
+          <span style="margin-left:auto;font-size:20px;color:var(--brd2);">›</span>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-family:var(--mono);font-size:10px;background:rgba(0,178,226,.1);color:var(--acc);padding:2px 7px;border-radius:10px;">📄 ${factura}</span>
+          <span style="font-family:var(--mono);font-size:10px;background:rgba(157,180,85,.1);color:#5a7a20;padding:2px 7px;border-radius:10px;">#${consec}</span>
+          ${nat?`<span style="font-size:10px;background:rgba(245,124,0,.1);color:#f57c00;padding:2px 7px;border-radius:10px;">${nat}</span>`:''}
+          ${fechaOcurr?`<span style="font-size:10px;color:var(--tx3);">📅 ${fechaOcurr}</span>`:''}
+          ${fechaCreado?`<span style="font-size:10px;color:var(--tx3);">🕐 ${fechaCreado}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="flex:1;height:3px;background:var(--sur2);border-radius:2px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${pctColor};border-radius:2px;"></div>
+          </div>
+          <span style="font-size:9px;font-family:var(--mono);color:${pctColor};font-weight:700;">${pct}% F1</span>
+        </div>
+      </div>`;
+  });
+
+  html += `</div>
+    <div style="margin-top:10px;">
+      <button onclick="window.continuarConCedula(null)" class="btn bs" style="font-size:11px;padding:5px 12px;">
+        ✕ Ignorar — digitar desde cero
+      </button>
+    </div>`;
+
+  resEl.innerHTML = html;
+};
+
+// Campos que SE COPIAN del FURIPS anterior (excluye datos propios de cada reclamación)
+const CAMPOS_COPIAR_CEDULA = [
+  'c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17',
+  'c18','c19','c20','c21','c24','c25','c26',
+  'c27','c28','c29','c30','c31','c32','c33','c34','c36',
+  'c43','c44','c45','c46','c47','c48','c49','c50','c51','c52',
+  'c53','c54','c55','c56','c57','c58','c59','c60','c61','c62',
+  'c89','c90','c91','c92','c93','c94','c95'
+];
+
+window.continuarConCedula = function(idx) {
+  if (idx !== null && window._cedulaRegistros && window._cedulaRegistros[idx]) {
+    const rec = window._cedulaRegistros[idx];
+    window._furips1Previo = {
+      furips1:       rec.furips1       || {},
+      furips1_flags: rec.furips1_flags || {}
+    };
+    const nombre = [rec.furips1?.c5, rec.furips1?.c7].filter(Boolean).join(' ') || 'la víctima';
+    document.getElementById('n-paso2-sub').innerHTML =
+      `✅ Se precargarán los datos de <strong>${nombre}</strong> — cédula ${window._cedulaBuscada}`;
+  } else {
+    window._furips1Previo = null;
+    document.getElementById('n-paso2-sub').textContent =
+      window._cedulaBuscada
+        ? `Cédula ${window._cedulaBuscada} — nueva víctima, todos los campos en blanco.`
+        : 'Completa los campos de la nueva reclamación.';
+  }
+  document.getElementById('n-paso1').style.display = 'none';
+  document.getElementById('n-paso2').style.display = 'block';
+};
+
+window.volverPaso1 = function() {
+  document.getElementById('n-paso2').style.display = 'none';
+  document.getElementById('n-paso1').style.display = 'block';
+  window._furips1Previo = null;
+};
+
+window.saltarBusquedaCedula = function() {
+  window._cedulaBuscada  = null;
+  window._furips1Previo  = null;
+  document.getElementById('n-paso1').style.display = 'none';
+  document.getElementById('n-paso2').style.display = 'block';
+  document.getElementById('n-paso2-sub').textContent = 'Completa los campos de la nueva reclamación.';
+};
+
+// ══════════════════════════════════════════════════════════════
+// BÚSQUEDA DE CÉDULA ANTES DE NUEVA RECLAMACIÓN
+// ══════════════════════════════════════════════════════════════
+window._cedulaBuscada  = null;
+window._furips1Previo  = null; // { furips1, furips1_flags } del registro elegido
+window._cedulaRegistros = [];
+
+window.buscarCedulaNueva = function() {
+  const ced = (document.getElementById('n-cedula-buscar')?.value || '').trim();
+  if (!ced) { toast('Ingresa un número de documento primero.', 'w'); return; }
+  window._cedulaBuscada = ced;
+
+  // Buscar en RECS (ya cargados en memoria desde Firebase)
+  const encontrados = RECS.filter(r => (r.furips1?.c10 || '').trim() === ced);
+  const resEl = document.getElementById('n-cedula-resultado');
+  if (!resEl) return;
+
+  if (encontrados.length === 0) {
+    resEl.style.display = 'block';
+    resEl.innerHTML = `
+      <div style="background:rgba(157,180,85,.08);border:1px solid rgba(157,180,85,.3);border-radius:7px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+        <div style="font-size:22px;">🆕</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:#5a7a20;">Víctima nueva — sin FURIPS anteriores</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:2px;">Cédula <strong>${ced}</strong> no tiene registros. Se digitará desde cero.</div>
+        </div>
+        <button onclick="window.continuarConCedula(null)" class="btn bp" style="flex-shrink:0;font-size:12px;">Continuar →</button>
+      </div>`;
+    window._furips1Previo = null;
+    return;
+  }
+
+  window._cedulaRegistros = encontrados;
+  let html = `
+    <div style="background:rgba(0,178,226,.06);border:1px solid rgba(0,178,226,.3);border-radius:7px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+      <div style="font-size:18px;">🔍</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--acc);">${encontrados.length} FURIPS encontrado${encontrados.length>1?'s':''} para cédula <strong>${ced}</strong></div>
+        <div style="font-size:11px;color:var(--tx2);">Selecciona uno para <strong>copiar los datos de la víctima</strong> automáticamente al nuevo FURIPS.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;max-height:280px;overflow-y:auto;padding-right:2px;">`;
+
+  encontrados.forEach((rec, idx) => {
+    const f1 = rec.furips1 || {};
+    const nombre = [f1.c5,f1.c6,f1.c7,f1.c8].filter(Boolean).join(' ') || 'Sin nombre';
+    const factura = f1.c2 || rec.factura || '?';
+    const consec  = f1.c3 || rec.consec  || '?';
+    const nat     = f1.c19==='01' ? '🚗 AT' : f1.c19 ? 'Evento '+f1.c19 : '';
+    const fechaOcurr = f1.c22 ? f1.c22.split('-').reverse().join('/') : '';
+    const pct = Math.min(100, Math.round(Object.values(f1).filter(v=>v&&v!=='').length / 90 * 100));
+    const pctColor = pct>=70?'#9DB455':pct>=40?'#f57c00':'#d32f2f';
+    let fechaCreado = '';
+    try {
+      if (rec.creado?.toDate) fechaCreado = rec.creado.toDate().toLocaleDateString('es-CO');
+      else if (rec.creado?.seconds) fechaCreado = new Date(rec.creado.seconds*1000).toLocaleDateString('es-CO');
+    } catch(e) {}
+
+    html += `
+      <div style="border:1px solid var(--brd);border-radius:8px;padding:11px 14px;background:var(--sur);cursor:pointer;transition:all .15s;position:relative;"
+        onmouseover="this.style.borderColor='var(--acc)';this.style.background='rgba(0,178,226,.04)';this.style.boxShadow='0 2px 8px rgba(0,178,226,.12)';"
+        onmouseout="this.style.borderColor='var(--brd)';this.style.background='var(--sur)';this.style.boxShadow='';"
+        onclick="window.continuarConCedula(${idx})">
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:5px;">👤 ${nombre}</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-family:var(--mono);font-size:10px;background:rgba(0,178,226,.1);color:var(--acc);padding:2px 7px;border-radius:10px;">📄 ${factura}</span>
+          <span style="font-family:var(--mono);font-size:10px;background:rgba(157,180,85,.1);color:#5a7a20;padding:2px 7px;border-radius:10px;">#${consec}</span>
+          ${nat?`<span style="font-size:10px;background:rgba(245,124,0,.1);color:#f57c00;padding:2px 7px;border-radius:10px;">${nat}</span>`:''}
+          ${fechaOcurr?`<span style="font-size:10px;color:var(--tx3);">📅 ${fechaOcurr}</span>`:''}
+          ${fechaCreado?`<span style="font-size:10px;color:var(--tx3);">🕐 ${fechaCreado}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="flex:1;height:3px;background:var(--sur2);border-radius:2px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${pctColor};border-radius:2px;"></div>
+          </div>
+          <span style="font-size:9px;font-family:var(--mono);color:${pctColor};font-weight:700;">${pct}% F1 completo</span>
+        </div>
+        <div style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--brd2);">›</div>
+      </div>`;
+  });
+
+  html += `</div>
+    <div style="margin-top:10px;">
+      <button onclick="window.continuarConCedula(null)" class="btn bs" style="font-size:11px;padding:5px 12px;">
+        ✕ Ignorar — digitar desde cero
+      </button>
+    </div>`;
+
+  resEl.style.display = 'block';
+  resEl.innerHTML = html;
+};
+
+window.continuarConCedula = function(idx) {
+  if (idx !== null && window._cedulaRegistros[idx]) {
+    const rec = window._cedulaRegistros[idx];
+    window._furips1Previo = { furips1: rec.furips1||{}, furips1_flags: rec.furips1_flags||{} };
+    const nombre = [rec.furips1?.c5, rec.furips1?.c7].filter(Boolean).join(' ') || 'la víctima';
+    document.getElementById('n-paso2-sub').innerHTML =
+      `✅ Se precargarán los datos de <strong>${nombre}</strong> (cédula ${window._cedulaBuscada}) al abrir el FURIPS.`;
+  } else {
+    window._furips1Previo = null;
+    document.getElementById('n-paso2-sub').textContent =
+      window._cedulaBuscada ? `Cédula ${window._cedulaBuscada} · nueva víctima — campos en blanco.` : 'Completa los campos de la nueva reclamación.';
+  }
+  document.getElementById('n-paso1').style.display = 'none';
+  document.getElementById('n-paso2').style.display  = 'block';
+};
+
+window.volverPaso1 = function() {
+  document.getElementById('n-paso2').style.display = 'none';
+  document.getElementById('n-paso1').style.display = 'block';
+  window._furips1Previo = null;
+};
+
+window.saltarBusquedaCedula = function() {
+  window._cedulaBuscada = null;
+  window._furips1Previo = null;
+  document.getElementById('n-paso1').style.display = 'none';
+  document.getElementById('n-paso2').style.display  = 'block';
+  document.getElementById('n-paso2-sub').textContent = 'Completa los campos de la nueva reclamación.';
+};
+
 // ── VALIDACIÓN DE FACTURAS DUPLICADAS ──
 window.chkDupFac=(val)=>{
   const fac=(val||'').trim().toUpperCase();
@@ -1360,6 +1665,17 @@ window.crearRec = async ()=>{
     const ref=await addDoc(collection(db,'reclamaciones'),data);
     CUR_ID=ref.id;
     const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
+    // ── Inyectar datos de víctima del FURIPS anterior si se seleccionó uno ──
+    if (window._furips1Previo?.furips1) {
+      const prev = window._furips1Previo.furips1;
+      (window.CAMPOS_COPIAR_CEDULA || []).forEach(k => { if (prev[k]) recLocal.furips1[k] = prev[k]; });
+      recLocal.furips1_flags = window._furips1Previo.furips1_flags || {};
+      recLocal._datosVictimaPrecargados = true;
+      // Persistir en Firebase para que Parte 2 los lea aunque venga de URL directa
+      try { await updateDoc(doc(db,'reclamaciones',ref.id),{ furips1:recLocal.furips1, furips1_flags:recLocal.furips1_flags }); } catch(e2){}
+    }
+    window._furips1Previo  = null;
+    window._cedulaBuscada  = null;
     const rl2=JSON.stringify(recLocal); try{sessionStorage.setItem('furips_p2_rec',rl2);}catch(e){} try{localStorage.setItem('furips_p2_rec',rl2);}catch(e){} try{sessionStorage.setItem('furips_p2_rol',USER.rol);}catch(e){} try{localStorage.setItem('furips_p2_rol',USER.rol);}catch(e){}
     loader(false);
     ialert('n-alr','as','✔ Reclamación creada correctamente.');
@@ -3936,8 +4252,16 @@ function prepNueva(){
   const nextConsec = consecs.length > 0 ? Math.max(...consecs) + 1 : 1;
   const elCon = g('n-con');
   if(elCon && !elCon.value) elCon.value = String(nextConsec).padStart(4,'0');
-  // Poner foco en factura
-  setTimeout(()=>{ const el=g('n-fac'); if(el) el.focus(); }, 100);
+  // Resetear paso 1 (búsqueda cédula) al abrir la página Nueva
+  window._furips1Previo = null;
+  window._cedulaBuscada = null;
+  const p1=g('n-paso1'), p2=g('n-paso2');
+  if(p1) p1.style.display='block';
+  if(p2) p2.style.display='none';
+  const resEl=g('n-cedula-resultado');
+  if(resEl){ resEl.style.display='none'; resEl.innerHTML=''; }
+  const cEl=g('n-cedula-buscar');
+  if(cEl){ cEl.value=''; setTimeout(()=>cEl.focus(),150); }
 }
 
 window.abrirF1=()=>{
@@ -4173,6 +4497,15 @@ window.switchNueva=(tab)=>{
     ind.classList.remove('hidden'); mas.classList.add('hidden');
     ti.style.color='var(--acc)'; ti.style.borderBottom='2px solid var(--acc)';
     tm.style.color='var(--tx2)'; tm.style.borderBottom='2px solid transparent';
+    // Resetear al paso 1 cada vez que se activa la pestaña Individual
+    const p1=g('n-paso1'), p2=g('n-paso2');
+    if(p1) p1.style.display='block';
+    if(p2) p2.style.display='none';
+    const resEl=g('n-cedula-resultado');
+    if(resEl){ resEl.style.display='none'; resEl.innerHTML=''; }
+    const cEl=g('n-cedula-buscar');
+    if(cEl) cEl.value='';
+    window._furips1Previo=null; window._cedulaBuscada=null;
   } else {
     ind.classList.add('hidden'); mas.classList.remove('hidden');
     tm.style.color='var(--acc)'; tm.style.borderBottom='2px solid var(--acc)';
