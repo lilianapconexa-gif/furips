@@ -1,0 +1,226 @@
+{
+  "1016013615": {
+    "tipoId": "CC",
+    "registro": "98393410",
+    "nombre1": "ADRIAN",
+    "nombre2": "FERNANDO",
+    "apellido1": "ORDOÑEZ",
+    "apellido2": "CAVIEDES"
+  },
+  "98393410": {
+    "tipoId": "CC",
+    "registro": "98393410",
+    "nombre1": "ALEXANDER",
+    "nombre2": "JAVIER",
+    "apellido1": "SOTTO",
+    "apellido2": "RAMOS"
+  },
+  "1143836195": {
+    "tipoId": "CC",
+    "registro": "1143836195",
+    "nombre1": "ANDRES",
+    "nombre2": "FELIPE",
+    "apellido1": "BURGOS",
+    "apellido2": "URRESTE"
+  },
+  "1022441442": {
+    "tipoId": "CC",
+    "registro": "1022441442",
+    "nombre1": "BRIAND",
+    "nombre2": "ALEXIS",
+    "apellido1": "OVIEDO",
+    "apellido2": "ORDOÑEZ"
+  },
+  "87304532": {
+    "tipoId": "CC",
+    "registro": "87304532",
+    "nombre1": "CARLOS",
+    "nombre2": "ALEXANDER",
+    "apellido1": "HURTADO",
+    "apellido2": "PORTILLA"
+  },
+  "6102046": {
+    "tipoId": "CC",
+    "registro": "6102046",
+    "nombre1": "CARLOS",
+    "nombre2": "ANTONIO",
+    "apellido1": "FRANCO",
+    "apellido2": "TORRES"
+  },
+  "1130590284": {
+    "tipoId": "CC",
+    "registro": "1130590284",
+    "nombre1": "CARLOS",
+    "nombre2": "MAURICIO",
+    "apellido1": "OSORIO",
+    "apellido2": "TORO"
+  },
+  "6227707": {
+    "tipoId": "CC",
+    "registro": "6227707",
+    "nombre1": "DANILO",
+    "nombre2": "ANDRES",
+    "apellido1": "GONZALEZ",
+    "apellido2": "HERNANDEZ"
+  },
+  "14836557": {
+    "tipoId": "CC",
+    "registro": "14836557",
+    "nombre1": "FABIO",
+    "nombre2": "ANDRES",
+    "apellido1": "VILLA",
+    "apellido2": "VELASQUEZ"
+  },
+  "16662827": {
+    "tipoId": "CC",
+    "registro": "16662827",
+    "nombre1": "FREDY",
+    "nombre2": "ZAPATA",
+    "apellido1": "SABOGAL",
+    "apellido2": ""
+  },
+  "14951308": {
+    "tipoId": "CC",
+    "registro": "9876",
+    "nombre1": "GUILLERMO",
+    "nombre2": "JOSE",
+    "apellido1": "VALENCIA",
+    "apellido2": "VALENCIA"
+  },
+  "1144146098": {
+    "tipoId": "CC",
+    "registro": "1144146098",
+    "nombre1": "GUSTAVO",
+    "nombre2": "ANDRES",
+    "apellido1": "ZAMORA",
+    "apellido2": "VASQUEZ"
+  },
+  "1129564953": {
+    "tipoId": "CC",
+    "registro": "1129564953",
+    "nombre1": "HELLMAN",
+    "nombre2": "PAUL",
+    "apellido1": "PADILLA",
+    "apellido2": "PEREZ"
+  },
+  "1045728625": {
+    "tipoId": "CC",
+    "registro": "1045728625",
+    "nombre1": "HERNAN",
+    "nombre2": "DARIO",
+    "apellido1": "MEJIA",
+    "apellido2": "PEÑA"
+  },
+  "16600451": {
+    "tipoId": "CC",
+    "registro": "1630684",
+    "nombre1": "JAIME",
+    "nombre2": "BACAL",
+    "apellido1": "GUTIERREZ",
+    "apellido2": ""
+  },
+  "1107516414": {
+    "tipoId": "CC",
+    "registro": "1107516414",
+    "nombre1": "JESSICA",
+    "nombre2": "ALVIM",
+    "apellido1": "MUÑOZ",
+    "apellido2": ""
+  },
+  "6393688": {
+    "tipoId": "CC",
+    "registro": "6393688",
+    "nombre1": "JESUS",
+    "nombre2": "DAVID",
+    "apellido1": "GARCIA",
+    "apellido2": "RAMIREZ"
+  },
+  "14970149": {
+    "tipoId": "CC",
+    "registro": "14970149",
+    "nombre1": "JOHN",
+    "nombre2": "EDGARDO",
+    "apellido1": "MORALES",
+    "apellido2": "QUINTERO"
+  },
+  "14636535": {
+    "tipoId": "CC",
+    "registro": "14636535",
+    "nombre1": "JORGE",
+    "nombre2": "IVAN",
+    "apellido1": "CASTILLO",
+    "apellido2": "SOTO"
+  },
+  "93355817": {
+    "tipoId": "CC",
+    "registro": "93355817",
+    "nombre1": "JUAN",
+    "nombre2": "CARLOS",
+    "apellido1": "FAJARDO",
+    "apellido2": "ARBELAEZ"
+  },
+  "1130607068": {
+    "tipoId": "CC",
+    "registro": "1130607068",
+    "nombre1": "JUAN",
+    "nombre2": "FERNANDO",
+    "apellido1": "SUAREZ",
+    "apellido2": "BEJARANO"
+  },
+  "1144106094": {
+    "tipoId": "CC",
+    "registro": "1144106094",
+    "nombre1": "LAURA",
+    "nombre2": "NATALIA",
+    "apellido1": "LEON",
+    "apellido2": "CARDONA"
+  },
+  "31538889": {
+    "tipoId": "CC",
+    "registro": "31538889",
+    "nombre1": "MARIA",
+    "nombre2": "DEL PILAR",
+    "apellido1": "DIAZ",
+    "apellido2": "VERGARA"
+  },
+  "16941919": {
+    "tipoId": "CC",
+    "registro": "16941919",
+    "nombre1": "ROLAND",
+    "nombre2": "JOHNNY",
+    "apellido1": "TREJOS",
+    "apellido2": "GRAIN"
+  },
+  "1077425002": {
+    "tipoId": "CC",
+    "registro": "1077425002",
+    "nombre1": "VICTOR",
+    "nombre2": "ALFONSO",
+    "apellido1": "OLAYA",
+    "apellido2": "PAZ"
+  },
+  "94488704": {
+    "tipoId": "CC",
+    "registro": "94488704",
+    "nombre1": "WILFREDO",
+    "nombre2": "CORTES",
+    "apellido1": "BETANCOURT",
+    "apellido2": ""
+  },
+  "1107095328": {
+    "tipoId": "CC",
+    "registro": "1107095328",
+    "nombre1": "XIMENA",
+    "nombre2": "MARIA",
+    "apellido1": "ROJAS",
+    "apellido2": "HUERTAS"
+  },
+  "1130678714": {
+    "tipoId": "CC",
+    "registro": "1130678714",
+    "nombre1": "YEIMY",
+    "nombre2": "CECILIA",
+    "apellido1": "VEGA",
+    "apellido2": "GOMEZ"
+  }
+}
