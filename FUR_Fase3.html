@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUR — Formulario Único de Reclamaciones</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#f0f7fc;--sur:#ffffff;--sur2:#e8f4fb;--brd:#cde6f5;--brd2:#a8d4ea;
+  --acc:#00B2E2;--acc2:#0090C0;--green:#9DB455;--red:#d32f2f;--warn:#f57c00;
+  --tx:#1a2e3b;--tx2:#4a7a96;--tx3:#7aafc8;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;min-height:100vh;}
+
+/* HEADER */
+.hdr{background:var(--sur);border-bottom:2px solid var(--green);padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:50px;position:sticky;top:0;z-index:200;}
+.hbrand{display:flex;align-items:center;gap:9px;}
+.hbadge{background:var(--green);color:#fff;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;}
+.hright{display:flex;align-items:center;gap:8px;}
+
+/* TABS (sections bar) */
+.sbar{background:var(--sur);border-bottom:1px solid var(--brd);padding:0 18px;display:flex;gap:0;overflow-x:auto;}
+.stab{padding:9px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--tx2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;}
+.stab:hover{color:var(--tx);}
+.stab.active{color:var(--green);border-bottom-color:var(--green);}
+.stab.done{color:var(--green);}
+.stab.done::before{content:'✓ ';}
+
+/* PROGRESS */
+.pbar{background:var(--sur);border-bottom:1px solid var(--brd);padding:6px 18px;display:flex;align-items:center;gap:12px;}
+.ptr{flex:1;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;}
+.pfl{height:100%;background:linear-gradient(90deg,var(--green),#7a9520);border-radius:3px;transition:width .4s;}
+.ppc{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green);min-width:32px;text-align:right;}
+
+/* LAYOUT */
+.layout{display:flex;height:calc(100vh - 108px);overflow:hidden;}
+.sidebar{width:170px;min-width:170px;background:var(--sur);border-right:1px solid var(--brd);overflow-y:auto;padding:8px 0;}
+.mcont{flex:1;overflow-y:auto;padding:16px 22px 90px;}
+
+/* SIDEBAR STEPS */
+.si{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;}
+.si:hover{background:var(--sur2);}
+.si.active{background:rgba(157,180,85,.1);border-left-color:var(--green);}
+.si.done{border-left-color:var(--green);}
+.sdot{width:18px;height:18px;border-radius:50%;border:2px solid var(--brd2);display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--mono);font-weight:600;flex-shrink:0;}
+.si.done .sdot{background:var(--green);border-color:var(--green);color:#fff;}
+.si.active .sdot{border-color:var(--green);color:var(--green);}
+.slbl{font-size:11px;color:var(--tx2);}
+.si.active .slbl{color:var(--tx);font-weight:500;}
+
+/* SECTIONS */
+.fsec{display:none!important;}.fsec.on{display:block!important;}
+.ft{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--tx);
+  display:flex;align-items:center;gap:8px;padding-bottom:9px;
+  border-bottom:1px solid var(--brd);}
+.ft::before{content:'';display:inline-block;width:3px;height:14px;
+  background:var(--green);border-radius:2px;flex-shrink:0;}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 14px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 14px;}
+.s2{grid-column:span 2;}.s3{grid-column:span 3;}.s4{grid-column:span 4;}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr;}.s2,.s3,.s4{grid-column:span 1;}}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:4px;}
+.field.ok input,.field.ok select,.field.ok textarea{border-color:var(--green);background:rgba(157,180,85,.05);}
+.field.err input,.field.err select,.field.err textarea{border-color:var(--red)!important;background:rgba(211,47,47,.02);}
+.field.hide{display:none;}
+.fl{font-size:11px;font-weight:600;color:var(--tx2);display:flex;align-items:center;gap:4px;line-height:1.3;}
+.fn{font-family:var(--mono);font-size:9px;color:var(--tx3);background:var(--sur2);padding:0 4px;border-radius:3px;line-height:16px;}
+.req{color:var(--red);font-size:10px;}
+.cnd{color:var(--acc);font-size:10px;}
+.hint{font-size:10px;color:var(--tx3);line-height:1.4;}
+
+/* INPUTS */
+input,select,textarea{
+  height:32px;background:var(--sur2);border:1px solid var(--brd);
+  border-radius:5px;color:var(--tx);font-family:var(--sans);font-size:12.5px;
+  padding:0 9px;transition:border-color .12s,box-shadow .12s;width:100%;box-sizing:border-box;
+}
+input:hover,select:hover{border-color:var(--brd2);}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green);background:#fff;box-shadow:0 0 0 2px rgba(157,180,85,.15);}
+input::placeholder{color:var(--tx3);font-size:12px;}
+select{cursor:pointer;padding-right:6px;}
+textarea{height:auto;min-height:72px;resize:vertical;padding:8px 9px;line-height:1.5;}
+input[readonly]{background:var(--sur2);color:var(--tx2);cursor:not-allowed;}
+
+/* BUTTONS */
+.btn{padding:6px 14px;border-radius:6px;border:1px solid;font-size:12px;cursor:pointer;font-family:var(--sans);font-weight:600;transition:all .15s;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.bp{background:var(--green);color:#fff;border-color:var(--green);}
+.bp:hover:not(:disabled){background:#86a048;}
+.bs{background:var(--sur2);color:var(--tx2);border-color:var(--brd2);}
+.bs:hover{background:var(--brd);}
+.ba{background:var(--acc);color:#fff;border-color:var(--acc);}
+.ba:hover{background:var(--acc2);}
+
+/* ALERTS */
+.alert{padding:9px 12px;border-radius:6px;font-size:12px;margin-bottom:10px;}
+.ai{background:rgba(0,178,226,.08);border:1px solid rgba(0,178,226,.25);color:var(--tx);}
+.aw{background:rgba(245,124,0,.08);border:1px solid rgba(245,124,0,.3);color:#c66200;}
+.ae{background:rgba(211,47,47,.08);border:1px solid rgba(211,47,47,.3);color:var(--red);}
+.as{background:rgba(157,180,85,.08);border:1px solid rgba(157,180,85,.3);color:#5a7a20;}
+
+/* DIVIDER */
+.divider{border:none;border-top:1px solid var(--brd);margin:14px 0;}
+
+/* NAV FOOTER */
+.fnav{position:fixed;bottom:0;right:0;width:calc(100% - 170px);background:var(--sur);border-top:1px solid var(--brd);padding:10px 22px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:100;}
+
+/* JSON Preview */
+.json-box{background:#1a2e3b;color:#c9f0ff;font-family:var(--mono);font-size:11px;padding:14px;border-radius:8px;overflow:auto;max-height:400px;white-space:pre;line-height:1.5;}
+
+/* BADGE */
+.badge{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;}
+.bg{background:rgba(157,180,85,.2);color:#5a7a20;}
+.bo{background:rgba(245,124,0,.15);color:#c66200;}
+.binfo{background:rgba(0,178,226,.15);color:var(--acc);}
+
+/* TOAST */
+#toast{position:fixed;bottom:70px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none;}
+.toast-item{padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);animation:toastIn .25s ease;pointer-events:auto;}
+.tok{background:#5a7a20;color:#fff;}.tow{background:var(--warn);color:#fff;}.toe{background:var(--red);color:#fff;}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* CONDITIONAL field highlight */
+.field.cond-hide{display:none!important;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hbrand">
+    <div class="hbadge">FUR</div>
+    <span style="font-size:13px;font-weight:600;">Formulario Único de Reclamaciones</span>
+    <span style="font-size:11px;color:var(--tx3);border-left:1px solid var(--brd2);padding-left:10px;margin-left:4px;">Resolución 0082560 · 2026 · ADRES</span>
+  </div>
+  <div class="hright">
+    <div id="hdr-factura" style="font-family:var(--mono);font-size:11px;color:var(--tx2);"></div>
+    <div id="hdr-rol" style="background:var(--sur2);border:1px solid var(--brd);border-radius:4px;padding:2px 8px;font-family:var(--mono);font-size:10px;color:var(--tx3);"></div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="pbar">
+  <span style="font-size:11px;color:var(--tx2);">Completado</span>
+  <div class="ptr"><div class="pfl" id="pfl" style="width:0%"></div></div>
+  <span class="ppc" id="ppc">0%</span>
+  <span style="font-size:11px;color:var(--tx3);" id="pcampos">0 / 0 campos</span>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--tx3);padding:10px 12px 4px;text-transform:uppercase;">Secciones</div>
+    <div class="si active" id="si-I"   onclick="goSec('I')"  ><div class="sdot" id="sd-I">I</div>   <span class="slbl">Prestador</span></div>
+    <div class="si"        id="si-II"  onclick="goSec('II')" ><div class="sdot" id="sd-II">II</div>  <span class="slbl">Reclamación</span></div>
+    <div class="si"        id="si-III" onclick="goSec('III')"><div class="sdot" id="sd-III">III</div><span class="slbl">Víctima</span></div>
+    <div class="si"        id="si-IV"  onclick="goSec('IV')" ><div class="sdot" id="sd-IV">IV</div>  <span class="slbl">Evento</span></div>
+    <div class="si"        id="si-V"   onclick="goSec('V')"  ><div class="sdot" id="sd-V">V</div>    <span class="slbl">Vehículo</span></div>
+    <div class="si"        id="si-VI"  onclick="goSec('VI')" ><div class="sdot" id="sd-VI">VI</div>  <span class="slbl">Propietario</span></div>
+    <div class="si"        id="si-VII" onclick="goSec('VII')"><div class="sdot" id="sd-VII">VII</div><span class="slbl">Conductor</span></div>
+    <div class="si"        id="si-VIII"onclick="goSec('VIII')" ><div class="sdot" id="sd-VIII">VIII</div><span class="slbl">Atención</span></div>
+    <div class="si"        id="si-IX"  onclick="goSec('IX')" ><div class="sdot" id="sd-IX">IX</div>  <span class="slbl">Remisión</span></div>
+    <div class="si"        id="si-X"   onclick="goSec('X')"  ><div class="sdot" id="sd-X">X</div>   <span class="slbl">Transporte</span></div>
+    <hr style="border:none;border-top:1px solid var(--brd);margin:8px 0;">
+    <div class="si"        id="si-JSON"onclick="goSec('JSON')"><div class="sdot" style="background:var(--acc);border-color:var(--acc);color:#fff;font-size:8px;">{}</div><span class="slbl" style="color:var(--acc);">Ver JSON</span></div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="mcont">
+
+    <!-- ═══ I. DATOS PRESTADOR ═══ -->
+    <div class="fsec on" id="sec-I">
+      <div class="ft">I. Datos del Prestador</div>
+      <div class="alert ai">NIT del prestador que factura, sin dígito de verificación. Para IPS (persona jurídica): máx 9 dígitos. Para prestador independiente: hasta 10 dígitos.</div>
+      <div class="g2">
+        <div class="field" id="ff-nit">
+          <span class="fl"><span class="fn">C1</span>NIT del Prestador <span class="req">*</span></span>
+          <input id="nit" maxlength="10" inputmode="numeric" placeholder="Sin dígito verificación"
+            oninput="this.value=this.value.replace(/\D/g,'');fv('nit');fp()">
+          <span class="hint">IPS: máx 9 dígitos · Prestador independiente: hasta 10 dígitos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ II. DATOS RECLAMACIÓN ═══ -->
+    <div class="fsec" id="sec-II">
+      <div class="ft">II. Datos de la Reclamación</div>
+      <div class="g2">
+        <div class="field" id="ff-num_factura">
+          <span class="fl"><span class="fn">C2</span>Número de Factura <span class="req">*</span></span>
+          <input id="num_factura" maxlength="20" placeholder="Consecutivo DIAN"
+            oninput="this.value=this.value.toUpperCase();fv('num_factura');fp()">
+          <span class="hint">Número asignado a la Factura Electrónica de Venta según numeración autorizada DIAN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ III. DATOS VÍCTIMA ═══ -->
+    <div class="fsec" id="sec-III">
+      <div class="ft">III. Datos de la Víctima</div>
+      <div class="g3">
+        <div class="field" id="ff-tipo_doc_victima">
+          <span class="fl"><span class="fn">C3</span>Tipo Documento Víctima <span class="req">*</span></span>
+          <select id="tipo_doc_victima" onchange="fv('tipo_doc_victima');fp()">
+            <option value="">Seleccione...</option>
+            <option value="CC">CC — Cédula de ciudadanía</option>
+            <option value="CE">CE — Cédula de extranjería</option>
+            <option value="CD">CD — Carné diplomático</option>
+            <option value="PA">PA — Pasaporte</option>
+            <option value="PE">PE — Permiso especial permanencia</option>
+            <option value="RC">RC — Registro civil nacimiento</option>
+            <option value="TI">TI — Tarjeta de identidad</option>
+            <option value="CN">CN — Certificado nacido vivo</option>
+            <option value="DE">DE — Documento extranjero</option>
+            <option value="PT">PT — Permiso protección temporal</option>
+            <option value="SC">SC — Salvoconducto</option>
+            <option value="AS">AS — Adulto sin identificar</option>
+            <option value="MS">MS — Menor sin identificar</option>
+          </select>
+        </div>
+        <div class="field" id="ff-num_doc_victima">
+          <span class="fl"><span class="fn">C4</span>Número Documento Víctima <span class="req">*</span></span>
+          <input id="num_doc_victima" maxlength="20" placeholder="Tal como aparece en el doc."
+            oninput="this.value=this.value.toUpperCase();fv('num_doc_victima');fp()">
+          <span class="hint">Para DE: código país + número documento</span>
+        </div>
+        <div class="field" id="ff-tipo_poblacion_especial">
+          <span class="fl"><span class="fn">C5</span>Población Especial <span class="cnd">●</span></span>
+          <select id="tipo_poblacion_especial" onchange="fp()">
+            <option value="">No aplica (vacío)</option>
+            <option value="01">01 — Habitante de calle</option>
+            <option value="02">02 — NNA en proceso restablecimiento derechos</option>
+            <option value="10">10 — Población infantil vulnerable (no ICBF)</option>
+            <option value="14">14 — Privada de libertad / inimputable</option>
+            <option value="16">16 — Adulto mayor abandono</option>
+            <option value="17">17 — Comunidades indígenas</option>
+            <option value="22">22 — Prisión domiciliaria INPEC</option>
+            <option value="25">25 — Adolescentes sistema resp. penal ICBF</option>
+          </select>
+          <span class="hint">Solo si la víctima está en listado censal</span>
+        </div>
+        <div class="field" id="ff-primer_nombre_victima">
+          <span class="fl"><span class="fn">C6</span>Primer Nombre Víctima <span class="req">*</span></span>
+          <input id="primer_nombre_victima" maxlength="30" placeholder="Como aparece en documento"
+            oninput="this.value=this.value.toUpperCase();fv('primer_nombre_victima');fp()">
+        </div>
+        <div class="field" id="ff-segundo_nombre_victima">
+          <span class="fl"><span class="fn">C7</span>Segundo Nombre Víctima</span>
+          <input id="segundo_nombre_victima" maxlength="30" placeholder="Si aparece en documento"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-primer_apellido_victima">
+          <span class="fl"><span class="fn">C8</span>Primer Apellido Víctima <span class="req">*</span></span>
+          <input id="primer_apellido_victima" maxlength="30" placeholder="Como aparece en documento"
+            oninput="this.value=this.value.toUpperCase();fv('primer_apellido_victima');fp()">
+        </div>
+        <div class="field" id="ff-segundo_apellido_victima">
+          <span class="fl"><span class="fn">C9</span>Segundo Apellido Víctima</span>
+          <input id="segundo_apellido_victima" maxlength="30" placeholder="Si aparece en documento"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field s2" id="ff-direccion_victima">
+          <span class="fl"><span class="fn">C10</span>Dirección Residencia Víctima <span class="req">*</span></span>
+          <input id="direccion_victima" maxlength="100" placeholder="Ej: CL 45 # 23-10 APTO 301"
+            oninput="this.value=this.value.toUpperCase();fv('direccion_victima');fp()">
+          <span class="hint">Urbana: CRA/CL/AV/TV/DG + # + número. Rural: Vereda/Corregimiento + Municipio + Dpto</span>
+        </div>
+        <div class="field" id="ff-municipio_victima">
+          <span class="fl"><span class="fn">C11</span>Municipio Residencia Víctima <span class="req">*</span> <span style="font-size:10px;color:var(--tx3);">(DIVIPOLA)</span></span>
+          <input id="municipio_victima" maxlength="5" inputmode="numeric" placeholder="Ej: 76001"
+            oninput="this.value=this.value.replace(/\D/g,'');fv('municipio_victima');fp()">
+          <span class="hint">Código DIVIPOLA 5 dígitos</span>
+        </div>
+        <div class="field" id="ff-telefono_victima">
+          <span class="fl"><span class="fn">C12</span>Teléfono Víctima <span class="req">*</span></span>
+          <input id="telefono_victima" maxlength="10" inputmode="numeric" placeholder="Celular: 3XXXXXXXXX"
+            oninput="this.value=this.value.replace(/\D/g,'');fv('telefono_victima');fp()">
+          <span class="hint">Celular: 10 dígitos iniciando en 3 · Fijo: 60 + indicativo + número local</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ IV. DATOS SITIO EVENTO ═══ -->
+    <div class="fsec" id="sec-IV">
+      <div class="ft">IV. Datos del Sitio del Evento</div>
+      <div class="g3">
+        <div class="field" id="ff-naturaleza_evento">
+          <span class="fl"><span class="fn">C13</span>Naturaleza del Evento <span class="req">*</span></span>
+          <select id="naturaleza_evento" onchange="onNaturalezaChange();fv('naturaleza_evento');fp()">
+            <option value="">Seleccione...</option>
+            <option value="01">01 — Accidente de tránsito</option>
+            <option value="02">02 — Sismo</option>
+            <option value="03">03 — Maremoto</option>
+            <option value="04">04 — Erupción volcánica</option>
+            <option value="05">05 — Deslizamiento de tierra</option>
+            <option value="06">06 — Inundación</option>
+            <option value="07">07 — Avalancha</option>
+            <option value="08">08 — Incendio natural</option>
+            <option value="09">09 — Explosión terrorista</option>
+            <option value="10">10 — Incendio terrorista</option>
+            <option value="11">11 — Combate</option>
+            <option value="12">12 — Ataques a municipios</option>
+            <option value="13">13 — Masacre</option>
+            <option value="14">14 — Desplazados</option>
+            <option value="15">15 — Mina antipersonal</option>
+            <option value="16">16 — Huracán</option>
+            <option value="17">17 — Otro (requiere acto administrativo MSPS)</option>
+            <option value="25">25 — Rayo</option>
+            <option value="26">26 — Vendaval</option>
+            <option value="27">27 — Tornado</option>
+          </select>
+        </div>
+        <div class="field" id="ff-descripcion_otro_evento">
+          <span class="fl"><span class="fn">C14</span>Descripción Otro Evento <span class="cnd">● Solo si Naturaleza=17</span></span>
+          <input id="descripcion_otro_evento" maxlength="40" placeholder="N° acto administrativo MSPS"
+            oninput="this.value=this.value.toUpperCase();fp()">
+          <span class="hint">Solo cuando se selecciona opción 17. Registrar número del acto administrativo MSPS.</span>
+        </div>
+        <div class="field" id="ff-condicion_victima">
+          <span class="fl"><span class="fn">C15</span>Condición Víctima <span class="cnd">● Solo si AT</span></span>
+          <select id="condicion_victima" onchange="fp()">
+            <option value="">Vacío si no es AT</option>
+            <option value="01">01 — Conductor</option>
+            <option value="02">02 — Peatón</option>
+            <option value="03">03 — Ocupante</option>
+            <option value="04">04 — Ciclista</option>
+          </select>
+          <span class="hint">Solo para accidente de tránsito (01)</span>
+        </div>
+        <div class="field" id="ff-fecha_ocurrencia">
+          <span class="fl"><span class="fn">C16</span>Fecha Ocurrencia Evento <span class="req">*</span></span>
+          <input id="fecha_ocurrencia" type="date" onchange="fv('fecha_ocurrencia');fp()">
+          <span class="hint">Formato AAAA-MM-DD</span>
+        </div>
+        <div class="field" id="ff-zona_ocurrencia">
+          <span class="fl"><span class="fn">C17</span>Zona Ocurrencia <span class="req">*</span></span>
+          <select id="zona_ocurrencia" onchange="fv('zona_ocurrencia');fp()">
+            <option value="">Seleccione...</option>
+            <option value="01">01 — Rural</option>
+            <option value="02">02 — Urbana</option>
+          </select>
+        </div>
+        <div class="field" id="ff-municipio_ocurrencia">
+          <span class="fl"><span class="fn">C18</span>Municipio Ocurrencia <span class="req">*</span> <span style="font-size:10px;color:var(--tx3);">(DIVIPOLA)</span></span>
+          <input id="municipio_ocurrencia" maxlength="5" inputmode="numeric" placeholder="Ej: 76001"
+            oninput="this.value=this.value.replace(/\D/g,'');fv('municipio_ocurrencia');fp()">
+          <span class="hint">Código DIVIPOLA 5 dígitos</span>
+        </div>
+        <div class="field s2" id="ff-direccion_ocurrencia">
+          <span class="fl"><span class="fn">C19</span>Dirección Ocurrencia Evento <span class="req">*</span></span>
+          <input id="direccion_ocurrencia" maxlength="100" placeholder="Dirección exacta del evento"
+            oninput="this.value=this.value.toUpperCase();fv('direccion_ocurrencia');fp()">
+        </div>
+        <div class="field s3" id="ff-descripcion_evento">
+          <span class="fl"><span class="fn">C20</span>Descripción Corta del Evento <span class="req">*</span></span>
+          <textarea id="descripcion_evento" maxlength="1000" placeholder="Descripción detallada de los hechos (mín 100 caracteres)"
+            oninput="updDescCnt();fv('descripcion_evento');fp()"></textarea>
+          <div style="display:flex;justify-content:space-between;">
+            <span class="hint">Mínimo 100 · máximo 1000 caracteres. Sin comas (,).</span>
+            <span id="desc-cnt" style="font-size:10px;color:var(--tx3);font-family:var(--mono);">0/1000</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ V. DATOS VEHÍCULO ═══ -->
+    <div class="fsec" id="sec-V">
+      <div class="ft">V. Datos del Vehículo <span style="font-size:11px;font-weight:400;color:var(--tx3);">(Solo para accidente de tránsito)</span></div>
+      <div id="at-aviso" class="alert aw" style="display:none;">Esta sección solo aplica para <strong>Accidente de Tránsito (01)</strong>. Si el evento no es AT, los campos deben quedar vacíos.</div>
+      <div class="g3">
+        <div class="field" id="ff-estado_aseguramiento">
+          <span class="fl"><span class="fn">C21</span>Estado Aseguramiento <span class="cnd">● Solo si AT</span></span>
+          <select id="estado_aseguramiento" onchange="onAsegChange();fp()">
+            <option value="">Vacío si no es AT</option>
+            <option value="2">2 — No asegurado</option>
+            <option value="3">3 — Vehículo fantasma</option>
+            <option value="4">4 — Póliza falsa</option>
+            <option value="6">6 — Cobertura tarifa diferencial Decreto 2497/2022</option>
+            <option value="7">7 — No asegurado: propietario indeterminado</option>
+            <option value="8">8 — Vehículo sin placa</option>
+          </select>
+        </div>
+        <div class="field" id="ff-placa_vehiculo">
+          <span class="fl"><span class="fn">C22</span>Placa Vehículo <span class="cnd">●</span></span>
+          <input id="placa_vehiculo" maxlength="10" placeholder="Solo alfanumérico, sin guiones"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');fp()">
+          <span class="hint">Obligatorio si AT y estado 2/4/6/7. Vacío si fantasma (3) o sin placa (8).</span>
+        </div>
+        <div class="field" id="ff-tipo_vehiculo">
+          <span class="fl"><span class="fn">C23</span>Tipo de Vehículo <span class="cnd">●</span></span>
+          <select id="tipo_vehiculo" onchange="fp()">
+            <option value="">Vacío si fantasma o no AT</option>
+            <option value="01">01 — Automóvil</option>
+            <option value="02">02 — Bus</option>
+            <option value="03">03 — Buseta</option>
+            <option value="04">04 — Camión</option>
+            <option value="05">05 — Camioneta</option>
+            <option value="06">06 — Campero</option>
+            <option value="07">07 — Microbús</option>
+            <option value="08">08 — Tractocamión</option>
+            <option value="09">09 — Transporte escolar</option>
+            <option value="10">10 — Motocicleta</option>
+            <option value="14">14 — Motocarro</option>
+            <option value="17">17 — Mototriciclo</option>
+            <option value="19">19 — Cuatrimoto</option>
+            <option value="20">20 — Moto extranjera</option>
+            <option value="21">21 — Vehículo extranjero</option>
+            <option value="22">22 — Volqueta</option>
+            <option value="23">23 — Transporte masivo</option>
+          </select>
+          <span class="hint">Vacío cuando el estado es 3 (fantasma)</span>
+        </div>
+        <div class="field" id="ff-codigo_aseguradora">
+          <span class="fl"><span class="fn">C24</span>Código Aseguradora <span class="cnd">●</span></span>
+          <input id="codigo_aseguradora" maxlength="6" placeholder="Código ADRES"
+            oninput="this.value=this.value.toUpperCase();fp()">
+          <span class="hint">Obligatorio si estado 4 o 6. Vacío si no asegurado.</span>
+        </div>
+        <div class="field" id="ff-numero_poliza">
+          <span class="fl"><span class="fn">C25</span>Número Póliza SOAT <span class="cnd">●</span></span>
+          <input id="numero_poliza" maxlength="20" placeholder="Número póliza"
+            oninput="this.value=this.value.toUpperCase();fp()">
+          <span class="hint">Obligatorio si estado 4 o 6.</span>
+        </div>
+        <div class="field" id="ff-vigencia_inicio">
+          <span class="fl"><span class="fn">C26</span>Inicio Vigencia Póliza <span class="cnd">●</span></span>
+          <input id="vigencia_inicio" type="date" onchange="fp()">
+          <span class="hint">Obligatorio si estado 4 o 6. Fecha descrita en la póliza (≠ expedición).</span>
+        </div>
+        <div class="field" id="ff-vigencia_fin">
+          <span class="fl"><span class="fn">C27</span>Fin Vigencia Póliza (Vencimiento) <span class="cnd">●</span></span>
+          <input id="vigencia_fin" type="date" onchange="fp()">
+          <span class="hint">Obligatorio si estado 4 o 6.</span>
+        </div>
+        <div class="field" id="ff-radicado_siras">
+          <span class="fl"><span class="fn">C28</span>Radicado SIRAS <span class="cnd">●</span></span>
+          <input id="radicado_siras" maxlength="20" placeholder="Código SIRAS"
+            oninput="this.value=this.value.toUpperCase();fp()">
+          <span class="hint">Obligatorio si AT y fecha ocurrencia ≥ 01/06/2023</span>
+        </div>
+        <div class="field" id="ff-agotamiento_tope">
+          <span class="fl"><span class="fn">C29</span>Cobro Agotamiento Tope Aseguradora <span class="cnd">●</span></span>
+          <select id="agotamiento_tope" onchange="fp()">
+            <option value="">Vacío si no es AT</option>
+            <option value="0">0 — NO</option>
+            <option value="1">1 — SÍ (adjuntar CRA_NIT_Factura.pdf)</option>
+          </select>
+          <span class="hint">Obligatorio cuando AT y estado 6. Si estado 2/3/4/7/8 → valor 0.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VI. DATOS PROPIETARIO ═══ -->
+    <div class="fsec" id="sec-VI">
+      <div class="ft">VI. Datos del Propietario <span style="font-size:11px;font-weight:400;color:var(--tx3);">(Solo AT con estado 2/4/6/8)</span></div>
+      <div class="alert ai">Obligatorio cuando Naturaleza=01 (AT) y Estado de aseguramiento = 2, 4, 6 u 8.</div>
+      <div class="g3">
+        <div class="field" id="ff-tipo_doc_prop">
+          <span class="fl"><span class="fn">C30</span>Tipo Doc. Propietario <span class="cnd">●</span></span>
+          <select id="tipo_doc_prop" onchange="fp()">
+            <option value="">Vacío si no aplica</option>
+            <option value="CC">CC — Cédula ciudadanía</option>
+            <option value="CE">CE — Cédula extranjería</option>
+            <option value="CD">CD — Carné diplomático</option>
+            <option value="PA">PA — Pasaporte</option>
+            <option value="PE">PE — Permiso especial</option>
+            <option value="DE">DE — Documento extranjero</option>
+            <option value="PT">PT — Permiso protección temporal</option>
+            <option value="NI">NI — NIT (persona jurídica)</option>
+          </select>
+        </div>
+        <div class="field" id="ff-num_doc_prop">
+          <span class="fl"><span class="fn">C31</span>Número Doc. Propietario <span class="cnd">●</span></span>
+          <input id="num_doc_prop" maxlength="20" placeholder="Como en tarjeta de propiedad"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-nombre1_prop">
+          <span class="fl"><span class="fn">C32</span>Primer Nombre / Razón Social <span class="cnd">●</span></span>
+          <input id="nombre1_prop" maxlength="30" placeholder="Primer nombre o razón social"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-nombre2_prop">
+          <span class="fl"><span class="fn">C33</span>Segundo Nombre Propietario</span>
+          <input id="nombre2_prop" maxlength="30" placeholder="Si aparece en documento"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-apellido1_prop">
+          <span class="fl"><span class="fn">C34</span>Primer Apellido Propietario <span class="cnd">●</span></span>
+          <input id="apellido1_prop" maxlength="30"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-apellido2_prop">
+          <span class="fl"><span class="fn">C35</span>Segundo Apellido Propietario</span>
+          <input id="apellido2_prop" maxlength="30"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field s2" id="ff-dir_prop">
+          <span class="fl"><span class="fn">C36</span>Dirección Residencia Propietario <span class="cnd">●</span></span>
+          <input id="dir_prop" maxlength="100" placeholder="Vacío si tipo doc es NI"
+            oninput="this.value=this.value.toUpperCase();fp()">
+          <span class="hint">Vacío si tipo documento es NI (NIT)</span>
+        </div>
+        <div class="field" id="ff-tel_prop">
+          <span class="fl"><span class="fn">C37</span>Teléfono Propietario <span class="cnd">●</span></span>
+          <input id="tel_prop" maxlength="10" inputmode="numeric" placeholder="Celular: 3XXXXXXXXX"
+            oninput="this.value=this.value.replace(/\D/g,'');fp()">
+          <span class="hint">Vacío si tipo doc es NI</span>
+        </div>
+        <div class="field" id="ff-municipio_prop">
+          <span class="fl"><span class="fn">C38</span>Municipio Residencia Propietario <span class="cnd">●</span> <span style="font-size:10px;color:var(--tx3);">(DIVIPOLA)</span></span>
+          <input id="municipio_prop" maxlength="5" inputmode="numeric" placeholder="Vacío si NI"
+            oninput="this.value=this.value.replace(/\D/g,'');fp()">
+          <span class="hint">Vacío si tipo doc es NI</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VII. DATOS CONDUCTOR ═══ -->
+    <div class="fsec" id="sec-VII">
+      <div class="ft">VII. Datos del Conductor <span style="font-size:11px;font-weight:400;color:var(--tx3);">(Solo AT con estado 2/4/6/7/8)</span></div>
+      <div class="alert ai">Obligatorio cuando Naturaleza=01 (AT) y Estado = 2, 4, 6, 7 u 8.</div>
+      <div class="g3">
+        <div class="field" id="ff-tipo_doc_cond">
+          <span class="fl"><span class="fn">C39</span>Tipo Doc. Conductor <span class="cnd">●</span></span>
+          <select id="tipo_doc_cond" onchange="fp()">
+            <option value="">Vacío si no aplica</option>
+            <option value="TI">TI — Tarjeta identidad</option>
+            <option value="CC">CC — Cédula ciudadanía</option>
+            <option value="CE">CE — Cédula extranjería</option>
+            <option value="CD">CD — Carné diplomático</option>
+            <option value="PA">PA — Pasaporte</option>
+            <option value="PE">PE — Permiso especial</option>
+            <option value="DE">DE — Documento extranjero</option>
+            <option value="PT">PT — Permiso protección temporal</option>
+            <option value="SC">SC — Salvoconducto</option>
+            <option value="AS">AS — Adulto sin identificación</option>
+            <option value="MS">MS — Menor sin identificación</option>
+          </select>
+        </div>
+        <div class="field" id="ff-num_doc_cond">
+          <span class="fl"><span class="fn">C40</span>Número Doc. Conductor <span class="cnd">●</span></span>
+          <input id="num_doc_cond" maxlength="20" placeholder="Como en licencia de conducción"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-nombre1_cond">
+          <span class="fl"><span class="fn">C41</span>Primer Nombre Conductor <span class="cnd">●</span></span>
+          <input id="nombre1_cond" maxlength="30"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-nombre2_cond">
+          <span class="fl"><span class="fn">C42</span>Segundo Nombre Conductor <span class="cnd">●</span></span>
+          <input id="nombre2_cond" maxlength="30"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-apellido1_cond">
+          <span class="fl"><span class="fn">C43</span>Primer Apellido Conductor <span class="cnd">●</span></span>
+          <input id="apellido1_cond" maxlength="30"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-apellido2_cond">
+          <span class="fl"><span class="fn">C44</span>Segundo Apellido Conductor <span class="cnd">●</span></span>
+          <input id="apellido2_cond" maxlength="30"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-municipio_cond">
+          <span class="fl"><span class="fn">C45</span>Municipio Residencia Conductor <span class="cnd">●</span> <span style="font-size:10px;color:var(--tx3);">(DIVIPOLA)</span></span>
+          <input id="municipio_cond" maxlength="5" inputmode="numeric"
+            oninput="this.value=this.value.replace(/\D/g,'');fp()">
+        </div>
+        <div class="field s2" id="ff-dir_cond">
+          <span class="fl"><span class="fn">C46</span>Dirección Residencia Conductor <span class="cnd">●</span></span>
+          <input id="dir_cond" maxlength="100"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-tel_cond">
+          <span class="fl"><span class="fn">C47</span>Teléfono Conductor <span class="cnd">●</span></span>
+          <input id="tel_cond" maxlength="10" inputmode="numeric" placeholder="Celular: 3XXXXXXXXX"
+            oninput="this.value=this.value.replace(/\D/g,'');fp()">
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VIII. DATOS ATENCIÓN VÍCTIMA ═══ -->
+    <div class="fsec" id="sec-VIII">
+      <div class="ft">VIII. Datos Atención de la Víctima</div>
+      <div class="g2">
+        <div class="field" id="ff-uso_osteosintesis">
+          <span class="fl"><span class="fn">C48</span>Uso Material de Osteosíntesis <span class="req">*</span></span>
+          <select id="uso_osteosintesis" onchange="fv('uso_osteosintesis');fp()">
+            <option value="">Seleccione...</option>
+            <option value="1">1 — SÍ (adjuntar FMO_NIT_Factura.pdf)</option>
+            <option value="2">2 — NO</option>
+          </select>
+          <span class="hint">Si SI: adjuntar factura del material + representación gráfica DIAN</span>
+        </div>
+        <div class="field" id="ff-tipo_atencion">
+          <span class="fl"><span class="fn">C49</span>Tipo de Atención <span class="req">*</span></span>
+          <select id="tipo_atencion" onchange="onTipoAtencionChange();fv('tipo_atencion');fp()">
+            <option value="">Seleccione...</option>
+            <option value="1">1 — Atención médica inicial del evento</option>
+            <option value="2">2 — Transporte Primario (solo)</option>
+            <option value="3">3 — Transporte Secundario (solo)</option>
+            <option value="4">4 — Continuidad atención hospitalaria</option>
+            <option value="5">5 — Atención ambulatoria</option>
+            <option value="6">6 — Atención inicial + Transporte Primario</option>
+            <option value="7">7 — Atención inicial + Transporte Secundario</option>
+            <option value="8">8 — Atención inicial + TP + TS</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ IX. DATOS REMISIÓN ═══ -->
+    <div class="fsec" id="sec-IX">
+      <div class="ft">IX. Datos de Remisión <span style="font-size:11px;font-weight:400;color:var(--tx3);">(Solo si tipo atención incluye TS: opciones 3/7/8)</span></div>
+      <div id="rem-aviso" class="alert aw">Esta sección solo aplica cuando el tipo de atención incluye <strong>Transporte Secundario</strong> (opciones 3, 7 u 8).</div>
+      <div class="g3">
+        <div class="field" id="ff-placa_ambu_sec">
+          <span class="fl"><span class="fn">C50</span>Placa Ambulancia Traslado Secundario <span class="cnd">●</span></span>
+          <input id="placa_ambu_sec" maxlength="7" placeholder="7 caracteres"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');fp()">
+        </div>
+        <div class="field" id="ff-tipo_transporte_sec">
+          <span class="fl"><span class="fn">C51</span>Tipo Transporte Secundario <span class="cnd">●</span></span>
+          <select id="tipo_transporte_sec" onchange="fp()">
+            <option value="">Seleccione...</option>
+            <option value="1">1 — Transporte básico</option>
+            <option value="2">2 — Transporte medicalizado</option>
+          </select>
+        </div>
+        <div class="field" id="ff-cod_hab_remite">
+          <span class="fl"><span class="fn">C52</span>Código Habilitación Prestador Remite <span class="cnd">●</span></span>
+          <input id="cod_hab_remite" maxlength="12" inputmode="numeric" placeholder="12 dígitos con sede"
+            oninput="this.value=this.value.replace(/\D/g,'');fp()">
+        </div>
+        <div class="field" id="ff-cod_hab_recibe_sec">
+          <span class="fl"><span class="fn">C53</span>Código Habilitación Prestador Recibe <span class="cnd">●</span></span>
+          <input id="cod_hab_recibe_sec" maxlength="12" inputmode="numeric" placeholder="12 dígitos con sede"
+            oninput="this.value=this.value.replace(/\D/g,'');fp()">
+        </div>
+        <div class="field" id="ff-tipo_doc_prof_recibe">
+          <span class="fl"><span class="fn">C54</span>Tipo Doc. Profesional que Recibe <span class="cnd">●</span></span>
+          <select id="tipo_doc_prof_recibe" onchange="fp()">
+            <option value="">Seleccione...</option>
+            <option value="CC">CC — Cédula ciudadanía</option>
+            <option value="CE">CE — Cédula extranjería</option>
+            <option value="CD">CD — Carné diplomático</option>
+            <option value="PA">PA — Pasaporte</option>
+            <option value="PE">PE — Permiso especial</option>
+            <option value="DE">DE — Documento extranjero</option>
+            <option value="PT">PT — Permiso protección temporal</option>
+          </select>
+        </div>
+        <div class="field" id="ff-num_doc_prof_recibe">
+          <span class="fl"><span class="fn">C55</span>Número Doc. Profesional que Recibe <span class="cnd">●</span></span>
+          <input id="num_doc_prof_recibe" maxlength="20"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field" id="ff-fecha_aceptacion">
+          <span class="fl"><span class="fn">C56</span>Fecha Aceptación Remisión <span class="cnd">●</span></span>
+          <input id="fecha_aceptacion" type="date" onchange="fp()">
+          <span class="hint">Fecha aceptación del paciente en IPS receptora</span>
+        </div>
+        <div class="field" id="ff-hora_aceptacion">
+          <span class="fl"><span class="fn">C57</span>Hora Aceptación (HH:MM) <span class="cnd">●</span></span>
+          <input id="hora_aceptacion" maxlength="5" placeholder="14:30"
+            oninput="this.value=this.value.replace(/[^0-9:]/g,'');fp()">
+          <span class="hint">Formato 24 horas: HH:MM</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ X. DATOS TRANSPORTE Y MOVILIZACIÓN ═══ -->
+    <div class="fsec" id="sec-X">
+      <div class="ft">X. Datos Transporte y Movilización <span style="font-size:11px;font-weight:400;color:var(--tx3);">(Solo si tipo atención incluye TP: opciones 2/6/8)</span></div>
+      <div id="tp-aviso" class="alert aw">Esta sección solo aplica cuando el tipo de atención incluye <strong>Transporte Primario</strong> (opciones 2, 6 u 8).</div>
+      <div class="g3">
+        <div class="field" id="ff-tipo_transporte_prim">
+          <span class="fl"><span class="fn">C58</span>Tipo Transporte Primario <span class="cnd">●</span></span>
+          <select id="tipo_transporte_prim" onchange="fp()">
+            <option value="">Seleccione...</option>
+            <option value="1">1 — Transporte básico</option>
+            <option value="2">2 — Transporte medicalizado</option>
+          </select>
+        </div>
+        <div class="field" id="ff-placa_ambu_prim">
+          <span class="fl"><span class="fn">C59</span>Placa Ambulancia Transporte Primario <span class="cnd">●</span></span>
+          <input id="placa_ambu_prim" maxlength="7" placeholder="7 caracteres"
+            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');fp()">
+        </div>
+        <div class="field" id="ff-cod_hab_recibe_prim">
+          <span class="fl"><span class="fn">C60</span>Código Habilitación Prestador Recibe TP <span class="cnd">●</span></span>
+          <input id="cod_hab_recibe_prim" maxlength="12" inputmode="numeric" placeholder="12 dígitos con sede"
+            oninput="this.value=this.value.replace(/\D/g,'');fp()">
+        </div>
+        <div class="field s2" id="ff-dir_desde_evento">
+          <span class="fl"><span class="fn">C61</span>Dirección Desde (Sitio Evento) <span class="cnd">●</span></span>
+          <input id="dir_desde_evento" maxlength="100" placeholder="Dirección donde fue recogida la víctima"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+        <div class="field s2" id="ff-dir_hasta_ips">
+          <span class="fl"><span class="fn">C62</span>Dirección Hasta (IPS) <span class="cnd">●</span></span>
+          <input id="dir_hasta_ips" maxlength="100" placeholder="Dirección de la IPS a la que fue trasladado"
+            oninput="this.value=this.value.toUpperCase();fp()">
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ JSON OUTPUT ═══ -->
+    <div class="fsec" id="sec-JSON">
+      <div class="ft">Vista JSON — Salida del Formulario</div>
+      <div id="json-validacion" class="alert ai" style="margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="btn bp" onclick="guardarFUR()">💾 Guardar en nube (Firestore)</button>
+        <button class="btn ba" onclick="descargarJSON()">⬇ Descargar .json</button>
+        <button class="btn bs" onclick="generarJSON()">🔄 Actualizar vista</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:6px;">▶ JSON generado (Formulario Único de Reclamaciones):</div>
+      <div class="json-box" id="json-output">— Haz clic en "Actualizar vista" o completa el formulario para ver el JSON —</div>
+      <div style="margin-top:12px;" id="save-alr"></div>
+    </div>
+
+  </div><!-- /mcont -->
+</div><!-- /layout -->
+
+<!-- NAV FOOTER -->
+<div class="fnav">
+  <button class="btn bs" id="btn-prev" onclick="navSec(-1)">← Anterior</button>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="sec-label" style="font-family:var(--mono);font-size:11px;color:var(--tx2);">I. Prestador</span>
+    <button class="btn bp" onclick="guardarFUR()" id="btn-save-fly">💾 Guardar</button>
+    <div id="save-fly-msg" style="font-size:11px;color:var(--green);display:none;">✔ Guardado</div>
+  </div>
+  <button class="btn bs" id="btn-next" onclick="navSec(1)">Siguiente →</button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ════════════════ FIREBASE ════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, updateDoc, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const FB_CFG = { apiKey:"AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g", authDomain:"conexa-soat.firebaseapp.com", projectId:"conexa-soat", storageBucket:"conexa-soat.firebasestorage.app", messagingSenderId:"410323697377", appId:"1:410323697377:web:f76e88fe905b8c265e41a0" };
+
+let db = null, REC = null, ROL = 'digitador';
+
+// Section order
+const SECS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','JSON'];
+let curSec = 'I';
+
+// Required fields per section (field IDs)
+const REQUIRED = {
+  I:    ['nit'],
+  II:   ['num_factura'],
+  III:  ['tipo_doc_victima','num_doc_victima','primer_nombre_victima','primer_apellido_victima',
+          'direccion_victima','municipio_victima','telefono_victima'],
+  IV:   ['naturaleza_evento','fecha_ocurrencia','zona_ocurrencia','municipio_ocurrencia',
+          'direccion_ocurrencia','descripcion_evento'],
+  V:    [],
+  VI:   [],
+  VII:  [],
+  VIII: ['uso_osteosintesis','tipo_atencion'],
+  IX:   [],
+  X:    [],
+  JSON: []
+};
+
+const g = id => document.getElementById(id);
+const gv = id => { const e=g(id); return e ? e.value.trim() : ''; };
+
+// ─── INIT ───
+window.addEventListener('DOMContentLoaded', async () => {
+  await initFirebase();
+  loadRec();
+  goSec('I');
+  fp();
+});
+
+async function initFirebase() {
+  try {
+    const app2 = initializeApp(FB_CFG, 'fur-app');
+    db = getFirestore(app2);
+  } catch(e) {
+    // Might already be initialized
+    try {
+      const { getApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+      const app2 = getApp('fur-app');
+      db = getFirestore(app2);
+    } catch(e2) { console.warn('Firebase not available:', e2.message); }
+  }
+}
+
+function loadRec() {
+  const params = new URLSearchParams(location.search);
+  const id  = params.get('id');
+  ROL = params.get('rol') || 'digitador';
+  g('hdr-rol').textContent = ROL.toUpperCase();
+
+  // Try localStorage first
+  let raw = null;
+  try { raw = sessionStorage.getItem('fur_rec') || localStorage.getItem('fur_rec'); } catch(e){}
+  if (raw) {
+    try {
+      REC = JSON.parse(raw);
+      populateFromRec();
+    } catch(e) {}
+  }
+  // Try Firebase for fresh data
+  if (id && db) {
+    loadFromFirebase(id);
+  }
+}
+
+async function loadFromFirebase(id) {
+  try {
+    const snap = await getDoc(doc(db,'reclamaciones',id));
+    if (snap.exists()) {
+      REC = { id: snap.id, ...snap.data() };
+      populateFromRec();
+    }
+  } catch(e) { console.warn('Firebase read error:', e.message); }
+}
+
+function populateFromRec() {
+  if (!REC) return;
+  const fur = REC.fur || {};
+  const f = REC.furips1 || {};
+
+  // Header
+  g('hdr-factura').textContent = REC.factura ? `Factura: ${REC.factura} · Consec. ${REC.consec||'—'}` : '';
+
+  // Pre-fill from fur object (previously saved)
+  Object.entries(fur).forEach(([k,v]) => {
+    const el = g(k);
+    if (el && v !== undefined && v !== null) el.value = v;
+  });
+
+  // Pre-fill NIT from furips1.c4 if not already
+  if (!gv('nit') && f.c4) g('nit').value = f.c4;
+  // Pre-fill factura
+  if (!gv('num_factura') && REC.factura) g('num_factura').value = REC.factura;
+  // Pre-fill fecha ocurrencia
+  if (!gv('fecha_ocurrencia') && REC.fechaEvento) g('fecha_ocurrencia').value = REC.fechaEvento;
+
+  onNaturalezaChange();
+  onAsegChange();
+  onTipoAtencionChange();
+  fp();
+}
+
+// ─── SECTION NAVIGATION ───
+window.goSec = function(sec) {
+  curSec = sec;
+  SECS.forEach(s => {
+    const el = g(`sec-${s}`); if(el){ el.classList.remove('on'); }
+    const si = g(`si-${s}`);  if(si){ si.classList.remove('active'); }
+  });
+  const el = g(`sec-${sec}`); if(el) el.classList.add('on');
+  const si = g(`si-${sec}`);  if(si) si.classList.add('active');
+
+  const labels = {I:'I. Prestador',II:'II. Reclamación',III:'III. Víctima',IV:'IV. Evento',
+    V:'V. Vehículo',VI:'VI. Propietario',VII:'VII. Conductor',VIII:'VIII. Atención',
+    IX:'IX. Remisión',X:'X. Transporte',JSON:'JSON Output'};
+  g('sec-label').textContent = labels[sec] || sec;
+
+  const idx = SECS.indexOf(sec);
+  g('btn-prev').disabled = idx === 0;
+  g('btn-next').disabled = idx === SECS.length - 1;
+
+  if (sec === 'JSON') generarJSON();
+};
+
+window.navSec = function(dir) {
+  const idx = SECS.indexOf(curSec);
+  const next = SECS[idx + dir];
+  if (next) goSec(next);
+};
+
+// ─── FIELD VALIDATION ───
+window.fv = function(id) {
+  const el = g(id); if(!el) return;
+  const ff = g(`ff-${id}`); if(!ff) return;
+  const v = el.value.trim();
+  if (!v) { ff.classList.remove('ok'); ff.classList.add('err'); }
+  else     { ff.classList.remove('err'); ff.classList.add('ok'); }
+};
+
+// ─── PROGRESS ───
+window.fp = function() {
+  // Count required fields across all sections
+  const allReq = Object.values(REQUIRED).flat();
+  const total = allReq.length;
+  const filled = allReq.filter(id => {
+    const el = g(id); return el && el.value.trim().length > 0;
+  }).length;
+  const pct = total > 0 ? Math.round(filled/total*100) : 0;
+  g('pfl').style.width = pct + '%';
+  g('ppc').textContent = pct + '%';
+  g('pcampos').textContent = `${filled} / ${total} campos`;
+
+  // Update sidebar dots
+  SECS.filter(s => s !== 'JSON').forEach(s => {
+    const reqs = REQUIRED[s] || [];
+    if (reqs.length === 0) return;
+    const all = reqs.every(id => { const el=g(id); return el && el.value.trim(); });
+    const si = g(`si-${s}`); const sd = g(`sd-${s}`);
+    if (!si || !sd) return;
+    if (all) { si.classList.add('done'); sd.textContent = '✓'; }
+    else      { si.classList.remove('done'); sd.textContent = s; }
+  });
+};
+
+// ─── CONDITIONAL LOGIC ───
+window.onNaturalezaChange = function() {
+  const nat = gv('naturaleza_evento');
+  const isAT = nat === '01';
+
+  // Show/hide secciones AT
+  ['at-aviso'].forEach(id => { const e=g(id); if(e) e.style.display = isAT?'none':'block'; });
+
+  // Condición víctima: solo AT
+  const ffCond = g('ff-condicion_victima');
+  if (ffCond) ffCond.style.opacity = isAT ? '1' : '.5';
+
+  // Descripción otro evento: solo 17
+  const ffOtro = g('ff-descripcion_otro_evento');
+  if (ffOtro) { ffOtro.style.opacity = nat==='17' ? '1' : '.5'; }
+  if (nat !== '17' && g('descripcion_otro_evento')) {/* keep value */}
+
+  // V,VI,VII not AT → dim
+  ['sec-V','sec-VI','sec-VII'].forEach(s => {
+    const e = g(s); if(e) e.style.opacity = isAT ? '1' : '.6';
+  });
+  ['si-V','si-VI','si-VII'].forEach(s => {
+    const e = g(s); if(e) e.style.opacity = isAT ? '1' : '.5';
+  });
+};
+
+window.onAsegChange = function() {
+  const est = gv('estado_aseguramiento');
+  // Placa obligatoria para 2/4/6/7; vacía para 3/8
+  const ffPlaca = g('ff-placa_vehiculo');
+  if (ffPlaca) {
+    const needPlaca = ['2','4','6','7'].includes(est);
+    ffPlaca.style.opacity = needPlaca ? '1' : '.6';
+    const lbl = ffPlaca.querySelector('.fl');
+    if(lbl) {
+      const req = lbl.querySelector('.req,.cnd');
+      if(req) req.textContent = needPlaca ? '★ Oblig.' : '● Cond.';
+    }
+  }
+};
+
+window.onTipoAtencionChange = function() {
+  const ta = gv('tipo_atencion');
+  const hasTS = ['3','7','8'].includes(ta);
+  const hasTP = ['2','6','8'].includes(ta);
+
+  // Remisión
+  const remAviso = g('rem-aviso');
+  if (remAviso) remAviso.style.display = hasTS ? 'none' : 'block';
+  g('sec-IX').style.opacity = hasTS ? '1' : '.6';
+  g('si-IX').style.opacity  = hasTS ? '1' : '.5';
+
+  // Transporte primario
+  const tpAviso = g('tp-aviso');
+  if (tpAviso) tpAviso.style.display = hasTP ? 'none' : 'block';
+  g('sec-X').style.opacity = hasTP ? '1' : '.6';
+  g('si-X').style.opacity  = hasTP ? '1' : '.5';
+};
+
+// ─── DESCRIPCION COUNTER ───
+window.updDescCnt = function() {
+  const el = g('descripcion_evento');
+  const cnt = g('desc-cnt');
+  if (!el || !cnt) return;
+  const len = el.value.length;
+  cnt.textContent = `${len}/1000`;
+  cnt.style.color = len < 100 ? 'var(--warn)' : len >= 900 ? 'var(--red)' : 'var(--tx3)';
+};
+
+// ─── BUILD JSON ───
+function buildJSON() {
+  const v = id => gv(id) || null;
+  const obj = {
+    // I
+    NIT_PRESTADOR: gv('nit') || null,
+    // II
+    NUM_FACTURA: gv('num_factura') || null,
+    // III
+    Tipo_documento_identidad_victima: gv('tipo_doc_victima') || null,
+    Numero_documento_identidad_victima: gv('num_doc_victima') || null,
+    Tipo_de_poblacion_especial: gv('tipo_poblacion_especial') || null,
+    Primer_nombre_victima: gv('primer_nombre_victima') || null,
+    Segundo_nombre_victima: gv('segundo_nombre_victima') || null,
+    Primer_apellido_victima: gv('primer_apellido_victima') || null,
+    Segundo_apellido_victima: gv('segundo_apellido_victima') || null,
+    Direccion_residencia_victima: gv('direccion_victima') || null,
+    Codigo_municipio_residencia_victima: gv('municipio_victima') || null,
+    Telefono_victima: gv('telefono_victima') || null,
+    // IV
+    Naturaleza_del_evento: gv('naturaleza_evento') || null,
+    Descripcion_del_otro_evento: gv('descripcion_otro_evento') || null,
+    Condicion_victima: gv('condicion_victima') || null,
+    Fecha_de_ocurrencia_evento: gv('fecha_ocurrencia') || null,
+    Zona_de_ocurrencia_evento: gv('zona_ocurrencia') || null,
+    Codigo_municipio_ocurrencia_evento: gv('municipio_ocurrencia') || null,
+    Direccion_de_ocurrencia_evento: gv('direccion_ocurrencia') || null,
+    Descripcion_corta_de_lo_ocurrido_en_el_evento: gv('descripcion_evento') || null,
+    // V
+    Estado_de_aseguramiento: gv('estado_aseguramiento') || null,
+    Placa_vehiculo: gv('placa_vehiculo') || null,
+    Tipo_de_Vehiculo: gv('tipo_vehiculo') || null,
+    Codigo_de_la_aseguradora: gv('codigo_aseguradora') || null,
+    Numero_de_poliza_SOAT: gv('numero_poliza') || null,
+    Fecha_de_inicio_de_vigencia_de_la_poliza: gv('vigencia_inicio') || null,
+    Fecha_final_de_vigencia_de_la_poliza: gv('vigencia_fin') || null,
+    Numero_de_radicado_SIRAS: gv('radicado_siras') || null,
+    Cobro_por_agotamiento_tope_Aseguradora: gv('agotamiento_tope') || null,
+    // VI
+    Tipo_de_documento_de_identidad_del_propietario: gv('tipo_doc_prop') || null,
+    Numero_de_documento_de_identidad_del_propietario: gv('num_doc_prop') || null,
+    Primer_nombre_del_propietario_o_razon_social: gv('nombre1_prop') || null,
+    Segundo_nombre_del_propietario: gv('nombre2_prop') || null,
+    Primer_apellido_del_propietario: gv('apellido1_prop') || null,
+    Segundo_apellido_del_propietario: gv('apellido2_prop') || null,
+    Direccion_de_residencia_del_propietario: gv('dir_prop') || null,
+    Telefono_de_residencia_del_propietario: gv('tel_prop') || null,
+    Codigo_del_municipio_de_residencia_del_propietario: gv('municipio_prop') || null,
+    // VII
+    Tipo_de_documento_de_identidad_del_conductor: gv('tipo_doc_cond') || null,
+    Numero_de_documento_de_identidad_del_conductor: gv('num_doc_cond') || null,
+    Primer_nombre_del_conductor: gv('nombre1_cond') || null,
+    Segundo_nombre_del_conductor: gv('nombre2_cond') || null,
+    Primer_apellido_del_conductor: gv('apellido1_cond') || null,
+    Segundo_apellido_del_conductor: gv('apellido2_cond') || null,
+    Codigo_del_municipio_de_residencia_del_conductor: gv('municipio_cond') || null,
+    Direccion_de_residencia_del_conductor: gv('dir_cond') || null,
+    Telefono_de_residencia_del_conductor: gv('tel_cond') || null,
+    // VIII
+    Uso_material_de_osteosintesis_en_la_atencion: gv('uso_osteosintesis') || null,
+    Es_atencion_inicial_paciente_remitido_o_control: gv('tipo_atencion') || null,
+    // IX
+    Placa_ambulancia_que_realiza_el_traslado_secundario: gv('placa_ambu_sec') || null,
+    Tipo_de_servicio_del_transporte_secundario: gv('tipo_transporte_sec') || null,
+    Codigo_de_habilitacion_del_prestador_que_remite: gv('cod_hab_remite') || null,
+    Codigo_de_habilitacion_del_prestador_que_recibe: gv('cod_hab_recibe_sec') || null,
+    TIPO_de_documento_Profesional_que_recibe: gv('tipo_doc_prof_recibe') || null,
+    Numero_de_documento_Profesional_que_recibe: gv('num_doc_prof_recibe') || null,
+    Fecha_de_aceptacion: gv('fecha_aceptacion') || null,
+    Hora_aceptacion: gv('hora_aceptacion') || null,
+    // X
+    Tipo_de_servicio_del_transporte: gv('tipo_transporte_prim') || null,
+    Placa_ambulancia_que_realiza_el_traslado: gv('placa_ambu_prim') || null,
+    Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario: gv('cod_hab_recibe_prim') || null,
+    Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion: gv('dir_desde_evento') || null,
+    Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS: gv('dir_hasta_ips') || null,
+  };
+  // Remove null values for cleaner JSON
+  return Object.fromEntries(Object.entries(obj).filter(([,v]) => v !== null && v !== ''));
+}
+
+function buildFlatForFirestore() {
+  const ids = ['nit','num_factura','tipo_doc_victima','num_doc_victima','tipo_poblacion_especial',
+    'primer_nombre_victima','segundo_nombre_victima','primer_apellido_victima','segundo_apellido_victima',
+    'direccion_victima','municipio_victima','telefono_victima',
+    'naturaleza_evento','descripcion_otro_evento','condicion_victima','fecha_ocurrencia',
+    'zona_ocurrencia','municipio_ocurrencia','direccion_ocurrencia','descripcion_evento',
+    'estado_aseguramiento','placa_vehiculo','tipo_vehiculo','codigo_aseguradora','numero_poliza',
+    'vigencia_inicio','vigencia_fin','radicado_siras','agotamiento_tope',
+    'tipo_doc_prop','num_doc_prop','nombre1_prop','nombre2_prop','apellido1_prop','apellido2_prop',
+    'dir_prop','tel_prop','municipio_prop',
+    'tipo_doc_cond','num_doc_cond','nombre1_cond','nombre2_cond','apellido1_cond','apellido2_cond',
+    'municipio_cond','dir_cond','tel_cond',
+    'uso_osteosintesis','tipo_atencion',
+    'placa_ambu_sec','tipo_transporte_sec','cod_hab_remite','cod_hab_recibe_sec',
+    'tipo_doc_prof_recibe','num_doc_prof_recibe','fecha_aceptacion','hora_aceptacion',
+    'tipo_transporte_prim','placa_ambu_prim','cod_hab_recibe_prim','dir_desde_evento','dir_hasta_ips'];
+  const obj = {};
+  ids.forEach(id => { const v = gv(id); if(v) obj[id] = v; });
+  return obj;
+}
+
+// ─── JSON VIEW ───
+window.generarJSON = function() {
+  const json = buildJSON();
+  const errors = validateJSON(json);
+  const jBox = g('json-output');
+  const valDiv = g('json-validacion');
+
+  if (errors.length > 0) {
+    valDiv.className = 'alert aw';
+    valDiv.innerHTML = `⚠️ <strong>${errors.length} campo${errors.length>1?'s':''} con observación:</strong><br>` +
+      errors.slice(0,5).map(e=>`· ${e}`).join('<br>') +
+      (errors.length > 5 ? `<br>· ... y ${errors.length-5} más` : '');
+  } else {
+    valDiv.className = 'alert as';
+    valDiv.innerHTML = `✔ JSON válido — <strong>${Object.keys(json).length} campos</strong> completados correctamente.`;
+  }
+
+  jBox.textContent = JSON.stringify(json, null, 2);
+};
+
+function validateJSON(json) {
+  const errors = [];
+  if (!json.NIT_PRESTADOR) errors.push('NIT del Prestador es obligatorio');
+  if (!json.NUM_FACTURA) errors.push('Número de Factura es obligatorio');
+  if (!json.Tipo_documento_identidad_victima) errors.push('Tipo documento víctima es obligatorio');
+  if (!json.Numero_documento_identidad_victima) errors.push('Número documento víctima es obligatorio');
+  if (!json.Primer_nombre_victima) errors.push('Primer nombre víctima es obligatorio');
+  if (!json.Primer_apellido_victima) errors.push('Primer apellido víctima es obligatorio');
+  if (!json.Direccion_residencia_victima) errors.push('Dirección víctima es obligatoria');
+  if (!json.Codigo_municipio_residencia_victima) errors.push('Municipio residencia víctima es obligatorio');
+  if (!json.Telefono_victima) errors.push('Teléfono víctima es obligatorio');
+  if (!json.Naturaleza_del_evento) errors.push('Naturaleza del evento es obligatoria');
+  if (!json.Fecha_de_ocurrencia_evento) errors.push('Fecha de ocurrencia es obligatoria');
+  if (!json.Zona_de_ocurrencia_evento) errors.push('Zona de ocurrencia es obligatoria');
+  if (!json.Codigo_municipio_ocurrencia_evento) errors.push('Municipio ocurrencia es obligatorio');
+  if (!json.Direccion_de_ocurrencia_evento) errors.push('Dirección ocurrencia es obligatoria');
+  if (!json.Descripcion_corta_de_lo_ocurrido_en_el_evento) {
+    errors.push('Descripción del evento es obligatoria');
+  } else if (json.Descripcion_corta_de_lo_ocurrido_en_el_evento.length < 100) {
+    errors.push('Descripción debe tener mínimo 100 caracteres');
+  }
+  if (!json.Uso_material_de_osteosintesis_en_la_atencion) errors.push('Uso osteosíntesis es obligatorio');
+  if (!json.Es_atencion_inicial_paciente_remitido_o_control) errors.push('Tipo de atención es obligatorio');
+  // AT-specific
+  if (json.Naturaleza_del_evento === '01') {
+    if (!json.Estado_de_aseguramiento) errors.push('Estado aseguramiento obligatorio para AT');
+    if (!json.Condicion_victima) errors.push('Condición víctima obligatoria para AT');
+  }
+  return errors;
+}
+
+// ─── SAVE ───
+window.guardarFUR = async function() {
+  const flyMsg = g('save-fly-msg');
+  const saveAlr = g('save-alr');
+
+  try {
+    const furFlat = buildFlatForFirestore();
+    const furJSON = buildJSON();
+
+    // Save to localStorage as backup
+    if (REC) {
+      REC.fur = furFlat;
+      try { localStorage.setItem('fur_rec', JSON.stringify(REC)); } catch(e){}
+    }
+
+    // Save to Firestore if available
+    if (db && REC?.id) {
+      await updateDoc(doc(db,'reclamaciones', REC.id), {
+        fur: furFlat,
+        fur_json: furJSON,
+        fur_actualizado: serverTimestamp(),
+        actualizado: serverTimestamp()
+      });
+      toast('✔ FUR guardado en Firestore', 'ok');
+    } else {
+      toast('✔ Guardado localmente (Firebase no disponible)', 'w');
+    }
+
+    if(flyMsg){ flyMsg.style.display='block'; setTimeout(()=>flyMsg.style.display='none',2500); }
+    if(saveAlr){ saveAlr.className='alert as'; saveAlr.innerHTML='✔ FUR guardado correctamente.'; }
+
+  } catch(e) {
+    toast('Error al guardar: '+e.message, 'e');
+    if(saveAlr){ saveAlr.className='alert ae'; saveAlr.innerHTML='⚠ Error: '+e.message; }
+  }
+};
+
+// ─── DOWNLOAD JSON ───
+window.descargarJSON = function() {
+  const json = buildJSON();
+  const factura = gv('num_factura') || 'SIN_FACTURA';
+  const nit = gv('nit') || 'SIN_NIT';
+  const filename = `FUR_${nit}_${factura}.json`;
+  const blob = new Blob([JSON.stringify(json, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast(`⬇ Descargando ${filename}`, 'ok');
+};
+
+// ─── TOAST ───
+function toast(msg, type='ok') {
+  const box = g('toast'); if(!box) return;
+  const cls = type==='ok'?'tok':type==='w'?'tow':'toe';
+  const el = document.createElement('div');
+  el.className = 'toast-item ' + cls;
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .4s'; setTimeout(()=>el.remove(),400); }, 3000);
+}
+</script>
+</body>
+</html>
