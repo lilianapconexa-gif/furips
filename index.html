@@ -2121,6 +2121,15 @@ service cloud.firestore {
 
 <!-- Firebase SDK -->
 <script type="module">
+// ── DATOS DIVIPOLA ──
+const DEPTOS={"05":"Antioquia","08":"Atlántico","11":"Bogotá D.C.","13":"Bolívar","15":"Boyacá","17":"Caldas","18":"Caquetá","19":"Cauca","20":"Cesar","23":"Córdoba","25":"Cundinamarca","27":"Chocó","41":"Huila","44":"La Guajira","47":"Magdalena","50":"Meta","52":"Nariño","54":"Norte de Santander","63":"Quindío","66":"Risaralda","68":"Santander","70":"Sucre","73":"Tolima","76":"Valle del Cauca","81":"Arauca","85":"Casanare","86":"Putumayo","88":"San Andrés y Providencia","91":"Amazonas","94":"Guainía","95":"Guaviare","97":"Vaupés","99":"Vichada"};
+const MPIOS={"05":{"001":"Medellín","002":"Abejorral","021":"Alejandría","030":"Amagá","031":"Amalfi","034":"Andes","036":"Angelópolis","038":"Angostura","040":"Anorí","045":"Apartadó","051":"Arboletes","055":"Argelia","079":"Barbosa","086":"Belmira","088":"Bello","101":"Ciudad Bolívar","107":"Briceño","113":"Buriticá","120":"Cáceres","125":"Caicedo","129":"Caldas","138":"Cañasgordas","142":"Caracolí","147":"Carepa","154":"Caucasia","172":"Chigorodó","197":"Cocorná","206":"Concepción","209":"Concordia","212":"Copacabana","234":"Dabeiba","237":"Don Matías","243":"El Bagre","252":"Envigado","256":"Fredonia","258":"Frontino","266":"Girardota","270":"Gómez Plata","284":"Guadalupe","288":"Guarne","291":"Guatapé","306":"Itagüí","308":"Ituango","310":"Jardín","313":"Jericó","318":"La Ceja","321":"La Estrella","349":"La Unión","360":"Marinilla","368":"Montebello","376":"Nariño","400":"Olaya","425":"Peque","440":"Pueblorrico","467":"Puerto Berrío","475":"Puerto Nare","480":"Puerto Triunfo","483":"Remedios","490":"Retiro","495":"Rionegro","541":"Sabaneta","549":"Río Viejo","556":"San Carlos","560":"San Jerónimo","564":"San Juan de Urabá","568":"San Luis","572":"San Pedro de los Milagros","579":"San Pedro de Urabá","585":"San Rafael","591":"San Roque","607":"Santa Bárbara","615":"Santa Rosa de Osos","642":"Segovia","647":"Sonsón","649":"Sopetrán","652":"Támesis","656":"Tarazá","658":"Tarso","665":"Titiribí","667":"Toledo","670":"Turbo","679":"Urrao","686":"Valdivia","690":"Valparaíso","736":"Vigía del Fuerte","758":"Yarumal","761":"Yolombó","764":"Yondó","789":"Zaragoza"},"08":{"001":"Barranquilla","078":"Baranoa","137":"Campo de la Cruz","141":"Candelaria","296":"Galapa","372":"Juan de Acosta","421":"Luruaco","433":"Malambo","436":"Manatí","520":"Palmar de Varela","549":"Piojó","558":"Polonuevo","560":"Ponedera","573":"Puerto Colombia","606":"Repelón","634":"Sabanagrande","638":"Sabanalarga","675":"Santa Lucía","685":"Santo Tomás","758":"Soledad","770":"Suan","832":"Tubará","849":"Usiacurí"},"11":{"001":"Bogotá D.C."},"13":{"001":"Cartagena","006":"Achí","030":"Altos del Rosario","042":"Arenal","052":"Arjona","062":"Arroyohondo","074":"Barranco de Loba","140":"Calamar","160":"Cantagallo","188":"Cicuco","212":"Córdoba","222":"Clemencia","244":"El Carmen de Bolívar","248":"El Guamo","268":"El Peñón","300":"Hatillo de Loba","360":"Magangué","362":"Mahates","380":"Margarita","382":"María la Baja","400":"Mompós","433":"Montecristo","440":"Morales","473":"Pinillos","490":"Regidor","549":"Río Viejo","580":"San Cristóbal","600":"San Estanislao","620":"San Fernando","647":"San Jacinto","654":"San Juan Nepomuceno","657":"San Pablo","667":"Santa Catalina","670":"Santa Rosa","673":"Santa Rosa del Sur","683":"Simití","688":"Soplaviento","744":"Talaigua Nuevo","760":"Tiquisio","780":"Turbaco","787":"Turbaná","810":"Villanueva","836":"Zambrano"},"15":{"001":"Tunja","022":"Almeida","047":"Aquitania","051":"Arcabuco","087":"Belén","090":"Berbeo","097":"Boavita","104":"Boyacá","106":"Briceño","109":"Buenavista","114":"Busbanzá","131":"Caldas","135":"Campohermoso","162":"Cerinza","172":"Chinavita","176":"Chiquinquirá","180":"Chíquiza","189":"Ciénega","204":"Cómbita","212":"Coper","215":"Corrales","218":"Covarachía","223":"Cubará","226":"Cuítiva","244":"Firavitoba","248":"Floresta","272":"Gachantivá","276":"Gámeza","293":"Garagoa","299":"Guateque","317":"Guayatá","322":"Güicán","362":"Iza","367":"Jenesano","368":"Jericó","377":"Labranzagrande","380":"La Capilla","401":"La Victoria","403":"La Uvita","407":"Villa de Leyva","425":"Macanal","442":"Maripí","455":"Miraflores","464":"Mongua","466":"Monguí","469":"Moniquirá","476":"Motavita","480":"Muzo","491":"Nobsa","494":"Nuevo Colón","500":"Oicatá","507":"Otanche","511":"Pachavita","514":"Páez","516":"Paipa","518":"Pajarito","522":"Panqueba","531":"Pauna","533":"Paya","537":"Paz de Río","542":"Pesca","572":"Puerto Boyacá","580":"Quípama","599":"Ramiriquí","600":"Ráquira","621":"Rondón","632":"Saboyá","638":"Sáchica","646":"Samacá","660":"San Eduardo","664":"San José de Pare","673":"San Mateo","681":"San Pablo de Borbur","686":"Santana","690":"Santa María","693":"Santa Rosa de Viterbo","696":"Santa Sofía","720":"Sativanorte","723":"Sativasur","740":"Siachoque","753":"Soatá","757":"Socotá","759":"Socha","761":"Sogamoso","763":"Sora","764":"Sotaquirá","776":"Susacón","778":"Sutamarchán","790":"Sutatenza","798":"Tasco","804":"Tenza","806":"Tibaná","808":"Tinjacá","810":"Tipacoque","814":"Toca","820":"Tópaga","822":"Turmequé","832":"Tununguá","839":"Tutazá","842":"Umbita","861":"Ventaquemada","897":"Zetaquira"},"17":{"001":"Manizales","013":"Aguadas","042":"Anserma","050":"Aranzazu","088":"Belalcázar","174":"Chinchiná","272":"Filadelfia","380":"La Dorada","388":"La Merced","433":"Manzanares","442":"Marmato","444":"Marquetalia","446":"Marulanda","486":"Neira","495":"Norcasia","513":"Pácora","524":"Palestina","541":"Pensilvania","614":"Riosucio","616":"Risaralda","653":"Salamina","662":"Samaná","665":"San José","777":"Supía","867":"Victoria","873":"Villamaría","877":"Viterbo"},"18":{"001":"Florencia","029":"Albania","094":"Belén de los Andaquíes","150":"Cartagena del Chairá","205":"Curillo","247":"El Doncello","256":"El Paujil","410":"La Montañita","460":"Milán","479":"Morelia","592":"Puerto Rico","610":"San José del Fragua","753":"San Vicente del Caguán","756":"Solano","785":"Solita","860":"Valparaíso"},"19":{"001":"Popayán","022":"Almaguer","050":"Argelia","075":"Balboa","100":"Bolívar","110":"Buenos Aires","130":"Cajibío","137":"Caldono","142":"Caloto","212":"Corinto","256":"El Tambo","300":"Guachené","318":"Guapi","355":"Inzá","364":"Jambaló","392":"La Sierra","397":"La Vega","418":"López de Micay","450":"Mercaderes","455":"Miranda","473":"Morales","513":"Padilla","517":"Páez","532":"Patía","537":"Piendamó","548":"Puerto Tejada","573":"Puracé","585":"Rosas","622":"San Sebastián","630":"Santander de Quilichao","638":"Santa Rosa","693":"Silvia","698":"Sotará","701":"Suárez","743":"Timbío","745":"Timbiquí","750":"Toribío","755":"Totoró","807":"Villa Rica"},"20":{"001":"Valledupar","011":"Aguachica","013":"Agustín Codazzi","032":"Astrea","045":"Becerril","060":"Bosconia","175":"Chimichagua","178":"Chiriguaná","228":"Curumaní","238":"El Copey","250":"El Paso","295":"Gamarra","310":"González","383":"La Gloria","400":"La Jagua de Ibirico","443":"Manaure","517":"Pailitas","550":"Pelaya","570":"Pueblo Bello","614":"Río de Oro","621":"La Paz","710":"San Alberto","750":"San Diego","770":"San Martín","787":"Tamalameque"},"23":{"001":"Montería","068":"Ayapel","079":"Buenavista","090":"Canalete","162":"Cereté","168":"Chimá","182":"Chinú","189":"Ciénaga de Oro","300":"Cotorra","350":"La Apartada","417":"Lorica","419":"Los Córdobas","464":"Momil","466":"Montelíbano","500":"Moñitos","555":"Planeta Rica","570":"Pueblo Nuevo","574":"Puerto Escondido","580":"Puerto Libertador","586":"Purísima","660":"Sahagún","670":"San Andrés de Sotavento","672":"San Antero","675":"San Bernardo del Viento","678":"San Carlos","682":"San José de Uré","686":"San Pelayo","770":"Tierralta","807":"Tuchín","855":"Valencia"},"25":{"001":"Agua de Dios","019":"Albán","035":"Anapoima","040":"Anolaima","053":"Arbeláez","086":"Beltrán","095":"Bituima","099":"Bojacá","120":"Cabrera","123":"Cachipay","126":"Cajicá","148":"Cáqueza","154":"Carmen de Carupa","175":"Chía","178":"Chipaque","181":"Choachí","183":"Chocontá","200":"Cogua","214":"Cota","224":"Cucunubá","245":"El Colegio","260":"El Rosal","269":"Facatativá","279":"Fomeque","281":"Fosca","286":"Funza","290":"Fusagasugá","293":"Gachalá","295":"Gachancipá","297":"Gachetá","307":"Girardot","312":"Granada","317":"Guachetá","320":"Guaduas","322":"Guasca","324":"Guataquí","326":"Guatavita","335":"Guayabetal","339":"Gutiérrez","368":"Jerusalén","372":"Junín","377":"La Calera","386":"La Mesa","394":"La Palma","398":"La Peña","402":"La Vega","407":"Lenguazaque","426":"Macheta","430":"Madrid","436":"Manta","438":"Medina","473":"Mosquera","483":"Nariño","486":"Nemocón","488":"Nilo","489":"Nimaima","491":"Nocaima","513":"Pacho","518":"Paime","524":"Pandi","530":"Paratebueno","535":"Pasca","572":"Puerto Salgar","580":"Pulí","592":"Quebradanegra","594":"Quetame","612":"Ricaurte","645":"San Antonio del Tequendama","649":"San Bernardo","653":"San Cayetano","658":"San Francisco","662":"San Juan de Río Seco","718":"Sasaima","736":"Sesquilé","740":"Sibaté","743":"Silvania","745":"Simijaca","754":"Soacha","758":"Sopó","769":"Subachoque","772":"Suesca","777":"Supatá","779":"Susa","785":"Tausa","793":"Tena","797":"Tenjo","799":"Tibacuy","805":"Tibirita","807":"Tocaima","809":"Tocancipá","815":"Topaipí","817":"Ubalá","819":"Ubaque","822":"Ubaté","824":"Une","841":"Vergara","843":"Vianí","873":"Villapinzón","875":"Villeta","878":"Viotá","885":"Yacopí","898":"Zipacón","899":"Zipaquirá"},"27":{"001":"Quibdó","006":"Acandí","025":"Alto Baudó","050":"Atrato","073":"Bagadó","075":"Bahía Solano","077":"Bajo Baudó","099":"Bojaya","150":"Carmen del Darién","160":"Cértegui","205":"Condoto","245":"El Carmen de Atrato","361":"Istmina","372":"Juradó","413":"Lloró","425":"Medio Atrato","430":"Medio Baudó","450":"Medio San Juan","491":"Nóvita","495":"Nuquí","580":"Río Iró","600":"Río Quito","615":"Riosucio","660":"San José del Palmar","745":"Sipí","787":"Tadó","800":"Unguía","810":"Unión Panamericana"},"41":{"001":"Neiva","006":"Acevedo","013":"Agrado","016":"Aipe","020":"Algeciras","026":"Altamira","078":"Baraya","132":"Campoalegre","206":"Colombia","244":"Elías","298":"Garzón","306":"Gigante","319":"Guadalupe","349":"Hobo","357":"Iquira","359":"Isnos","378":"La Argentina","396":"La Plata","483":"Nátaga","503":"Oporapa","518":"Paicol","524":"Palermo","530":"Palestina","548":"Pital","551":"Pitalito","615":"Rivera","660":"Saladoblanco","668":"San Agustín","676":"Santa María","770":"Suaza","791":"Tarqui","797":"Tesalia","799":"Tello","801":"Timana","807":"Villavieja","872":"Yaguará"},"44":{"001":"Riohacha","035":"Albania","078":"Barrancas","090":"Dibulla","098":"Distracción","110":"El Molino","143":"Fonseca","160":"Hatonuevo","378":"La Jagua del Pilar","420":"Maicao","430":"Manaure","560":"San Juan del Cesar","650":"Uribia","674":"Urumita","878":"Villanueva"},"47":{"001":"Santa Marta","030":"Algarrobo","053":"Aracataca","058":"Ariguaní","161":"Cerro de San Antonio","170":"Chibolo","189":"Ciénaga","205":"Concordia","245":"El Banco","258":"El Piñón","268":"El Retén","288":"Fundación","318":"Guamal","460":"Nueva Granada","541":"Pedraza","545":"Pijiño del Carmen","551":"Pivijay","555":"Plato","570":"Puebloviejo","605":"Remolino","660":"Sabanas de San Ángel","675":"Salamina","692":"San Sebastián de Buenavista","703":"San Zenón","707":"Santa Ana","720":"Santa Bárbara de Pinto","745":"Sitionuevo","798":"Tenerife","960":"Zapayán","963":"Zona Bananera"},"50":{"001":"Villavicencio","006":"Acacías","110":"Barranca de Upía","124":"Cabuyaro","150":"Castilla la Nueva","223":"Cubarral","226":"Cumaral","245":"El Calvario","251":"El Castillo","270":"El Dorado","287":"Fuente de Oro","313":"Granada","318":"Guamal","325":"Mapiripán","330":"Mesetas","350":"La Macarena","400":"Lejanías","568":"Puerto Concordia","573":"Puerto Gaitán","577":"Puerto Lleras","590":"Puerto López","606":"Puerto Rico","680":"Restrepo","689":"San Carlos de Guaroa","711":"San Juan de Arama","716":"San Juanito","720":"San Martín","790":"Uribe","840":"Vistahermosa"},"52":{"001":"Pasto","019":"Albán","022":"Aldana","036":"Ancuyá","051":"Arboleda","079":"Barbacoas","083":"Belén","110":"Buesaco","207":"Colón","210":"Consacá","215":"Contadero","224":"Córdoba","227":"Cuaspud","233":"Cumbal","240":"Cumbitara","250":"Chachagüí","254":"El Charco","258":"El Peñol","260":"El Rosario","265":"El Tablón de Gómez","268":"El Tambo","287":"Funes","317":"Guachucal","320":"Guaitarilla","323":"Gualmatán","352":"Iles","354":"Imués","356":"Ipiales","378":"La Cruz","381":"La Florida","385":"La Llanada","390":"La Tola","399":"La Unión","405":"Leiva","411":"Linares","418":"Los Andes","427":"Magüí","435":"Mallama","473":"Mosquera","480":"Nariño","490":"Olaya Herrera","506":"Ospina","520":"Francisco Pizarro","540":"Policarpa","560":"Potosí","565":"Providencia","573":"Pupiales","585":"Ricaurte","612":"Roberto Payán","621":"Samaniego","678":"Sandoná","683":"San Bernardo","685":"San Lorenzo","687":"San Pablo","693":"Santa Bárbara","696":"Santacruz","699":"Sapuyes","720":"Taminango","740":"Tangua","786":"San Andrés de Tumaco","807":"Túquerres","835":"Yacuanquer"},"54":{"001":"Cúcuta","003":"Ábrego","051":"Arboledas","099":"Bochalema","109":"Bucarasica","125":"Cácota","128":"Cáchira","172":"Chinácota","174":"Chitagá","206":"Convención","223":"Cucutilla","239":"Durania","243":"El Carmen","250":"El Tarra","258":"El Zulia","313":"Gramalote","385":"Hacarí","398":"Herrán","405":"Labateca","418":"La Esperanza","480":"Ocaña","498":"Pamplona","500":"Pamplonita","518":"Puerto Santander","553":"Ragonvalia","599":"Salazar","660":"San Calixto","670":"San Cayetano","673":"Santiago","680":"Sardinata","720":"Silos","743":"Teorama","800":"Tibú","820":"Toledo","874":"Villa del Rosario"},"63":{"001":"Armenia","051":"Buenavista","077":"Calarcá","111":"Circasia","129":"Córdoba","190":"Filandia","212":"Génova","401":"La Tebaida","443":"Montenegro","473":"Pijao","548":"Quimbaya","594":"Salento"},"66":{"001":"Pereira","045":"Apía","075":"Balboa","088":"Belén de Umbría","170":"Dosquebradas","318":"Guática","383":"La Celia","400":"La Virginia","440":"Marsella","456":"Mistrató","572":"Pueblo Rico","594":"Quinchía","682":"Santa Rosa de Cabal","687":"Santuario"},"68":{"001":"Bucaramanga","013":"Aguada","020":"Albania","051":"Aratoca","077":"Barbosa","079":"Barichara","081":"Barrancabermeja","092":"Betulia","101":"Bolívar","121":"Cabrera","132":"California","147":"Capitanejo","152":"Carcasí","160":"Cepitá","162":"Cerrito","167":"Charalá","169":"Charta","190":"Cimitarra","207":"Concepción","209":"Confines","211":"Contratación","217":"Coromoro","229":"Curití","235":"El Carmen de Chucurí","245":"El Guacamayo","250":"El Peñón","255":"El Playón","264":"Encino","266":"Enciso","271":"Florián","276":"Floridablanca","296":"Galán","298":"Gámbita","307":"Girón","318":"Guaca","320":"Guadalupe","322":"Guapotá","324":"Guavatá","327":"Güepsa","344":"Hato","368":"Jesús María","370":"Jordán","377":"La Belleza","385":"Landázuri","397":"La Paz","406":"Lebrija","418":"Los Santos","425":"Macaravita","432":"Málaga","444":"Matanza","464":"Mogotes","468":"Molagavita","498":"Ocamonte","500":"Oiba","502":"Onzaga","522":"Palmar","533":"Páramo","547":"Piedecuesta","572":"Pinchote","615":"Puente Nacional","617":"Puerto Parra","655":"Puerto Wilches","669":"Rionegro","673":"Sabana de Torres","679":"San Andrés","682":"San Benito","684":"San Gil","686":"San Joaquín","689":"San José de Miranda","693":"San Miguel","695":"San Vicente de Chucurí","720":"Santa Bárbara","745":"Santa Helena del Opón","755":"Simacota","770":"Socorro","773":"Suaita","780":"Sucre","820":"Suratá","861":"Tona","867":"Valle de San José","872":"Vélez","876":"Vetas","885":"Villanueva","895":"Zapatoca"},"70":{"001":"Sincelejo","101":"Buenavista","110":"Caimito","124":"Coloso","130":"Corozal","147":"Coveñas","150":"Chalán","204":"El Roble","215":"Galeras","221":"Guaranda","230":"La Unión","233":"Los Palmitos","235":"Majagual","255":"Morroa","258":"Ovejas","508":"Sampués","523":"San Benito Abad","535":"San Juan de Betulia","549":"San Marcos","550":"San Onofre","555":"San Pedro","565":"Sincé","678":"Sucre","702":"Santiago de Tolú","708":"Tolú Viejo"},"73":{"001":"Ibagué","024":"Alpujarra","026":"Alvarado","030":"Ambalema","043":"Anzoátegui","055":"Armero","067":"Ataco","100":"Cajamarca","124":"Carmen de Apicalá","130":"Casabianca","148":"Chaparral","152":"Coello","168":"Coyaima","178":"Cunday","190":"Espinal","200":"Falan","217":"Flandes","226":"Fresno","236":"Guamo","268":"Herveo","270":"Honda","275":"Icononzo","349":"Lérida","347":"Líbano","411":"Mariquita","443":"Melgar","449":"Murillo","461":"Natagaima","483":"Ortega","504":"Palocabildo","520":"Piedras","530":"Planadas","547":"Prado","555":"Purificación","563":"Rioblanco","585":"Roncesvalles","592":"Rovira","616":"Saldaña","622":"San Antonio","624":"San Luis","630":"Santa Isabel","671":"Suárez","675":"Valle de San Juan","678":"Venadillo","686":"Villahermosa","690":"Villarrica"},"76":{"001":"Cali","020":"Alcalá","036":"Andalucía","041":"Ansermanuevo","054":"Argelia","100":"Bolívar","109":"Buenaventura","111":"Buga","113":"Bugalagrande","122":"Caicedonia","126":"Calima","130":"Candelaria","147":"Cartago","233":"Dagua","243":"El Águila","246":"El Cairo","248":"El Cerrito","250":"El Dovio","275":"Florida","306":"Ginebra","318":"Guacarí","364":"Jamundí","377":"La Cumbre","400":"La Unión","403":"La Victoria","440":"Obando","520":"Palmira","563":"Pradera","606":"Restrepo","616":"Riofrío","622":"Roldanillo","670":"San Pedro","736":"Sevilla","823":"Toro","828":"Trujillo","834":"Tuluá","845":"Ulloa","863":"Versalles","869":"Vijes","890":"Yotoco","892":"Yumbo","895":"Zarzal"},"81":{"001":"Arauca","065":"Arauquita","220":"Cravo Norte","238":"Fortul","591":"Puerto Rondón","736":"Saravena","794":"Tame"},"85":{"001":"Yopal","010":"Aguazul","015":"Chámeza","125":"Hato Corozal","136":"La Salina","139":"Maní","162":"Monterrey","225":"Nunchía","230":"Orocué","250":"Paz de Ariporo","263":"Pore","279":"Recetor","300":"Sabanalarga","315":"Sácama","325":"San Luis de Palenque","400":"Támara","410":"Tauramena","430":"Trinidad","440":"Villanueva"},"86":{"001":"Mocoa","219":"Colón","320":"Orito","418":"Puerto Asís","430":"Puerto Caicedo","438":"Puerto Guzmán","573":"Puerto Leguízamo","749":"Sibundoy","755":"San Francisco","757":"San Miguel","761":"Santiago","865":"Valle del Guamuez","885":"Villagarzón"},"88":{"001":"San Andrés","564":"Providencia"},"91":{"001":"Leticia","263":"El Encanto","405":"La Chorrera","407":"La Pedrera","430":"La Victoria","460":"Mirití-Paraná","530":"Puerto Alegría","536":"Puerto Arica","540":"Puerto Nariño","669":"Puerto Santander","798":"Tarapacá"},"94":{"001":"Inírida","343":"Barranco Minas","663":"Maparipana","884":"San Felipe","885":"Puerto Colombia"},"95":{"001":"San José del Guaviare","015":"Calamar","025":"El Retorno","200":"Miraflores"},"97":{"001":"Mitú","161":"Carurú","511":"Pacoa","666":"Taraira","889":"Yavaraté"},"99":{"001":"Puerto Carreño","524":"La Primavera","624":"Santa Rosalía","773":"Cumaribo"}};
+function dOpts(sel=''){return Object.entries(DEPTOS).sort((a,b)=>a[1].localeCompare(b[1])).map(([k,v])=>`<option value="${k}" ${sel===k?'selected':''}>${k} — ${v}</option>`).join('');}
+window._updateMpioNIPS=(depId)=>{
+  const sel=document.getElementById('nips-mpio'); if(!sel) return;
+  const mpios=MPIOS[depId]||{};
+  sel.innerHTML='<option value="">Seleccione municipio...</option>'+Object.entries(mpios).sort((a,b)=>a[1].localeCompare(b[1])).map(([k,v])=>`<option value="${k}">${k} — ${v}</option>`).join('');
+};
 import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -8980,17 +8989,16 @@ let CLIENTES_IPS = [
   { nit:'157590080301', razon:'CLÍNICA EL LAGUITO S.A',   corto:'LAG', ciudad:'Cartagena, Bolívar', tipo:'IPS' }
 ];
 
-// Cargar IPS desde Firestore y combinar con las hardcodeadas
 async function cargarIPSdeFirestore(){
   try{
     const snap = await getDocs(collection(db,'ips'));
     if(snap.empty) return;
-    const nitsBases = CLIENTES_IPS.map(c=>c.nit);
+    const nitsBase = CLIENTES_IPS.map(c=>c.nit);
     snap.forEach(d=>{
       const data = d.data();
-      if(!nitsBases.includes(data.nit)){
+      if(!nitsBase.includes(data.nit)){
         CLIENTES_IPS.push({ id:d.id, ...data });
-        nitsBases.push(data.nit);
+        nitsBase.push(data.nit);
       }
     });
     renderClientes();
@@ -9170,49 +9178,45 @@ window.volverAPanel = function(){
 };
 
 window.nuevaIPS = function(){
-  // Remover modal anterior si existe
-  const old = g('modal-nueva-ips'); if(old) old.remove();
+  const old = document.getElementById('modal-nueva-ips');
+  if(old) old.remove();
 
   const overlay = document.createElement('div');
   overlay.id = 'modal-nueva-ips';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
 
   overlay.innerHTML = `
-    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;width:min(560px,100%);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.3);">
-      <!-- Header -->
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;width:min(580px,100%);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.3);">
       <div style="padding:14px 20px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(0,178,226,.06),rgba(157,180,85,.04));">
         <div>
           <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--tx);">🏥 Nueva IPS</div>
           <div style="font-size:11px;color:var(--tx2);margin-top:1px;">Registrar institución prestadora de servicios de salud</div>
         </div>
-        <button onclick="g('modal-nueva-ips').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--tx2);padding:0 4px;" title="Cerrar">×</button>
+        <button id="nips-btn-x" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--tx2);padding:0 6px;line-height:1;">×</button>
       </div>
-      <!-- Body -->
       <div style="overflow-y:auto;padding:18px 20px;flex:1;">
         <div id="nips-alr"></div>
-        <!-- Sección: Identificación -->
-        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">I. Identificación</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-          <div class="field">
-            <span class="fl">Razón Social <span class="req">*</span></span>
-            <input id="nips-razon" maxlength="120" placeholder="Nombre completo de la IPS" oninput="this.value=this.value.toUpperCase()">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:10px;">I. IDENTIFICACIÓN</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          <div class="field" style="grid-column:span 2;">
+            <label class="fl">Razón Social <span class="req">*</span></label>
+            <input id="nips-razon" maxlength="120" placeholder="Nombre completo de la IPS">
           </div>
           <div class="field">
-            <span class="fl">Nombre Corto <span class="req">*</span></span>
-            <input id="nips-corto" maxlength="10" placeholder="Ej: OCC" oninput="this.value=this.value.toUpperCase()" style="font-family:var(--mono);">
-            <span class="hint">Sigla o abreviatura (máx 10 caracteres)</span>
+            <label class="fl">Nombre Corto / Sigla <span class="req">*</span></label>
+            <input id="nips-corto" maxlength="10" placeholder="Ej: OCC" style="font-family:var(--mono);text-transform:uppercase;">
+            <span class="hint">Máximo 10 caracteres</span>
           </div>
           <div class="field">
-            <span class="fl">NIT <span class="req">*</span></span>
-            <input id="nips-nit" maxlength="15" placeholder="Sin dígito verificación" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" style="font-family:var(--mono);">
+            <label class="fl">NIT <span class="req">*</span></label>
+            <input id="nips-nit" maxlength="15" placeholder="Sin dígito verificación" inputmode="numeric" style="font-family:var(--mono);">
           </div>
           <div class="field">
-            <span class="fl">Código de Habilitación <span class="req">*</span></span>
-            <input id="nips-codhab" maxlength="12" placeholder="Ej: 760010001001" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" style="font-family:var(--mono);">
-            <span class="hint">12 dígitos incluyendo número de sede</span>
+            <label class="fl">Código Habilitación <span class="req">*</span></label>
+            <input id="nips-codhab" maxlength="12" placeholder="12 dígitos con sede" inputmode="numeric" style="font-family:var(--mono);">
           </div>
           <div class="field">
-            <span class="fl">Tipo</span>
+            <label class="fl">Tipo</label>
             <select id="nips-tipo">
               <option value="IPS">IPS — Institución Prestadora</option>
               <option value="CLINICA">Clínica</option>
@@ -9223,50 +9227,44 @@ window.nuevaIPS = function(){
             </select>
           </div>
           <div class="field">
-            <span class="fl">Estado</span>
+            <label class="fl">Estado</label>
             <select id="nips-estado">
               <option value="activo">Activo</option>
               <option value="inactivo">Inactivo</option>
             </select>
           </div>
         </div>
-        <!-- Sección: Ubicación -->
-        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">II. Ubicación</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:10px;">II. UBICACIÓN</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
           <div class="field">
-            <span class="fl">Departamento <span class="req">*</span></span>
-            <select id="nips-depto" onchange="window.nipsUpdateMpio(this.value)">
-              <option value="">Seleccione departamento...</option>
-            </select>
+            <label class="fl">Departamento <span class="req">*</span></label>
+            <select id="nips-depto"><option value="">Seleccione departamento...</option></select>
           </div>
           <div class="field">
-            <span class="fl">Municipio <span class="req">*</span></span>
-            <select id="nips-mpio">
-              <option value="">Seleccione municipio...</option>
-            </select>
+            <label class="fl">Municipio <span class="req">*</span></label>
+            <select id="nips-mpio"><option value="">Seleccione municipio...</option></select>
           </div>
           <div class="field" style="grid-column:span 2;">
-            <span class="fl">Dirección <span class="req">*</span></span>
-            <input id="nips-dir" maxlength="150" placeholder="Ej: CRA 5 # 12-34" oninput="this.value=this.value.toUpperCase()">
+            <label class="fl">Dirección <span class="req">*</span></label>
+            <input id="nips-dir" maxlength="150" placeholder="Ej: CRA 5 # 12-34">
           </div>
         </div>
-        <!-- Sección: Contacto -->
-        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">III. Contacto</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:10px;">III. CONTACTO</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
           <div class="field">
-            <span class="fl">Teléfono</span>
-            <input id="nips-tel" maxlength="15" placeholder="Ej: 6023456789" inputmode="numeric" style="font-family:var(--mono);">
+            <label class="fl">Teléfono</label>
+            <input id="nips-tel" maxlength="15" placeholder="Ej: 6023456789" style="font-family:var(--mono);">
           </div>
           <div class="field">
-            <span class="fl">Correo Electrónico</span>
+            <label class="fl">Correo Electrónico</label>
             <input id="nips-email" type="email" maxlength="80" placeholder="admin@ips.com">
           </div>
           <div class="field">
-            <span class="fl">Responsable / Representante</span>
-            <input id="nips-responsable" maxlength="80" placeholder="Nombre del representante" oninput="this.value=this.value.toUpperCase()">
+            <label class="fl">Representante / Responsable</label>
+            <input id="nips-responsable" maxlength="80" placeholder="Nombre del representante">
           </div>
           <div class="field">
-            <span class="fl">Régimen</span>
+            <label class="fl">Régimen</label>
             <select id="nips-regimen">
               <option value="">No especificado</option>
               <option value="contributivo">Contributivo</option>
@@ -9274,105 +9272,103 @@ window.nuevaIPS = function(){
               <option value="ambos">Ambos</option>
             </select>
           </div>
-        </div>
-        <!-- Sección: Observaciones -->
-        <div class="field">
-          <span class="fl">Observaciones</span>
-          <textarea id="nips-obs" maxlength="300" placeholder="Notas adicionales sobre la IPS..." style="min-height:56px;resize:vertical;"></textarea>
+          <div class="field" style="grid-column:span 2;">
+            <label class="fl">Observaciones</label>
+            <textarea id="nips-obs" maxlength="300" placeholder="Notas adicionales..." style="min-height:52px;resize:vertical;"></textarea>
+          </div>
         </div>
       </div>
-      <!-- Footer -->
       <div style="padding:12px 20px;border-top:1px solid var(--brd);display:flex;gap:8px;justify-content:flex-end;background:var(--sur2);">
-        <button class="btn bs" onclick="g('modal-nueva-ips').remove()">Cancelar</button>
-        <button class="btn bp" id="nips-btn-guardar" onclick="window.guardarNuevaIPS()">💾 Guardar IPS</button>
+        <button id="nips-btn-cancel" class="btn bs">Cancelar</button>
+        <button id="nips-btn-guardar" class="btn bp">💾 Guardar IPS</button>
       </div>
     </div>`;
 
   document.body.appendChild(overlay);
 
-  // Cargar departamentos DIVIPOLA en el select
-  const deptoSel = g('nips-depto');
-  if(deptoSel && typeof dOpts === 'function'){
-    deptoSel.innerHTML = '<option value="">Seleccione departamento...</option>' + dOpts();
-  }
-};
+  // Poblar departamentos
+  const deptoSel = document.getElementById('nips-depto');
+  deptoSel.innerHTML = '<option value="">Seleccione departamento...</option>' + dOpts();
 
-window.nipsUpdateMpio = function(depId){
-  if(typeof updateMpio === 'function'){
-    updateMpio(depId, 'nips-mpio', '');
-  }
-};
+  // Event listeners (no inline handlers — estamos en type="module")
+  document.getElementById('nips-btn-x').addEventListener('click', () => overlay.remove());
+  document.getElementById('nips-btn-cancel').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
 
-window.guardarNuevaIPS = async function(){
-  const btn = g('nips-btn-guardar');
-  const alr = g('nips-alr');
+  deptoSel.addEventListener('change', () => {
+    window._updateMpioNIPS(deptoSel.value);
+  });
 
-  const razon   = (g('nips-razon')?.value||'').trim();
-  const corto   = (g('nips-corto')?.value||'').trim();
-  const nit     = (g('nips-nit')?.value||'').trim();
-  const codHab  = (g('nips-codhab')?.value||'').trim();
-  const tipo    = g('nips-tipo')?.value || 'IPS';
-  const estado  = g('nips-estado')?.value || 'activo';
-  const deptoEl = g('nips-depto');
-  const mpioEl  = g('nips-mpio');
-  const depto   = deptoEl?.options[deptoEl.selectedIndex]?.text || '';
-  const mpioCode= mpioEl?.value || '';
-  const mpio    = mpioEl?.options[mpioEl.selectedIndex]?.text || '';
-  const ciudad  = depto && mpio ? `${mpio}, ${depto}` : '';
-  const dir     = (g('nips-dir')?.value||'').trim();
-  const tel     = (g('nips-tel')?.value||'').trim();
-  const email   = (g('nips-email')?.value||'').trim();
-  const resp    = (g('nips-responsable')?.value||'').trim();
-  const regimen = g('nips-regimen')?.value || '';
-  const obs     = (g('nips-obs')?.value||'').trim();
+  document.getElementById('nips-btn-guardar').addEventListener('click', async () => {
+    const btn   = document.getElementById('nips-btn-guardar');
+    const alr   = document.getElementById('nips-alr');
+    const gv    = id => (document.getElementById(id)?.value || '').trim();
+    const gvUP  = id => gv(id).toUpperCase();
 
-  // Validar campos obligatorios
-  const errs = [];
-  if(!razon)  errs.push('Razón social obligatoria');
-  if(!corto)  errs.push('Nombre corto obligatorio');
-  if(!nit)    errs.push('NIT obligatorio');
-  if(!codHab) errs.push('Código de habilitación obligatorio');
-  if(!mpioCode) errs.push('Municipio obligatorio');
-  if(!dir)    errs.push('Dirección obligatoria');
+    const razon  = gvUP('nips-razon');
+    const corto  = gvUP('nips-corto');
+    const nit    = gv('nips-nit').replace(/\D/g,'');
+    const codHab = gv('nips-codhab').replace(/\D/g,'');
+    const tipo   = gv('nips-tipo') || 'IPS';
+    const estado = gv('nips-estado') || 'activo';
+    const deptoEl= document.getElementById('nips-depto');
+    const mpioEl = document.getElementById('nips-mpio');
+    const deptoTxt = deptoEl.options[deptoEl.selectedIndex]?.text?.replace(/^\d+\s*—\s*/,'') || '';
+    const mpioCode = mpioEl.value || '';
+    const mpioTxt  = mpioEl.options[mpioEl.selectedIndex]?.text?.replace(/^\d+\s*—\s*/,'') || '';
+    const ciudad   = mpioTxt && deptoTxt ? `${mpioTxt}, ${deptoTxt}` : '';
+    const dir      = gvUP('nips-dir');
+    const tel      = gv('nips-tel');
+    const email    = gv('nips-email');
+    const resp     = gvUP('nips-responsable');
+    const regimen  = gv('nips-regimen');
+    const obs      = gv('nips-obs');
 
-  if(errs.length){
-    alr.innerHTML = `<div class="alert ae" style="font-size:12px;margin-bottom:10px;">⚠ ${errs.join(' · ')}</div>`;
-    return;
-  }
+    // Validar
+    const errs = [];
+    if(!razon)  errs.push('Razón social');
+    if(!corto)  errs.push('Nombre corto');
+    if(!nit)    errs.push('NIT');
+    if(!codHab) errs.push('Código habilitación');
+    if(!mpioCode) errs.push('Municipio');
+    if(!dir)    errs.push('Dirección');
 
-  // Verificar NIT duplicado
-  if(CLIENTES_IPS.find(c => c.nit === nit)){
-    alr.innerHTML = `<div class="alert aw" style="font-size:12px;margin-bottom:10px;">⚠ Ya existe una IPS con el NIT ${nit}</div>`;
-    return;
-  }
+    if(errs.length){
+      alr.innerHTML = `<div class="alert ae" style="margin-bottom:10px;">⚠ Campos obligatorios: <strong>${errs.join(', ')}</strong></div>`;
+      return;
+    }
+    if(CLIENTES_IPS.find(c => c.nit === nit)){
+      alr.innerHTML = `<div class="alert aw" style="margin-bottom:10px;">⚠ Ya existe una IPS con el NIT <strong>${nit}</strong></div>`;
+      return;
+    }
 
-  btn.disabled = true;
-  btn.textContent = '⏳ Guardando...';
-  alr.innerHTML = '';
+    btn.disabled = true;
+    btn.textContent = '⏳ Guardando...';
+    alr.innerHTML = '';
 
-  const data = {
-    nit, razon, corto, codHab, tipo, estado,
-    ciudad, municipioCod: mpioCode, direccion: dir,
-    telefono: tel, email, responsable: resp,
-    regimen, observaciones: obs,
-    creadoPor: USER.uid,
-    creadoPorNombre: USER.nombre || USER.email || '',
-    creado: serverTimestamp(),
-    actualizado: serverTimestamp()
-  };
+    const data = {
+      nit, razon, corto, codHab, tipo, estado, ciudad,
+      municipioCod: mpioCode, direccion: dir,
+      telefono: tel, email, responsable: resp,
+      regimen, observaciones: obs,
+      creadoPor: USER.uid,
+      creadoPorNombre: USER.nombre || USER.email || '',
+      creado: serverTimestamp(),
+      actualizado: serverTimestamp()
+    };
 
-  try {
-    const ref = await addDoc(collection(db, 'ips'), data);
-    // Agregar al array local
-    CLIENTES_IPS.push({ id: ref.id, nit, razon, corto, ciudad, tipo, estado, codHab });
-    renderClientes();
-    g('modal-nueva-ips').remove();
-    toast(`✔ IPS "${razon}" registrada correctamente`, 'ok');
-  } catch(e) {
-    alr.innerHTML = `<div class="alert ae" style="font-size:12px;margin-bottom:10px;">❌ Error al guardar: ${e.message}</div>`;
-    btn.disabled = false;
-    btn.textContent = '💾 Guardar IPS';
-  }
+    try {
+      const ref = await addDoc(collection(db,'ips'), data);
+      CLIENTES_IPS.push({ id: ref.id, nit, razon, corto, ciudad, tipo, estado, codHab });
+      renderClientes();
+      overlay.remove();
+      toast(`✔ IPS "${razon}" registrada`, 'ok');
+    } catch(e){
+      alr.innerHTML = `<div class="alert ae" style="margin-bottom:10px;">❌ Error: ${e.message}</div>`;
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar IPS';
+    }
+  });
 };
 
 window.cerrarSesionPanel = function(){
