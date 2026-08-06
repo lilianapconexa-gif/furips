@@ -9544,29 +9544,44 @@ window.buscarParaAsignar = function(q){
   const res = document.getElementById('asig-resultados');
   if(!res) return;
   q = (q||'').trim().toLowerCase();
-  if(q.length < 2){ res.style.display='none'; return; }
-  const found = RECS_ALL.filter(r=>
+  if(q.length < 1){ res.style.display='none'; return; }
+  // Usar RECS o RECS_ALL — el que tenga datos
+  const fuente = (RECS_ALL && RECS_ALL.length > 0) ? RECS_ALL : (RECS && RECS.length > 0 ? RECS : []);
+  if(!fuente.length){
+    res.style.display='block';
+    res.innerHTML='<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No hay reclamaciones cargadas. Recarga la página.</div>';
+    return;
+  }
+  const found = fuente.filter(r=>
     (r.factura||'').toLowerCase().includes(q) ||
     (r.consec||'').toString().includes(q)
-  ).slice(0,10);
-  if(!found.length){ res.style.display='none'; return; }
+  ).slice(0,15);
+  if(!found.length){
+    res.style.display='block';
+    res.innerHTML=`<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No se encontró "${q}" en ${fuente.length} reclamaciones.</div>`;
+    return;
+  }
   res.style.display='block';
   res.innerHTML = found.map(r=>{
-    const yaAsig = r.asignadoA ? `<span style="color:var(--warn);font-size:10px;">⚠ ya asignada a ${r.asignadoANombre||r.asignadoA}</span>` : '';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);cursor:pointer;"
-        onmouseover="this.style.background='var(--sur2)'" onmouseout="this.style.background=''">
+    const yaAsig = r.asignadoA ? `<span style="color:var(--warn);font-size:10px;margin-left:6px;">⚠ ${r.asignadoANombre||'asignada'}</span>` : '';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);">
       <div style="font-size:12px;">
         <span style="font-family:var(--mono);color:var(--tx3);">${r.consec}</span>
         <strong style="margin:0 8px;">${r.factura}</strong>
         <span style="color:var(--tx2);font-size:11px;">${r.fechaEvento||r.furips1?.c22||'—'}</span>
         ${yaAsig}
       </div>
-      <button onclick="asignarFactura('${r.id}')"
+      <button id="btn-asig-${r.id}"
         style="background:var(--acc);color:#fff;border:none;border-radius:4px;padding:3px 12px;cursor:pointer;font-size:11px;">
         Asignar
       </button>
     </div>`;
   }).join('');
+  // Agregar listeners a los botones (no inline onclick)
+  found.forEach(r=>{
+    const btn = document.getElementById('btn-asig-'+r.id);
+    if(btn) btn.addEventListener('click', ()=>asignarFactura(r.id));
+  });
 };
 
 // Asignar una factura individual al digitador seleccionado
