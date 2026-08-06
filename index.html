@@ -215,6 +215,12 @@ select option{background:var(--sur2);}
 .cli-switch .name{font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cli-switch .chg{font-family:var(--mono);font-size:10px;color:var(--acc2);letter-spacing:.5px;}
 @media(max-width:600px){.pcli-grid{grid-template-columns:1fr;}.pcli-hdr h1{font-size:18px;}}
+
+@media print {
+  .sidebar, nav, .topbar, button, select, #dash-vencimiento, .nav { display: none !important; }
+  #p-dash { display: block !important; }
+  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 </style>
 </head>
 <body>
@@ -395,123 +401,175 @@ select option{background:var(--sur2);}
 
       <!-- DASHBOARD -->
       <div class="page on" id="p-dash">
-        <div class="ptitle">Dashboard</div>
-        <div class="psub">Datos en tiempo real desde Firebase · <span id="dash-rol"></span></div>
-        <div class="stats">
-          <div class="stat"><div class="sv" id="sd-tot">0</div><div class="sl">Reclamaciones</div></div>
-          <div class="stat"><div class="sv" id="sd-f1">0</div><div class="sl">FURIPS 1 completos</div></div>
-          <div class="stat"><div class="sv" id="sd-it">0</div><div class="sl">Ítems FURIPS 2</div></div>
-          <div class="stat"><div class="sv" id="sd-vl">$0</div><div class="sl">Total Facturado</div></div>
-          <div class="stat" style="cursor:pointer;" onclick="go('lista')" title="Ver reclamaciones próximas a vencer"><div class="sv" id="sd-venc" style="color:var(--warn);">0</div><div class="sl">Por vencer ⏰</div></div>
-        </div>
+        <!-- ██ DASHBOARD EJECUTIVO ██ -->
+        <div style="padding:0 0 20px 0;">
 
-        <!-- BLOQUE 1: GESTIÓN INTERNA -->
-        <div style="margin-top:18px;">
-          <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:8px;letter-spacing:.5px;">📋 GESTIÓN INTERNA (Conexa ↔ IPS)</div>
-          <div class="stats" style="grid-template-columns:repeat(6,1fr);">
-            <div class="stat" style="background:linear-gradient(135deg,var(--sur2),var(--sur));border:1px solid var(--brd2);"><div class="sv" id="sd-g-tot" style="color:var(--acc);">0</div><div class="sl" style="font-weight:700;">📊 Total</div><div class="sv2" id="sd-g-tot-v" style="font-family:var(--mono);font-size:10px;color:var(--tx2);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('gestion','por_procesar')" title="Ver por procesar"><div class="sv" id="sd-g-pp" style="color:#8b949e;">0</div><div class="sl">📥 Por Procesar</div><div class="sv2" id="sd-g-pp-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('gestion','pendiente')" title="Ver pendientes"><div class="sv" id="sd-g-pe" style="color:#e3b341;">0</div><div class="sl">⏸ Pendiente</div><div class="sv2" id="sd-g-pe-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('gestion','devuelta_ips')" title="Ver devueltas a IPS"><div class="sv" id="sd-g-di" style="color:#db6d28;">0</div><div class="sl">↩ Devuelta IPS</div><div class="sv2" id="sd-g-di-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('gestion','radicada')" title="Ver radicadas"><div class="sv" id="sd-g-ra" style="color:#79c0ff;">0</div><div class="sl">📬 Radicada</div><div class="sv2" id="sd-g-ra-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('gestion','anulada')" title="Ver anuladas"><div class="sv" id="sd-g-an" style="color:#6e7681;">0</div><div class="sl">✕ Anulada</div><div class="sv2" id="sd-g-an-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-          </div>
-        </div>
-
-        <!-- BLOQUE 2: RESPUESTA ADRES -->
-        <div style="margin-top:14px;">
-          <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:8px;letter-spacing:.5px;">🏛 RESPUESTA ADRES</div>
-          <div class="stats" style="grid-template-columns:repeat(6,1fr);">
-            <div class="stat" style="background:linear-gradient(135deg,var(--sur2),var(--sur));border:1px solid var(--brd2);"><div class="sv" id="sd-a-tot" style="color:var(--acc);">0</div><div class="sl" style="font-weight:700;">📊 Total</div><div class="sv2" id="sd-a-tot-v" style="font-family:var(--mono);font-size:10px;color:var(--tx2);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('adres','aprobada')" title="Ver aprobadas"><div class="sv" id="sd-a-ap" style="color:#3fb950;">0</div><div class="sl">✔ Aprobada</div><div class="sv2" id="sd-a-ap-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('adres','aprobada_parcial')" title="Ver aprobadas parciales"><div class="sv" id="sd-a-pa" style="color:#e3b341;">0</div><div class="sl">◐ Aprobada Parc.</div><div class="sv2" id="sd-a-pa-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('adres','glosada')" title="Ver glosadas"><div class="sv" id="sd-a-gl" style="color:#f85149;">0</div><div class="sl">✕ Glosada</div><div class="sv2" id="sd-a-gl-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('adres','en_tramite')" title="Ver en trámite"><div class="sv" id="sd-a-et" style="color:#79c0ff;">0</div><div class="sl">⏳ En Trámite</div><div class="sv2" id="sd-a-et-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-            <div class="stat" style="cursor:pointer;" onclick="filtrarPorEstado('adres','anulada_adres')" title="Ver anuladas ADRES"><div class="sv" id="sd-a-an" style="color:#8b949e;">0</div><div class="sl">∅ Anulada ADRES</div><div class="sv2" id="sd-a-an-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div></div>
-          </div>
-        </div>
-
-        <div id="dash-vencimiento" style="margin-top:16px;"></div>
-
-        <!-- ═══ BLOQUE 3: ESTADO DEL PORTAFOLIO KPI ═══ -->
-        <div style="margin-top:18px;" id="bloque-portafolio">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;">📂 ESTADO DEL PORTAFOLIO</div>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-              <select id="port-mes-sel" onchange="updPortafolio()" style="font-size:11px;padding:3px 8px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);cursor:pointer;">
+          <!-- Encabezado -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:20px;font-weight:700;color:var(--tx);font-family:var(--mono);">📊 Dashboard Ejecutivo</div>
+              <div style="font-size:11px;color:var(--tx3);margin-top:2px;">Datos en tiempo real · <span id="dash-rol"></span></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <select id="port-mes-sel" onchange="updPortafolio();" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);cursor:pointer;">
                 <option value="">Todo el historial</option>
               </select>
-              <button onclick="descargarInformeMensual()" class="btn bp" style="font-size:11px;padding:4px 12px;background:var(--green);border-color:var(--green);">⬇ Informe mensual</button>
+              <button onclick="descargarInformeMensual()" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                ⬇ Informe Comité
+              </button>
+              <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:6px 14px;font-size:11px;cursor:pointer;">
+                🖨 Imprimir
+              </button>
             </div>
           </div>
 
-          <!-- Fila 1: KPIs principales -->
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;" id="port-kpis-top">
-            <div class="stat" style="border-left:3px solid var(--acc);">
-              <div class="sv" id="pk-total" style="color:var(--acc);">0</div>
-              <div class="sl">Total Portafolio</div>
-              <div class="sv2" id="pk-total-v" style="font-family:var(--mono);font-size:10px;color:var(--tx2);margin-top:2px;">$0</div>
+          <!-- Alertas vencimiento -->
+          <div id="dash-vencimiento" style="margin-bottom:14px;"></div>
+
+          <!-- ── FILA 1: KPIs principales ── -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <div style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
+              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">Total Portafolio</div>
+              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="sd-tot">0</div>
+              <div style="font-size:12px;opacity:.8;" id="sd-vl">$0</div>
+              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">📋</div>
             </div>
-            <div class="stat" style="border-left:3px solid #3fb950;cursor:pointer;" onclick="filtrarPorEstado('adres','aprobada')">
-              <div class="sv" id="pk-pag" style="color:#3fb950;">0</div>
-              <div class="sl">✔ Pagadas / Aprobadas</div>
-              <div class="sv2" id="pk-pag-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div>
+            <div style="background:linear-gradient(135deg,#3fb950,#2ea043);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
+              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">✔ Pagadas / Aprobadas</div>
+              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="pk-pag">0</div>
+              <div style="font-size:12px;opacity:.8;" id="pk-pag-v">$0</div>
+              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">✔</div>
             </div>
-            <div class="stat" style="border-left:3px solid #e3b341;cursor:pointer;" onclick="filtrarPorEstado('gestion','radicada')">
-              <div class="sv" id="pk-rad" style="color:#e3b341;">0</div>
-              <div class="sl">📬 En Cobro (radicadas)</div>
-              <div class="sv2" id="pk-rad-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div>
+            <div style="background:linear-gradient(135deg,#e3b341,#c9960c);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
+              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">📬 En Cobro</div>
+              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="pk-rad">0</div>
+              <div style="font-size:12px;opacity:.8;" id="pk-rad-v">$0</div>
+              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">📬</div>
             </div>
-            <div class="stat" style="border-left:3px solid #f85149;cursor:pointer;" onclick="filtrarPorEstado('adres','glosada')">
-              <div class="sv" id="pk-glo" style="color:#f85149;">0</div>
-              <div class="sl">✕ Glosadas</div>
-              <div class="sv2" id="pk-glo-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div>
-            </div>
-            <div class="stat" style="border-left:3px solid #8b949e;cursor:pointer;" onclick="filtrarPorEstado('gestion','sinradicar')">
-              <div class="sv" id="pk-pen" style="color:#8b949e;">0</div>
-              <div class="sl">⏸ Sin Radicar</div>
-              <div class="sv2" id="pk-pen-v" style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px;">$0</div>
+            <div style="background:linear-gradient(135deg,#f85149,#c4393a);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
+              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">✕ Glosadas</div>
+              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="pk-glo">0</div>
+              <div style="font-size:12px;opacity:.8;" id="pk-glo-v">$0</div>
+              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">✕</div>
             </div>
           </div>
 
-          <!-- Fila 2: Antigüedad de cartera + tasas -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <!-- ── FILA 2: KPIs secundarios ── -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">⏸ Sin Radicar</div>
+              <div style="font-size:28px;font-weight:700;color:#8b949e;font-family:var(--mono);" id="pk-pen">0</div>
+              <div style="font-size:11px;color:var(--tx3);" id="pk-pen-v">$0</div>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📄 Con FURIPS 1</div>
+              <div style="font-size:28px;font-weight:700;color:var(--acc);font-family:var(--mono);" id="sd-f1">0</div>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">🧾 Ítems Factura</div>
+              <div style="font-size:28px;font-weight:700;color:var(--acc);font-family:var(--mono);" id="sd-it">0</div>
+            </div>
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">⚠ Por Vencer</div>
+              <div style="font-size:28px;font-weight:700;font-family:var(--mono);" id="sd-venc" style="color:var(--green);">0</div>
+            </div>
+          </div>
 
-            <!-- Antigüedad de cartera -->
-            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
-              <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:10px;">📅 ANTIGÜEDAD DE CARTERA (no pagadas)</div>
-              <div id="port-antiguedad">
-                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-bottom:6px;"><span>Rango</span><span>N°</span><span>Valor</span><span>%</span></div>
-                <div id="pa-0-90"  class="pa-row" data-range="0"   style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"></div>
-                <div id="pa-91-180" class="pa-row" data-range="1"  style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"></div>
-                <div id="pa-181-360" class="pa-row" data-range="2" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"></div>
-                <div id="pa-361"   class="pa-row" data-range="3"   style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"></div>
-                <div id="pa-venc"  class="pa-row" data-range="4"   style="display:flex;align-items:center;gap:6px;"></div>
+          <!-- ── FILA 3: Gráfica donut + KPIs semáforo ── -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+
+            <!-- Donut chart distribución -->
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:18px;">
+              <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:14px;letter-spacing:.5px;">📊 DISTRIBUCIÓN POR ESTADO</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <svg id="dash-donut" width="120" height="120" viewBox="0 0 120 120" style="flex-shrink:0;">
+                  <circle cx="60" cy="60" r="45" fill="none" stroke="var(--sur2)" stroke-width="18"/>
+                  <text x="60" y="56" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace" id="donut-pct">0%</text>
+                  <text x="60" y="70" text-anchor="middle" font-size="9" fill="var(--tx3)" id="donut-lbl">efectividad</text>
+                </svg>
+                <div style="flex:1;" id="dash-barra-leyenda"></div>
+              </div>
+              <div style="margin-top:12px;">
+                <div id="port-barra-estados" style="display:flex;border-radius:6px;overflow:hidden;height:10px;"></div>
               </div>
             </div>
 
-            <!-- Tasas e indicadores -->
-            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;">
-              <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:10px;">📈 INDICADORES CLAVE</div>
-              <div id="port-indicadores" style="display:flex;flex-direction:column;gap:8px;">
-                <!-- Se llena dinámicamente -->
+            <!-- KPIs semáforo -->
+            <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:18px;">
+              <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:14px;letter-spacing:.5px;">📈 INDICADORES CLAVE (KPI)</div>
+              <div id="port-indicadores" style="display:flex;flex-direction:column;gap:10px;"></div>
+            </div>
+          </div>
+
+          <!-- ── FILA 4: Antigüedad de cartera (barras horizontales) ── -->
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:18px;margin-bottom:16px;">
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:14px;letter-spacing:.5px;">📅 ANTIGÜEDAD DE CARTERA</div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+              <div id="pa-0-90"    style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
+              <div id="pa-91-180" style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
+              <div id="pa-181-360"style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
+              <div id="pa-361"    style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
+              <div id="pa-venc"   style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN MES (visible cuando hay mes seleccionado) ── -->
+          <div id="port-seccion-mes" style="display:none;margin-bottom:16px;">
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--acc);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+              <span style="background:var(--acc);color:#fff;padding:2px 10px;border-radius:4px;font-size:10px;">MES</span>
+              <span id="port-mes-label">Gestión del mes</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+              <div style="background:rgba(0,178,226,.08);border:1px solid rgba(0,178,226,.3);border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:10px;color:var(--acc);font-weight:600;margin-bottom:4px;">TOTAL MES</div>
+                <div style="font-size:26px;font-weight:700;color:var(--acc);font-family:var(--mono);" id="pm-total">0</div>
+                <div style="font-size:10px;color:var(--tx3);" id="pm-total-v">$0</div>
+              </div>
+              <div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:10px;color:#3fb950;font-weight:600;margin-bottom:4px;">✔ PAGADAS</div>
+                <div style="font-size:26px;font-weight:700;color:#3fb950;font-family:var(--mono);" id="pm-pag">0</div>
+                <div style="font-size:10px;color:var(--tx3);" id="pm-pag-v">$0</div>
+              </div>
+              <div style="background:rgba(227,179,65,.08);border:1px solid rgba(227,179,65,.3);border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:10px;color:#e3b341;font-weight:600;margin-bottom:4px;">📬 RADICADAS</div>
+                <div style="font-size:26px;font-weight:700;color:#e3b341;font-family:var(--mono);" id="pm-rad">0</div>
+                <div style="font-size:10px;color:var(--tx3);" id="pm-rad-v">$0</div>
+              </div>
+              <div style="background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.3);border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:10px;color:#f85149;font-weight:600;margin-bottom:4px;">✕ GLOSADAS</div>
+                <div style="font-size:26px;font-weight:700;color:#f85149;font-family:var(--mono);" id="pm-glo">0</div>
+                <div style="font-size:10px;color:var(--tx3);" id="pm-glo-v">$0</div>
+              </div>
+              <div style="background:rgba(139,148,158,.08);border:1px solid rgba(139,148,158,.3);border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:10px;color:#8b949e;font-weight:600;margin-bottom:4px;">⏸ SIN RADICAR</div>
+                <div style="font-size:26px;font-weight:700;color:#8b949e;font-family:var(--mono);" id="pm-pen">0</div>
+                <div style="font-size:10px;color:var(--tx3);" id="pm-pen-v">$0</div>
               </div>
             </div>
           </div>
 
-          <!-- Fila 3: Barra de estados -->
-          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-top:10px;">
-            <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:10px;">📊 DISTRIBUCIÓN POR ESTADO</div>
-            <div id="port-barra-estados" style="display:flex;border-radius:6px;overflow:hidden;height:28px;margin-bottom:8px;"></div>
-            <div id="port-barra-leyenda" style="display:flex;flex-wrap:wrap;gap:10px;font-size:10px;"></div>
+          <!-- Label acumulado -->
+          <div id="port-acum-label" style="font-size:11px;color:var(--tx3);text-align:right;margin-top:-8px;margin-bottom:8px;"></div>
+
+          <!-- IDs ocultos para compatibilidad con updStats -->
+          <div style="display:none;">
+            <span id="sd-g-tot"></span><span id="sd-g-tot-v"></span>
+            <span id="sd-g-pp"></span><span id="sd-g-pp-v"></span>
+            <span id="sd-g-pe"></span><span id="sd-g-pe-v"></span>
+            <span id="sd-g-di"></span><span id="sd-g-di-v"></span>
+            <span id="sd-g-ra"></span><span id="sd-g-ra-v"></span>
+            <span id="sd-g-an"></span><span id="sd-g-an-v"></span>
+            <span id="sd-a-tot"></span><span id="sd-a-tot-v"></span>
+            <span id="sd-a-ap"></span><span id="sd-a-ap-v"></span>
+            <span id="sd-a-pa"></span><span id="sd-a-pa-v"></span>
+            <span id="sd-a-gl"></span><span id="sd-a-gl-v"></span>
+            <span id="sd-a-et"></span><span id="sd-a-et-v"></span>
+            <span id="sd-a-an"></span><span id="sd-a-an-v"></span>
+            <span id="port-barra-leyenda"></span>
           </div>
+
         </div>
-        <!-- ═══ FIN PORTAFOLIO ═══ -->
-      </div>
-
-
-      <!-- CHEQUEO DE SOPORTES -->
-      <div class="page hidden" id="p-chequeo">
+<div class="page hidden" id="p-chequeo">
         <div class="ptitle">✅ Chequeo de Soportes</div>
         <div class="psub">Revisión documental por ítem antes de radicar · Glosas serie 3101–3112</div>
 
@@ -4899,25 +4957,30 @@ window.updPortafolio = function(){
     { id:'pa-venc',    label:'⚠ VENCIDAS',     color:'#8b949e', min:-9999,max:-1 },
   ];
 
-  rangos.forEach(rg => {
+  // Calcular max para escala relativa
+  const allItems = rangos.map(rg => noPagadas.filter(r=>{
+    const v=calcVencimiento(r); if(!v) return false;
+    if(rg.min<0) return v.vencida;
+    return !v.vencida&&v.diasRestantes>=rg.min&&v.diasRestantes<=rg.max;
+  }));
+  const maxN2 = Math.max(...allItems.map(a=>a.length), 1);
+
+  rangos.forEach((rg,ri) => {
     const el = g(rg.id); if(!el) return;
-    const items = noPagadas.filter(r => {
-      const v = calcVencimiento(r);
-      if(!v) return false;
-      if(rg.min < 0) return v.vencida; // vencidas
-      return !v.vencida && v.diasRestantes >= rg.min && v.diasRestantes <= rg.max;
-    });
+    const items = allItems[ri];
     const n = items.length;
     const v = items.reduce((a,r)=>a+val(r),0);
     const p = pct(v, totalNPVal);
+    const barH = Math.max(4, Math.round(n/maxN2*80));
     el.innerHTML = `
-      <span style="min-width:100px;font-size:11px;color:var(--tx2);">${rg.label}</span>
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;min-width:24px;text-align:right;">${n}</span>
-      <div style="flex:1;height:14px;background:var(--sur2);border-radius:3px;overflow:hidden;">
-        <div style="height:100%;background:${rg.color};width:${p}%;transition:width .4s;"></div>
+      <div style="height:80px;display:flex;align-items:flex-end;justify-content:center;">
+        <div style="width:44px;height:${barH}px;background:${rg.color};border-radius:5px 5px 0 0;transition:height .5s;position:relative;">
+          ${n>0?`<div style="position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;color:${rg.color};font-family:var(--mono);white-space:nowrap;">${n}</div>`:''}
+        </div>
       </div>
-      <span style="font-family:var(--mono);font-size:10px;min-width:80px;text-align:right;color:${rg.color};">${fm(v)}</span>
-      <span style="font-size:10px;color:var(--tx3);min-width:32px;text-align:right;">${p}%</span>`;
+      <div style="font-size:10px;color:var(--tx2);text-align:center;font-weight:600;margin-top:4px;">${rg.label}</div>
+      <div style="font-size:10px;color:${rg.color};text-align:center;font-family:var(--mono);font-weight:700;">${p}%</div>
+      <div style="font-size:9px;color:var(--tx3);text-align:center;">${fm(v)}</div>`;
   });
 
   // ── Indicadores clave ──
@@ -4938,20 +5001,63 @@ window.updPortafolio = function(){
   })();
 
   const ind = g('port-indicadores'); if(!ind) return;
-  const indRow = (label, val, color, sub='') => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--brd);">
-      <span style="font-size:11px;color:var(--tx2);">${label}</span>
-      <div style="text-align:right;">
-        <span style="font-family:var(--mono);font-size:14px;font-weight:700;color:${color};">${val}</span>
-        ${sub?`<div style="font-size:9px;color:var(--tx3);">${sub}</div>`:''}
+  const sem = (v,b,m,inv=false) => inv?(v<=b?'🟢':v<=m?'🟡':'🔴'):(v>=b?'🟢':v>=m?'🟡':'🔴');
+  const kpiR = (lbl,valor,emoji,meta,sub='') => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);">
+      <span style="font-size:20px;">${emoji}</span>
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>
+        ${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}
       </div>
+      <span style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--tx);">${valor}</span>
     </div>`;
   ind.innerHTML =
-    indRow('% Efectividad de cobro', efectividad+'%', efectividad>=70?'#3fb950':efectividad>=40?'#e3b341':'#f85149', 'Valor pagado / total reclamado') +
-    indRow('% Tasa de glosa', tasaGlosa+'%', tasaGlosa<=10?'#3fb950':tasaGlosa<=25?'#e3b341':'#f85149', `${glosadas.length} de ${total} reclamaciones`) +
-    indRow('% Tasa de rechazo', tasaRechazo+'%', tasaRechazo<=5?'#3fb950':tasaRechazo<=15?'#e3b341':'#f85149', 'Anuladas / total') +
-    (diasProm!==null ? indRow('Días prom. evento → radicación', diasProm+' días', diasProm<=30?'#3fb950':diasProm<=90?'#e3b341':'#f85149', 'Meta: < 30 días') : '') +
-    indRow('Reclamaciones sin radicar', sinRad.length, sinRad.length===0?'#3fb950':sinRad.length<=5?'#e3b341':'#f85149', fm(sinRad.reduce((a,r)=>a+val(r),0)));
+    kpiR('Efectividad de cobro', efectividad+'%', sem(efectividad,70,40), '>70%', 'Pagado/Reclamado') +
+    kpiR('Tasa de glosa', tasaGlosa+'%', sem(tasaGlosa,10,25,true), '<10%', `${glosadas.length} de ${total}`) +
+    kpiR('Tasa de rechazo', tasaRechazo+'%', sem(tasaRechazo,5,15,true), '<5%', 'Anuladas/Total') +
+    (diasProm!==null ? kpiR('Días evento→radicación', diasProm+' días', sem(diasProm,30,90,true), '<30 días', 'Oportunidad') : '') +
+    kpiR('Sin radicar', sinRad.length, sinRad.length===0?'🟢':sinRad.length<=5?'🟡':'🔴', '0', fm(sinRad.reduce((a,r)=>a+val(r),0)));
+
+  // Donut SVG
+  const donut = g('dash-donut');
+  if(donut && total > 0){
+    const R=45,cx=60,cy=60,sw=16,circ=2*Math.PI*R;
+    const segs=[
+      {n:pagadas.length,color:'#3fb950'},
+      {n:radicadas.length,color:'#e3b341'},
+      {n:glosadas.length,color:'#f85149'},
+      {n:sinRad.length,color:'#8b949e'},
+      {n:recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length,color:'#db6d28'},
+    ].filter(s=>s.n>0);
+    let off=0, paths='';
+    segs.forEach(s=>{
+      const len=s.n/total*circ;
+      paths+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(circ-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+      off+=len;
+    });
+    const pag=pagadas.reduce((a,x)=>a+val(x),0);
+    const ef=pct(pag,totalVal);
+    donut.innerHTML=paths+
+      `<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace">${ef}%</text>`+
+      `<text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="9" fill="var(--tx3)">efectividad</text>`;
+  }
+  // Leyenda
+  const ley = g('dash-barra-leyenda');
+  if(ley && total > 0){
+    const legItems=[
+      {label:'Pagadas',n:pagadas.length,color:'#3fb950'},
+      {label:'En Cobro',n:radicadas.length,color:'#e3b341'},
+      {label:'Glosadas',n:glosadas.length,color:'#f85149'},
+      {label:'Sin Radicar',n:sinRad.length,color:'#8b949e'},
+    ].filter(e=>e.n>0);
+    ley.innerHTML=legItems.map(e=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;">
+        <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2);">
+          <span style="width:10px;height:10px;border-radius:2px;background:${e.color};display:inline-block;"></span>${e.label}
+        </span>
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${e.color};">${e.n}</span>
+      </div>`).join('');
+  }
 
   // ── Barra de distribución por estados ──
   const estados = [
