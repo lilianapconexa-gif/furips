@@ -426,31 +426,31 @@ select option{background:var(--sur2);}
           <!-- Alertas vencimiento -->
           <div id="dash-vencimiento" style="margin-bottom:14px;"></div>
 
-          <!-- ── FILA 1: KPIs principales ── -->
+          <!-- ── FILA 1: KPIs principales — Colores corporativos CONEXA ── -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
-            <div style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
-              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">Total Portafolio</div>
-              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="sd-tot">0</div>
-              <div style="font-size:12px;opacity:.8;" id="sd-vl">$0</div>
-              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">📋</div>
+            <div style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:12px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,178,226,.3);">
+              <div style="font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📋 Total Portafolio</div>
+              <div style="font-size:40px;font-weight:700;font-family:var(--mono);line-height:1;" id="sd-tot">0</div>
+              <div style="font-size:12px;opacity:.85;margin-top:6px;font-family:var(--mono);" id="sd-vl">$0</div>
+              <div style="position:absolute;right:-8px;bottom:-8px;font-size:72px;opacity:.08;">📋</div>
             </div>
-            <div style="background:linear-gradient(135deg,#3fb950,#2ea043);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
-              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">✔ Pagadas / Aprobadas</div>
-              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="pk-pag">0</div>
-              <div style="font-size:12px;opacity:.8;" id="pk-pag-v">$0</div>
-              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">✔</div>
+            <div style="background:linear-gradient(135deg,#A3D55D,#7fb83a);border-radius:12px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(163,213,93,.35);">
+              <div style="font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">✔ Pagadas / Aprobadas</div>
+              <div style="font-size:40px;font-weight:700;font-family:var(--mono);line-height:1;" id="pk-pag">0</div>
+              <div style="font-size:12px;opacity:.85;margin-top:6px;font-family:var(--mono);" id="pk-pag-v">$0</div>
+              <div style="position:absolute;right:-8px;bottom:-8px;font-size:72px;opacity:.08;">✔</div>
             </div>
-            <div style="background:linear-gradient(135deg,#e3b341,#c9960c);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
-              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">📬 En Cobro</div>
-              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="pk-rad">0</div>
-              <div style="font-size:12px;opacity:.8;" id="pk-rad-v">$0</div>
-              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">📬</div>
+            <div style="background:linear-gradient(135deg,#00B2E2cc,#9DB455);border-radius:12px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,178,226,.2);">
+              <div style="font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📬 En Cobro</div>
+              <div style="font-size:40px;font-weight:700;font-family:var(--mono);line-height:1;" id="pk-rad">0</div>
+              <div style="font-size:12px;opacity:.85;margin-top:6px;font-family:var(--mono);" id="pk-rad-v">$0</div>
+              <div style="position:absolute;right:-8px;bottom:-8px;font-size:72px;opacity:.08;">📬</div>
             </div>
-            <div style="background:linear-gradient(135deg,#f85149,#c4393a);border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;">
-              <div style="font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">✕ Glosadas</div>
-              <div style="font-size:36px;font-weight:700;font-family:var(--mono);margin:6px 0;" id="pk-glo">0</div>
-              <div style="font-size:12px;opacity:.8;" id="pk-glo-v">$0</div>
-              <div style="position:absolute;right:-10px;top:-10px;font-size:64px;opacity:.1;">✕</div>
+            <div style="background:linear-gradient(135deg,#999899,#6b6a6b);border-radius:12px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(153,152,153,.3);">
+              <div style="font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">✕ Glosadas / Pendientes</div>
+              <div style="font-size:40px;font-weight:700;font-family:var(--mono);line-height:1;" id="pk-glo">0</div>
+              <div style="font-size:12px;opacity:.85;margin-top:6px;font-family:var(--mono);" id="pk-glo-v">$0</div>
+              <div style="position:absolute;right:-8px;bottom:-8px;font-size:72px;opacity:.08;">✕</div>
             </div>
           </div>
 
@@ -5023,10 +5023,10 @@ window.updPortafolio = function(){
   if(donut && total > 0){
     const R=45,cx=60,cy=60,sw=16,circ=2*Math.PI*R;
     const segs=[
-      {n:pagadas.length,color:'#3fb950'},
-      {n:radicadas.length,color:'#e3b341'},
-      {n:glosadas.length,color:'#f85149'},
-      {n:sinRad.length,color:'#8b949e'},
+      {n:pagadas.length,color:'#A3D55D'},
+      {n:radicadas.length,color:'#00B2E2'},
+      {n:glosadas.length,color:'#999899'},
+      {n:sinRad.length,color:'#9DB455'},
       {n:recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length,color:'#db6d28'},
     ].filter(s=>s.n>0);
     let off=0, paths='';
@@ -5045,10 +5045,10 @@ window.updPortafolio = function(){
   const ley = g('dash-barra-leyenda');
   if(ley && total > 0){
     const legItems=[
-      {label:'Pagadas',n:pagadas.length,color:'#3fb950'},
-      {label:'En Cobro',n:radicadas.length,color:'#e3b341'},
-      {label:'Glosadas',n:glosadas.length,color:'#f85149'},
-      {label:'Sin Radicar',n:sinRad.length,color:'#8b949e'},
+      {label:'Pagadas',n:pagadas.length,color:'#A3D55D'},
+      {label:'En Cobro',n:radicadas.length,color:'#00B2E2'},
+      {label:'Glosadas',n:glosadas.length,color:'#999899'},
+      {label:'Sin Radicar',n:sinRad.length,color:'#9DB455'},
     ].filter(e=>e.n>0);
     ley.innerHTML=legItems.map(e=>`
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;">
