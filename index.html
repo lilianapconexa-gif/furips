@@ -9515,7 +9515,8 @@ window.cargarAsignaciones = function(){
     return;
   }
   const digNom = sel.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
-  const asignadas = RECS_ALL.filter(r=>r.asignadoA===uid);
+  const _recs = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||[]);
+  const asignadas = _recs.filter(r=>r.asignadoA===uid);
   if(!asignadas.length){
     lista.innerHTML=`<div style="color:var(--tx3);font-size:11px;">El digitador <strong>${digNom}</strong> no tiene reclamaciones asignadas aún.</div>`;
     return;
@@ -9546,7 +9547,8 @@ window.buscarParaAsignar = function(q){
   q = (q||'').trim().toLowerCase();
   if(q.length < 1){ res.style.display='none'; return; }
   // Usar RECS o RECS_ALL — el que tenga datos
-  const fuente = (RECS_ALL && RECS_ALL.length > 0) ? RECS_ALL : (RECS && RECS.length > 0 ? RECS : []);
+  const fuente = (typeof RECS_ALL!=='undefined' && RECS_ALL.length>0) ? RECS_ALL
+    : (typeof window.FURIPS_STATE!=='undefined' ? window.FURIPS_STATE.getRecs() : []);
   if(!fuente.length){
     res.style.display='block';
     res.innerHTML='<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No hay reclamaciones cargadas. Recarga la página.</div>';
@@ -9689,7 +9691,8 @@ window.asignarMasivoExcel = async (file) => {
     if(!digUid){ errores.push(`Fila ${i+2}: "${factura}" — sin digitador`); return; }
 
     // Buscar la reclamación
-    const rec = RECS_ALL.find(r2 => r2.factura === factura);
+    const _src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||[]);
+    const rec = _src.find(r2 => r2.factura === factura);
     if(!rec){ errores.push(`Fila ${i+2}: "${factura}" — no encontrada`); return; }
 
     asignaciones.push({ rec, digUid, digNom, obs });
@@ -9738,7 +9741,8 @@ window.asignarTodasSinAsignar = async () => {
   const digNom = selDig?.options[selDig.selectedIndex]?.text?.split(' (')[0]||'';
   if(!digUid){ toast('Selecciona un digitador primero.','w'); return; }
 
-  const sinAsignar = RECS_ALL.filter(r => !r.asignadoA);
+  const _rall = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||[]);
+  const sinAsignar = _rall.filter(r => !r.asignadoA);
   if(!sinAsignar.length){ toast('No hay reclamaciones sin asignar.','w'); return; }
   if(!confirm(`¿Asignar ${sinAsignar.length} reclamaciones sin asignar a "${digNom}"?`)) return;
 
