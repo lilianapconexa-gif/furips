@@ -2075,7 +2075,7 @@ select option{background:var(--sur2);}
             </div>
             <div class="field" style="flex:1;min-width:200px;">
               <label class="fl">Buscar factura para asignar</label>
-              <input id="asig-buscar" placeholder="N° factura o consecutivo..." oninput="buscarParaAsignar(this.value)" style="width:100%;">
+              <input id="asig-buscar" placeholder="N° factura o consecutivo..."  style="width:100%;">
             </div>
           </div>
           <div id="asig-resultados" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;margin-bottom:12px;"></div>
@@ -5768,8 +5768,17 @@ window.go=(id)=>{
   if(id==='respadres') loadRespuestaAdres();
   if(id==='adm'){
     const mn=g('mi-nombre'); if(mn) mn.value=USER.nombre||'';
-    // Pequeño delay para asegurar que db está listo
-    setTimeout(()=>cargarUsers(), 200);
+    setTimeout(()=>{ cargarUsers(); poblarSelectDigitadores(); }, 200);
+  }
+  // Poblar select digitadores siempre que se abra cualquier sección
+  // para que asig-digitador tenga datos aunque no se haya ido a Admin
+  if(id==='adm' || id==='lista' || id==='dash'){
+    setTimeout(()=>{
+      const selDig = document.getElementById('asig-digitador');
+      if(selDig && selDig.options.length <= 1 && typeof cargarUsers==='function'){
+        cargarUsers();
+      }
+    }, 500);
   }
   if(id==='inf'){
     if(USER.rol!=='superadmin'){ toast('Solo el Super Admin puede acceder a Informes.','w'); return; }
@@ -9475,6 +9484,27 @@ window.limpiarFchevt = () => {
 // ══════════════════════════════════════════════════════════════
 
 // Cargar reclamaciones asignadas al digitador seleccionado
+// Poblar select de digitadores desde RECS_ALL o desde Firestore
+window.poblarSelectDigitadores = async function(){
+  const selDig = document.getElementById('asig-digitador');
+  if(!selDig) return;
+  if(selDig.options.length > 1) return; // ya tiene datos
+  // Intentar cargar desde Firestore directamente
+  try{
+    const snap = await getDocs(collection(db,'usuarios'));
+    const digs = [];
+    snap.forEach(d=>{
+      const u = d.data();
+      if(!u.eliminado && (u.rol==='digitador'||u.rol==='admin'||u.rol==='superadmin')){
+        digs.push({id:d.id,...u});
+      }
+    });
+    digs.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    selDig.innerHTML = '<option value="">— Seleccione digitador —</option>' +
+      digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');
+  }catch(e){ console.warn('poblarSelectDigitadores:',e.message); }
+};
+
 window.cargarAsignaciones = function(){
   const sel   = document.getElementById('asig-digitador');
   const lista = document.getElementById('asig-lista');
@@ -9972,11 +10002,15 @@ window.guardarFechasEvento = async () => {
     if(digSel) digSel.addEventListener('change', function(){
       cargarAsignaciones();
     });
-    // Input búsqueda
+    // Input búsqueda — remover cualquier handler previo y agregar nuevo
     const buscar = document.getElementById('asig-buscar');
-    if(buscar) buscar.addEventListener('input', function(){
-      buscarParaAsignar(this.value);
-    });
+    if(buscar){
+      const newBuscar = buscar.cloneNode(true);
+      buscar.parentNode.replaceChild(newBuscar, buscar);
+      newBuscar.addEventListener('input', function(){
+        buscarParaAsignar(this.value);
+      });
+    }
   };
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', setup);
