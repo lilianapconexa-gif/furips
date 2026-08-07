@@ -4900,6 +4900,11 @@ function updStats(){
   const vencidas=RECS.filter(r=>{ if(getEstadoGestion(r)==='radicada') return false; const v=calcVencimiento(r); return v&&v.vencida; }).length;
   const sdv=g('sd-venc'); if(sdv){ sdv.textContent=porVencer+(vencidas>0?'+'+vencidas:''); sdv.style.color=vencidas>0?'var(--red)':porVencer>0?'var(--warn)':'var(--green)'; }
   _s('sd-tot',n);_s('sd-f1',f1);_s('sd-it',it);_s('sd-vl','$'+vl.toLocaleString('es-CO'));_s('rec-badge',n+' reclamaciones');
+  // Update Vista Cliente header
+  const cliTotEl = g('dash-cli-total-v');
+  if(cliTotEl) cliTotEl.textContent = '$' + vl.toLocaleString('es-CO');
+  const cliNEl = g('dash-cli-total-n');
+  if(cliNEl) cliNEl.textContent = n + ' reclamaciones';
   // Refrescar módulo TXT si está abierto
   if(g('p-txt')?.classList.contains('on')) loadTxt();
   if(g('p-xl')?.classList.contains('on'))  loadXL();
@@ -5015,22 +5020,24 @@ window.updPortafolio = function(){
     return null;
   };
 
-  // Filtrar por mes si aplica
-  let recs = RECS;
+  // Usar RECS si tiene datos, si no RECS_ALL como fallback
+  const BASE = (RECS && RECS.length > 0) ? RECS : (typeof RECS_ALL!=='undefined' && RECS_ALL.length > 0 ? RECS_ALL : []);
+  let recs = BASE;
   if(mesFiltro){
-    recs = RECS.filter(r => getMesRec(r) === mesFiltro);
+    recs = BASE.filter(r => getMesRec(r) === mesFiltro);
   }
+  const recsAcum = BASE;
 
   const val = r => parseInt(r.furips1?.c97 || r.furips1?.c96 || 0) || 0;
 
   // ── KPIs principales ──
-  const total = recs.length;
-  const totalVal = recs.reduce((a,r)=>a+val(r),0);
+  const total    = recsAcum.length;
+  const totalVal = recsAcum.reduce((a,r)=>a+val(r),0);
 
-  const pagadas   = recs.filter(r => getRespuestaAdres(r)==='aprobada' || getRespuestaAdres(r)==='aprobada_parcial');
-  const glosadas  = recs.filter(r => getRespuestaAdres(r)==='glosada');
-  const radicadas = recs.filter(r => getEstadoGestion(r)==='radicada' && !getRespuestaAdres(r));
-  const sinRad    = recs.filter(r => !r.radicado?.numero);
+  const pagadas   = recsAcum.filter(r => ['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+  const glosadas  = recsAcum.filter(r => getRespuestaAdres(r)==='glosada');
+  const radicadas = recsAcum.filter(r => getEstadoGestion(r)==='radicada' && !getRespuestaAdres(r));
+  const sinRad    = recsAcum.filter(r => !r.radicado?.numero);
 
   // ── Acumulado KPIs ──
   _s('pk-pag',  pagadas.length);  _s('pk-pag-v', fm(pagadas.reduce((a,r)=>a+val(r),0)));
@@ -5053,7 +5060,7 @@ window.updPortafolio = function(){
 
   // Header cliente
   const cliIPS = document.getElementById('dash-cli-ips');
-  if(cliIPS) cliIPS.textContent = (typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO?.razon)||'Todas las IPS';
+  if(cliIPS) cliIPS.textContent = (typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas las IPS';
   const cliPer = document.getElementById('dash-cli-periodo');
   const mesFiltro2 = g('port-mes-sel')?.value||'';
   if(cliPer) cliPer.textContent = mesFiltro2 ? (() => {
