@@ -7705,6 +7705,66 @@ window.descargarPlantillaAsignacion=function(){
 };
 
 // ══ Event listeners asignación ══
+window.asignarMasivoExcel=async function(file){
+  if(!file){toast('No se recibió archivo.','w');return;}
+  toast('📂 Leyendo archivo...','ok');
+  const status=document.getElementById('asig-masivo-status');
+  if(status){status.textContent='⏳ Leyendo archivo...';status.style.color='var(--acc)';}
+  let rows=[];
+  try{
+    if(typeof XLSX!=='undefined'){
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    }else{
+      const txt=await file.text();
+      const lines=txt.split('\n').filter(l=>l.trim()&&!l.startsWith('PLANTILLA')&&!l.startsWith('==='));
+      if(!lines.length){toast('Archivo vacío.','w');return;}
+      const headers=lines[0].split('\t').map(h=>h.trim().toLowerCase());
+      rows=lines.slice(1).map(l=>{const vals=l.split('\t');const obj={};headers.forEach((h,i)=>obj[h]=(vals[i]||'').trim());return obj;}).filter(r=>r.factura);
+    }
+  }catch(e){toast('Error leyendo archivo: '+e.message,'e');return;}
+  if(!rows.length){toast('No se encontraron filas válidas.','w');return;}
+  const selEl=document.getElementById('asig-digitador');
+  const digUidSel=selEl?.value||'',digNomSel=selEl?.options[selEl?.selectedIndex]?.text?.split(' (')[0]||'';
+  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const asignaciones=[],errores=[];
+  rows.forEach((r,i)=>{
+    const factura=String(r.factura||r.FACTURA||'').trim();
+    if(!factura||factura.startsWith('===')) return;
+    const nomDig=String(r.digitadornombre||r.digitadorNombre||'').trim();
+    const obs=String(r.observacion||r.obs||'').trim();
+    let digUid=digUidSel,digNom=digNomSel;
+    if(nomDig&&selEl){
+      const opt=Array.from(selEl.options).find(o=>o.text.toLowerCase().startsWith(nomDig.toLowerCase()));
+      if(opt){digUid=opt.value;digNom=opt.text.split(' (')[0];}
+    }
+    if(!digUid){errores.push(`Fila ${i+2}: "${factura}" — sin digitador`);return;}
+    const rec=src.find(r2=>r2.factura===factura);
+    if(!rec){errores.push(`Fila ${i+2}: "${factura}" — no encontrada`);return;}
+    asignaciones.push({rec,digUid,digNom,obs});
+  });
+  if(!asignaciones.length){
+    const msg=errores.length?`Sin válidas. ${errores[0]}`:'Sin filas válidas.';
+    toast(msg,'w');if(status)status.textContent='⚠ '+msg;return;
+  }
+  if(!confirm(`¿Asignar ${asignaciones.length} reclamaciones?${errores.length?' ('+errores.length+' omitidas)':''}`)) return;
+  let ok=0,err=0;
+  for(let i=0;i<asignaciones.length;i++){
+    const{rec,digUid,digNom,obs}=asignaciones[i];
+    if(status)status.textContent=`⏳ ${i+1}/${asignaciones.length}...`;
+    try{
+      await updateDoc(doc(db,'reclamaciones',rec.id),{asignadoA:digUid,asignadoANombre:digNom,asignadoObs:obs||'',asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});
+      rec.asignadoA=digUid;rec.asignadoANombre=digNom;ok++;
+    }catch(e){err++;}
+  }
+  aplicarFiltroCliente();renderLista();updStats();
+  const msg2=`✔ ${ok} asignadas${err?' · ⚠ '+err+' errores':''}`;
+  if(status)status.textContent=msg2;toast(msg2,err?'w':'ok');
+  const inp=document.getElementById('asig-excel-input');if(inp)inp.value='';
+};
+
 (function setupAsig(){
   const setup=()=>{
     const inp=document.getElementById('asig-excel-input');
