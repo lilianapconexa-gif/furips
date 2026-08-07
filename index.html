@@ -402,32 +402,22 @@ select option{background:var(--sur2);}
       <!-- DASHBOARD -->
       <div class="page on" id="p-dash">
 <style>
-.dash-card { border-radius:12px; padding:20px; color:#fff; position:relative; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.12); }
-.dash-card .dc-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; opacity:.85; margin-bottom:8px; }
-.dash-card .dc-num { font-size:38px; font-weight:700; font-family:var(--mono); line-height:1; }
-.dash-card .dc-val { font-size:12px; opacity:.85; margin-top:6px; font-family:var(--mono); }
-.dash-card .dc-bg { position:absolute; right:-10px; bottom:-10px; font-size:80px; opacity:.07; }
-.dash-card .dc-pct { position:absolute; top:16px; right:16px; font-size:11px; font-weight:700; background:rgba(255,255,255,.2); padding:2px 8px; border-radius:10px; }
-.kpi-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:var(--sur2); margin-bottom:8px; }
-.kpi-row .kpi-sem { font-size:22px; flex-shrink:0; }
-.kpi-row .kpi-body { flex:1; }
-.kpi-row .kpi-lbl { font-size:11px; font-weight:600; color:var(--tx); }
-.kpi-row .kpi-sub { font-size:9px; color:var(--tx3); margin-top:1px; }
-.kpi-row .kpi-val { font-family:var(--mono); font-size:17px; font-weight:700; color:var(--tx); }
-@media print {
-  .sidebar,.topbar,nav,button,select,#dash-interno { display:none!important; }
-  #p-dash { display:block!important; }
-  body { background:white!important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-}
+.dash-card{border-radius:12px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.12);}
+.dash-card .dc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.85;margin-bottom:8px;}
+.dash-card .dc-num{font-size:38px;font-weight:700;font-family:var(--mono);line-height:1;}
+.dash-card .dc-val{font-size:12px;opacity:.85;margin-top:6px;font-family:var(--mono);}
+.dash-card .dc-bg{position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:.07;}
+.dash-card .dc-pct{position:absolute;top:16px;right:16px;font-size:11px;font-weight:700;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;}
+.kpi-item2{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:var(--sur2);margin-bottom:8px;}
+@media print{.sidebar,.topbar,nav,button,select{display:none!important;}#p-dash{display:block!important;}body{background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 </style>
-
 <div style="padding:0 0 24px;">
 
-  <!-- Tabs: Cliente / Interno -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+  <!-- Header con tabs -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
     <div style="display:flex;gap:0;border:1px solid var(--brd);border-radius:8px;overflow:hidden;">
       <button id="tab-dash-cli" onclick="switchDashTab('cli')"
-        style="padding:7px 18px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:#00B2E2;color:#fff;font-family:var(--mono);">
+        style="padding:7px 18px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:#00B2E2;color:#fff;font-family:var(--mono);">
         📊 Vista Cliente
       </button>
       <button id="tab-dash-int" onclick="switchDashTab('int')"
@@ -439,41 +429,30 @@ select option{background:var(--sur2);}
       <select id="port-mes-sel" onchange="updPortafolio();" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);cursor:pointer;">
         <option value="">Todo el historial</option>
       </select>
-      <button onclick="descargarInformeMensual()" style="background:#A3D55D;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:11px;font-weight:700;cursor:pointer;">
-        ⬇ Informe Comité
-      </button>
-      <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:7px 14px;font-size:11px;cursor:pointer;">
-        🖨 Imprimir
-      </button>
+      <button onclick="descargarInformeMensual()" style="background:#A3D55D;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:11px;font-weight:700;cursor:pointer;">⬇ Informe Comité</button>
+      <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:7px 14px;font-size:11px;cursor:pointer;">🖨 Imprimir</button>
     </div>
   </div>
 
-  <!-- Alertas -->
-  <div id="dash-vencimiento" style="margin-bottom:14px;"></div>
-
-  <!-- ════════════════════════════════════
-       VISTA CLIENTE
-  ════════════════════════════════════ -->
+  <!-- ════ VISTA CLIENTE ════ -->
   <div id="dash-cli">
 
-    <!-- Nombre IPS + período -->
-    <div style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:14px;padding:20px 24px;color:#fff;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 4px 20px rgba(0,178,226,.25);">
+    <!-- Header IPS -->
+    <div style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:14px;padding:20px 24px;color:#fff;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 4px 20px rgba(0,178,226,.25);">
       <div>
-        <div style="font-size:13px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:1px;">Informe de Gestión · Estado del Portafolio</div>
-        <div style="font-size:22px;font-weight:700;margin-top:4px;" id="dash-cli-ips">OCCIDENTAL DE SALUD SAS</div>
+        <div style="font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:1px;">Informe de Gestión · Estado del Portafolio</div>
+        <div style="font-size:20px;font-weight:700;margin-top:4px;" id="dash-cli-ips">IPS</div>
         <div style="font-size:11px;opacity:.8;margin-top:2px;" id="dash-cli-periodo">Todo el historial</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;opacity:.8;">Total reclamado</div>
-        <div style="font-size:32px;font-weight:700;font-family:monospace;" id="dash-cli-total-v">$0</div>
+        <div style="font-size:30px;font-weight:700;font-family:monospace;" id="dash-cli-total-v">$0</div>
         <div style="font-size:11px;opacity:.8;margin-top:2px;" id="dash-cli-total-n">0 reclamaciones</div>
       </div>
     </div>
 
-    <!-- Fila 1: Las 4 grandes cifras que le interesan al cliente -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
-
-      <!-- Sin radicar -->
+    <!-- 4 KPI cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
       <div class="dash-card" style="background:linear-gradient(135deg,#999899,#6b6a6b);">
         <div class="dc-label">⏸ Sin Radicar</div>
         <div class="dc-num" id="cli-sinrad-n">0</div>
@@ -481,8 +460,6 @@ select option{background:var(--sur2);}
         <div class="dc-pct" id="cli-sinrad-pct">0%</div>
         <div class="dc-bg">⏸</div>
       </div>
-
-      <!-- Radicadas / En cobro -->
       <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2,#0090c0);">
         <div class="dc-label">📬 Radicadas · En Cobro</div>
         <div class="dc-num" id="cli-rad-n">0</div>
@@ -490,8 +467,6 @@ select option{background:var(--sur2);}
         <div class="dc-pct" id="cli-rad-pct">0%</div>
         <div class="dc-bg">📬</div>
       </div>
-
-      <!-- Pagadas -->
       <div class="dash-card" style="background:linear-gradient(135deg,#A3D55D,#7fb83a);">
         <div class="dc-label">✔ Reconocidas · Pagadas</div>
         <div class="dc-num" id="cli-pag-n">0</div>
@@ -499,8 +474,6 @@ select option{background:var(--sur2);}
         <div class="dc-pct" id="cli-pag-pct">0%</div>
         <div class="dc-bg">✔</div>
       </div>
-
-      <!-- Glosadas -->
       <div class="dash-card" style="background:linear-gradient(135deg,#9DB455,#7a9040);">
         <div class="dc-label">↩ Glosas · En Revisión</div>
         <div class="dc-num" id="cli-glo-n">0</div>
@@ -510,36 +483,29 @@ select option{background:var(--sur2);}
       </div>
     </div>
 
-    <!-- Fila 2: Desglose del radicado -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+    <!-- Barra distribución -->
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;">Distribución acumulada</div>
+      <div id="port-barra-estados" style="display:flex;border-radius:6px;overflow:hidden;height:14px;margin-bottom:8px;"></div>
+      <div id="port-barra-leyenda" style="display:flex;flex-wrap:wrap;gap:10px;font-size:10px;"></div>
+    </div>
 
-      <!-- Árbol de distribución -->
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:18px;">
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:14px;letter-spacing:.5px;">📊 DISTRIBUCIÓN DEL PORTAFOLIO</div>
-
-        <!-- Barra total -->
-        <div style="margin-bottom:14px;">
-          <div id="port-barra-estados" style="display:flex;border-radius:8px;overflow:hidden;height:24px;margin-bottom:8px;"></div>
-          <div id="port-barra-leyenda" style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;"></div>
-        </div>
-
-        <!-- Desglose con números -->
-        <div id="cli-desglose" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <!-- Desglose + KPIs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">📋 Desglose del portafolio</div>
+        <div id="cli-desglose"></div>
       </div>
-
-      <!-- KPIs ejecutivos -->
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:18px;">
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:14px;letter-spacing:.5px;">📈 INDICADORES DE GESTIÓN</div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">📈 Indicadores de gestión</div>
         <div id="port-indicadores"></div>
       </div>
     </div>
 
-    <!-- Fila 3: Antigüedad + Donut -->
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
-
-      <!-- Antigüedad barras verticales -->
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:18px;">
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:16px;letter-spacing:.5px;">📅 ANTIGÜEDAD DE CARTERA (cuentas no pagadas)</div>
+    <!-- Antigüedad + Donut -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:14px;">📅 Antigüedad de cartera</div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
           <div id="pa-0-90"    style="display:flex;flex-direction:column;align-items:center;gap:4px;"></div>
           <div id="pa-91-180" style="display:flex;flex-direction:column;align-items:center;gap:4px;"></div>
@@ -548,51 +514,39 @@ select option{background:var(--sur2);}
           <div id="pa-venc"   style="display:flex;flex-direction:column;align-items:center;gap:4px;"></div>
         </div>
       </div>
-
-      <!-- Donut efectividad -->
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:14px;letter-spacing:.5px;text-align:center;">🎯 EFECTIVIDAD</div>
-        <svg id="dash-donut" width="130" height="130" viewBox="0 0 130 130">
-          <circle cx="65" cy="65" r="50" fill="none" stroke="var(--sur2)" stroke-width="18"/>
-          <text x="65" y="60" text-anchor="middle" font-size="22" font-weight="700" fill="var(--tx)" font-family="monospace" id="donut-pct">0%</text>
-          <text x="65" y="76" text-anchor="middle" font-size="9" fill="var(--tx3)">de cobro</text>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;text-align:center;">🎯 Efectividad</div>
+        <svg id="dash-donut" width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="44" fill="none" stroke="var(--sur2)" stroke-width="16"/>
+          <text x="60" y="56" text-anchor="middle" font-size="20" font-weight="700" fill="var(--tx)" font-family="monospace" id="donut-pct">0%</text>
+          <text x="60" y="70" text-anchor="middle" font-size="9" fill="var(--tx3)">de cobro</text>
         </svg>
-        <div id="dash-barra-leyenda" style="width:100%;margin-top:8px;"></div>
+        <div id="dash-barra-leyenda" style="width:100%;margin-top:10px;"></div>
       </div>
     </div>
 
     <!-- Sección MES -->
-    <div id="port-seccion-mes" style="display:none;margin-bottom:14px;">
-      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:#00B2E2;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-        <span style="background:#00B2E2;color:#fff;padding:2px 10px;border-radius:4px;font-size:9px;">MES SELECCIONADO</span>
+    <div id="port-seccion-mes" style="display:none;margin-bottom:12px;">
+      <div style="font-size:10px;font-weight:700;color:#00B2E2;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <span style="background:#00B2E2;color:#fff;padding:2px 10px;border-radius:4px;font-size:9px;">MES</span>
         <span id="port-mes-label"></span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
-        <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2,#0090c0);">
-          <div class="dc-label">Total Mes</div><div class="dc-num" id="pm-total">0</div><div class="dc-val" id="pm-total-v">$0</div>
-        </div>
-        <div class="dash-card" style="background:linear-gradient(135deg,#A3D55D,#7fb83a);">
-          <div class="dc-label">✔ Pagadas</div><div class="dc-num" id="pm-pag">0</div><div class="dc-val" id="pm-pag-v">$0</div>
-        </div>
-        <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2cc,#9DB455);">
-          <div class="dc-label">📬 Radicadas</div><div class="dc-num" id="pm-rad">0</div><div class="dc-val" id="pm-rad-v">$0</div>
-        </div>
-        <div class="dash-card" style="background:linear-gradient(135deg,#9DB455,#7a9040);">
-          <div class="dc-label">↩ Glosadas</div><div class="dc-num" id="pm-glo">0</div><div class="dc-val" id="pm-glo-v">$0</div>
-        </div>
-        <div class="dash-card" style="background:linear-gradient(135deg,#999899,#6b6a6b);">
-          <div class="dc-label">⏸ Sin Radicar</div><div class="dc-num" id="pm-pen">0</div><div class="dc-val" id="pm-pen-v">$0</div>
-        </div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2,#0090c0);"><div class="dc-label">Total Mes</div><div class="dc-num" id="pm-total">0</div><div class="dc-val" id="pm-total-v">$0</div></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#A3D55D,#7fb83a);"><div class="dc-label">✔ Pagadas</div><div class="dc-num" id="pm-pag">0</div><div class="dc-val" id="pm-pag-v">$0</div></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2cc,#9DB455);"><div class="dc-label">📬 Radicadas</div><div class="dc-num" id="pm-rad">0</div><div class="dc-val" id="pm-rad-v">$0</div></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#9DB455,#7a9040);"><div class="dc-label">↩ Glosadas</div><div class="dc-num" id="pm-glo">0</div><div class="dc-val" id="pm-glo-v">$0</div></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#999899,#6b6a6b);"><div class="dc-label">⏸ Sin Rad.</div><div class="dc-num" id="pm-pen">0</div><div class="dc-val" id="pm-pen-v">$0</div></div>
       </div>
     </div>
-    <div id="port-acum-label" style="font-size:10px;color:var(--tx3);text-align:right;margin-top:-6px;"></div>
+    <div id="port-acum-label" style="font-size:10px;color:var(--tx3);text-align:right;margin-top:-4px;"></div>
 
   </div><!-- /dash-cli -->
 
-  <!-- ════════════════════════════════════
-       VISTA INTERNA
-  ════════════════════════════════════ -->
+  <!-- ════ VISTA INTERNA ════ -->
   <div id="dash-int" style="display:none;">
+    <!-- Alertas vencimiento SOLO en vista interna -->
+    <div id="dash-vencimiento" style="margin-bottom:14px;"></div>
     <div class="stats">
       <div class="stat"><div class="sv" id="sd-tot">0</div><div class="sl">Reclamaciones</div></div>
       <div class="stat"><div class="sv" id="sd-f1">0</div><div class="sl">FURIPS 1 completos</div></div>
@@ -600,10 +554,8 @@ select option{background:var(--sur2);}
       <div class="stat"><div class="sv" id="sd-vl">$0</div><div class="sl">Total Facturado</div></div>
       <div class="stat"><div class="sv" id="sd-venc" style="color:var(--red);">0</div><div class="sl">Por vencer ⏰</div></div>
     </div>
-
-    <!-- Gestión interna -->
-    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:14px;">
-      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">📋 GESTIÓN INTERNA (Conexa → IPS)</div>
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:12px;">
+      <div style="font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">📋 GESTIÓN INTERNA</div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
         <div class="stat"><div class="sv" id="sd-g-tot">0</div><div class="sl">Total</div><div class="sv2" id="sd-g-tot-v">$0</div></div>
         <div class="stat"><div class="sv" id="sd-g-pp">0</div><div class="sl">📥 Por Procesar</div><div class="sv2" id="sd-g-pp-v">$0</div></div>
@@ -613,10 +565,8 @@ select option{background:var(--sur2);}
         <div class="stat"><div class="sv" id="sd-g-an">0</div><div class="sl">✕ Anulada</div><div class="sv2" id="sd-g-an-v">$0</div></div>
       </div>
     </div>
-
-    <!-- Respuesta ADRES -->
     <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:10px;">
-      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">🏛 RESPUESTA ADRES</div>
+      <div style="font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">🏛 RESPUESTA ADRES</div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
         <div class="stat"><div class="sv" id="sd-a-tot">0</div><div class="sl">Total</div><div class="sv2" id="sd-a-tot-v">$0</div></div>
         <div class="stat"><div class="sv" style="color:#A3D55D;" id="sd-a-ap">0</div><div class="sl">✔ Aprobada</div><div class="sv2" id="sd-a-ap-v">$0</div></div>
@@ -626,23 +576,20 @@ select option{background:var(--sur2);}
         <div class="stat"><div class="sv" id="sd-a-an">0</div><div class="sl">∅ Anulada ADRES</div><div class="sv2" id="sd-a-an-v">$0</div></div>
       </div>
     </div>
-
-    <!-- KPIs internos (reutiliza los mismos IDs) -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;">
-      <div class="stat" style="border-left:3px solid var(--green);"><div class="sv" id="pk-pag">0</div><div class="sl">✔ Pagadas</div><div class="sv2" id="pk-pag-v">$0</div></div>
+      <div class="stat" style="border-left:3px solid #A3D55D;"><div class="sv" id="pk-pag">0</div><div class="sl">✔ Pagadas</div><div class="sv2" id="pk-pag-v">$0</div></div>
       <div class="stat" style="border-left:3px solid #00B2E2;"><div class="sv" id="pk-rad">0</div><div class="sl">📬 En Cobro</div><div class="sv2" id="pk-rad-v">$0</div></div>
       <div class="stat" style="border-left:3px solid #999899;"><div class="sv" id="pk-glo">0</div><div class="sl">✕ Glosadas</div><div class="sv2" id="pk-glo-v">$0</div></div>
       <div class="stat" style="border-left:3px solid var(--tx3);"><div class="sv" id="pk-pen">0</div><div class="sl">⏸ Sin Radicar</div><div class="sv2" id="pk-pen-v">$0</div></div>
     </div>
   </div><!-- /dash-int -->
 
-  <!-- IDs ocultos para compatibilidad -->
+  <!-- IDs ocultos compatibilidad -->
   <div style="display:none;">
-    <span id="pk-total"></span><span id="pk-total-v"></span>
-    <span id="pk-total-n"></span>
+    <span id="pk-total"></span><span id="pk-total-v"></span><span id="pk-total-n"></span>
+    <span id="dash-rol"></span>
   </div>
 
-</div>
 </div>
 <div class="page hidden" id="p-chequeo">
         <div class="ptitle">✅ Chequeo de Soportes</div>
@@ -9784,7 +9731,7 @@ window.cargarAsignaciones = function(){
     return;
   }
   const digNom = sel.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
-  const _recs = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||[]);
+  const _recs = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
   const asignadas = _recs.filter(r=>r.asignadoA===uid);
   if(!asignadas.length){
     lista.innerHTML=`<div style="color:var(--tx3);font-size:11px;">El digitador <strong>${digNom}</strong> no tiene reclamaciones asignadas aún.</div>`;
@@ -9816,8 +9763,9 @@ window.buscarParaAsignar = function(q){
   q = (q||'').trim().toLowerCase();
   if(q.length < 1){ res.style.display='none'; return; }
   // Usar RECS o RECS_ALL — el que tenga datos
-  const fuente = (typeof RECS_ALL!=='undefined' && RECS_ALL.length>0) ? RECS_ALL
-    : (typeof window.FURIPS_STATE!=='undefined' ? window.FURIPS_STATE.getRecs() : []);
+  const fuente = (typeof window.FURIPS_STATE!=='undefined' && window.FURIPS_STATE.getRecs().length>0)
+    ? window.FURIPS_STATE.getRecs()
+    : (typeof RECS!=='undefined' && RECS.length>0 ? RECS : []);
   if(!fuente.length){
     res.style.display='block';
     res.innerHTML='<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No hay reclamaciones cargadas. Recarga la página.</div>';
@@ -9868,8 +9816,9 @@ window.asignarFactura = async function(recId){
       asignadoEn: serverTimestamp(),
       actualizado: serverTimestamp()
     });
-    const idx = RECS_ALL.findIndex(r=>r.id===recId);
-    if(idx>=0){ RECS_ALL[idx].asignadoA=digUid; RECS_ALL[idx].asignadoANombre=digNom; }
+    const _all = window.FURIPS_STATE?.getRecs() || [];
+    const idx = _all.findIndex(r=>r.id===recId);
+    if(idx>=0){ _all[idx].asignadoA=digUid; _all[idx].asignadoANombre=digNom; }
     const rec = RECS_ALL.find(r=>r.id===recId);
     toast(`✔ Factura ${rec?.factura||''} asignada a ${digNom}`,'ok');
     // Limpiar búsqueda y recargar lista
@@ -9960,7 +9909,7 @@ window.asignarMasivoExcel = async (file) => {
     if(!digUid){ errores.push(`Fila ${i+2}: "${factura}" — sin digitador`); return; }
 
     // Buscar la reclamación
-    const _src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||[]);
+    const _src = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
     const rec = _src.find(r2 => r2.factura === factura);
     if(!rec){ errores.push(`Fila ${i+2}: "${factura}" — no encontrada`); return; }
 
@@ -10010,7 +9959,7 @@ window.asignarTodasSinAsignar = async () => {
   const digNom = selDig?.options[selDig.selectedIndex]?.text?.split(' (')[0]||'';
   if(!digUid){ toast('Selecciona un digitador primero.','w'); return; }
 
-  const _rall = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||[]);
+  const _rall = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
   const sinAsignar = _rall.filter(r => !r.asignadoA);
   if(!sinAsignar.length){ toast('No hay reclamaciones sin asignar.','w'); return; }
   if(!confirm(`¿Asignar ${sinAsignar.length} reclamaciones sin asignar a "${digNom}"?`)) return;
