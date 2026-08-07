@@ -215,12 +215,6 @@ select option{background:var(--sur2);}
 .cli-switch .name{font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cli-switch .chg{font-family:var(--mono);font-size:10px;color:var(--acc2);letter-spacing:.5px;}
 @media(max-width:600px){.pcli-grid{grid-template-columns:1fr;}.pcli-hdr h1{font-size:18px;}}
-
-@media print {
-  .sidebar, nav, .topbar, button, select, #dash-vencimiento, .nav { display: none !important; }
-  #p-dash { display: block !important; }
-  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-}
 </style>
 </head>
 <body>
@@ -404,108 +398,62 @@ select option{background:var(--sur2);}
 <style>
 .dash-card{border-radius:12px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.12);}
 .dash-card .dc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.85;margin-bottom:8px;}
-.dash-card .dc-num{font-size:38px;font-weight:700;font-family:var(--mono);line-height:1;}
+.dash-card .dc-num{font-size:36px;font-weight:700;font-family:var(--mono);line-height:1;}
 .dash-card .dc-val{font-size:12px;opacity:.85;margin-top:6px;font-family:var(--mono);}
-.dash-card .dc-bg{position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:.07;}
-.dash-card .dc-pct{position:absolute;top:16px;right:16px;font-size:11px;font-weight:700;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;}
-.kpi-item2{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:var(--sur2);margin-bottom:8px;}
-@media print{.sidebar,.topbar,nav,button,select{display:none!important;}#p-dash{display:block!important;}body{background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+.dash-card .dc-bg{position:absolute;right:-10px;bottom:-10px;font-size:76px;opacity:.07;}
+.dash-card .dc-pct{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;}
+@media print{.sidebar,.topbar,nav,button,select{display:none!important;}body{background:white!important;-webkit-print-color-adjust:exact;}}
 </style>
-<div style="padding:0 0 24px;">
-
-  <!-- Header con tabs -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+<div style="padding:0 0 20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
     <div style="display:flex;gap:0;border:1px solid var(--brd);border-radius:8px;overflow:hidden;">
-      <button id="tab-dash-cli" onclick="switchDashTab('cli')"
-        style="padding:7px 18px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:#00B2E2;color:#fff;font-family:var(--mono);">
-        📊 Vista Cliente
-      </button>
-      <button id="tab-dash-int" onclick="switchDashTab('int')"
-        style="padding:7px 18px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--sur2);color:var(--tx2);font-family:var(--mono);">
-        ⚙ Vista Interna
-      </button>
+      <button id="tab-dash-cli" onclick="switchDashTab('cli')" style="padding:6px 16px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:#00B2E2;color:#fff;">📊 Vista Cliente</button>
+      <button id="tab-dash-int" onclick="switchDashTab('int')" style="padding:6px 16px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--sur2);color:var(--tx2);">⚙ Vista Interna</button>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <select id="port-mes-sel" onchange="updPortafolio();" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);cursor:pointer;">
-        <option value="">Todo el historial</option>
-      </select>
-      <button onclick="descargarInformeMensual()" style="background:#A3D55D;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:11px;font-weight:700;cursor:pointer;">⬇ Informe Comité</button>
-      <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:7px 14px;font-size:11px;cursor:pointer;">🖨 Imprimir</button>
+      <select id="port-mes-sel" onchange="updPortafolio();" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);cursor:pointer;"><option value="">Todo el historial</option></select>
+      <button onclick="descargarInformeMensual()" style="background:#A3D55D;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;">⬇ Informe Comité</button>
+      <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;">🖨 Imprimir</button>
     </div>
   </div>
 
-  <!-- ════ VISTA CLIENTE ════ -->
   <div id="dash-cli">
-
-    <!-- Header IPS -->
-    <div style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:14px;padding:20px 24px;color:#fff;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 4px 20px rgba(0,178,226,.25);">
+    <div style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:14px;padding:18px 22px;color:#fff;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
       <div>
-        <div style="font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:1px;">Informe de Gestión · Estado del Portafolio</div>
+        <div style="font-size:10px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:1px;">Informe de Gestión · Estado del Portafolio</div>
         <div style="font-size:20px;font-weight:700;margin-top:4px;" id="dash-cli-ips">IPS</div>
         <div style="font-size:11px;opacity:.8;margin-top:2px;" id="dash-cli-periodo">Todo el historial</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:11px;opacity:.8;">Total reclamado</div>
-        <div style="font-size:30px;font-weight:700;font-family:monospace;" id="dash-cli-total-v">$0</div>
-        <div style="font-size:11px;opacity:.8;margin-top:2px;" id="dash-cli-total-n">0 reclamaciones</div>
+        <div style="font-size:28px;font-weight:700;font-family:monospace;" id="dash-cli-total-v">$0</div>
+        <div style="font-size:11px;opacity:.8;" id="dash-cli-total-n">0 reclamaciones</div>
       </div>
     </div>
-
-    <!-- 4 KPI cards -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
-      <div class="dash-card" style="background:linear-gradient(135deg,#999899,#6b6a6b);">
-        <div class="dc-label">⏸ Sin Radicar</div>
-        <div class="dc-num" id="cli-sinrad-n">0</div>
-        <div class="dc-val" id="cli-sinrad-v">$0</div>
-        <div class="dc-pct" id="cli-sinrad-pct">0%</div>
-        <div class="dc-bg">⏸</div>
-      </div>
-      <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2,#0090c0);">
-        <div class="dc-label">📬 Radicadas · En Cobro</div>
-        <div class="dc-num" id="cli-rad-n">0</div>
-        <div class="dc-val" id="cli-rad-v">$0</div>
-        <div class="dc-pct" id="cli-rad-pct">0%</div>
-        <div class="dc-bg">📬</div>
-      </div>
-      <div class="dash-card" style="background:linear-gradient(135deg,#A3D55D,#7fb83a);">
-        <div class="dc-label">✔ Reconocidas · Pagadas</div>
-        <div class="dc-num" id="cli-pag-n">0</div>
-        <div class="dc-val" id="cli-pag-v">$0</div>
-        <div class="dc-pct" id="cli-pag-pct">0%</div>
-        <div class="dc-bg">✔</div>
-      </div>
-      <div class="dash-card" style="background:linear-gradient(135deg,#9DB455,#7a9040);">
-        <div class="dc-label">↩ Glosas · En Revisión</div>
-        <div class="dc-num" id="cli-glo-n">0</div>
-        <div class="dc-val" id="cli-glo-v">$0</div>
-        <div class="dc-pct" id="cli-glo-pct">0%</div>
-        <div class="dc-bg">↩</div>
-      </div>
+      <div class="dash-card" style="background:linear-gradient(135deg,#999899,#6b6a6b);"><div class="dc-label">⏸ Sin Radicar</div><div class="dc-num" id="cli-sinrad-n">0</div><div class="dc-val" id="cli-sinrad-v">$0</div><div class="dc-pct" id="cli-sinrad-pct">0%</div><div class="dc-bg">⏸</div></div>
+      <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2,#0090c0);"><div class="dc-label">📬 En Cobro</div><div class="dc-num" id="cli-rad-n">0</div><div class="dc-val" id="cli-rad-v">$0</div><div class="dc-pct" id="cli-rad-pct">0%</div><div class="dc-bg">📬</div></div>
+      <div class="dash-card" style="background:linear-gradient(135deg,#A3D55D,#7fb83a);"><div class="dc-label">✔ Pagadas</div><div class="dc-num" id="cli-pag-n">0</div><div class="dc-val" id="cli-pag-v">$0</div><div class="dc-pct" id="cli-pag-pct">0%</div><div class="dc-bg">✔</div></div>
+      <div class="dash-card" style="background:linear-gradient(135deg,#9DB455,#7a9040);"><div class="dc-label">↩ En Glosa</div><div class="dc-num" id="cli-glo-n">0</div><div class="dc-val" id="cli-glo-v">$0</div><div class="dc-pct" id="cli-glo-pct">0%</div><div class="dc-bg">↩</div></div>
     </div>
-
-    <!-- Barra distribución -->
-    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;margin-bottom:12px;">
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:12px;margin-bottom:12px;">
       <div style="font-size:10px;color:var(--tx3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;">Distribución acumulada</div>
       <div id="port-barra-estados" style="display:flex;border-radius:6px;overflow:hidden;height:14px;margin-bottom:8px;"></div>
       <div id="port-barra-leyenda" style="display:flex;flex-wrap:wrap;gap:10px;font-size:10px;"></div>
     </div>
-
-    <!-- Desglose + KPIs -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">📋 Desglose del portafolio</div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:10px;">📋 Desglose del portafolio</div>
         <div id="cli-desglose"></div>
       </div>
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">📈 Indicadores de gestión</div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:10px;">📈 Indicadores de gestión</div>
         <div id="port-indicadores"></div>
       </div>
     </div>
-
-    <!-- Antigüedad + Donut -->
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;">
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:14px;">📅 Antigüedad de cartera</div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">📅 Antigüedad de cartera</div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
           <div id="pa-0-90"    style="display:flex;flex-direction:column;align-items:center;gap:4px;"></div>
           <div id="pa-91-180" style="display:flex;flex-direction:column;align-items:center;gap:4px;"></div>
@@ -514,66 +462,54 @@ select option{background:var(--sur2);}
           <div id="pa-venc"   style="display:flex;flex-direction:column;align-items:center;gap:4px;"></div>
         </div>
       </div>
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;text-align:center;">🎯 Efectividad</div>
-        <svg id="dash-donut" width="120" height="120" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="44" fill="none" stroke="var(--sur2)" stroke-width="16"/>
-          <text x="60" y="56" text-anchor="middle" font-size="20" font-weight="700" fill="var(--tx)" font-family="monospace" id="donut-pct">0%</text>
-          <text x="60" y="70" text-anchor="middle" font-size="9" fill="var(--tx3)">de cobro</text>
-        </svg>
-        <div id="dash-barra-leyenda" style="width:100%;margin-top:10px;"></div>
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:10px;text-align:center;">🎯 Efectividad</div>
+        <svg id="dash-donut" width="110" height="110" viewBox="0 0 110 110"><circle cx="55" cy="55" r="40" fill="none" stroke="var(--sur2)" stroke-width="16"/><text x="55" y="51" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace" id="donut-pct">0%</text><text x="55" y="65" text-anchor="middle" font-size="9" fill="var(--tx3)">de cobro</text></svg>
+        <div id="dash-barra-leyenda" style="width:100%;margin-top:8px;"></div>
       </div>
     </div>
-
-    <!-- Sección MES -->
     <div id="port-seccion-mes" style="display:none;margin-bottom:12px;">
-      <div style="font-size:10px;font-weight:700;color:#00B2E2;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-        <span style="background:#00B2E2;color:#fff;padding:2px 10px;border-radius:4px;font-size:9px;">MES</span>
-        <span id="port-mes-label"></span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
-        <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2,#0090c0);"><div class="dc-label">Total Mes</div><div class="dc-num" id="pm-total">0</div><div class="dc-val" id="pm-total-v">$0</div></div>
+      <div style="font-size:10px;font-weight:700;color:#00B2E2;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span style="background:#00B2E2;color:#fff;padding:2px 8px;border-radius:4px;font-size:9px;">MES</span><span id="port-mes-label"></span></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+        <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2,#0090c0);"><div class="dc-label">Total</div><div class="dc-num" id="pm-total">0</div><div class="dc-val" id="pm-total-v">$0</div></div>
         <div class="dash-card" style="background:linear-gradient(135deg,#A3D55D,#7fb83a);"><div class="dc-label">✔ Pagadas</div><div class="dc-num" id="pm-pag">0</div><div class="dc-val" id="pm-pag-v">$0</div></div>
         <div class="dash-card" style="background:linear-gradient(135deg,#00B2E2cc,#9DB455);"><div class="dc-label">📬 Radicadas</div><div class="dc-num" id="pm-rad">0</div><div class="dc-val" id="pm-rad-v">$0</div></div>
         <div class="dash-card" style="background:linear-gradient(135deg,#9DB455,#7a9040);"><div class="dc-label">↩ Glosadas</div><div class="dc-num" id="pm-glo">0</div><div class="dc-val" id="pm-glo-v">$0</div></div>
         <div class="dash-card" style="background:linear-gradient(135deg,#999899,#6b6a6b);"><div class="dc-label">⏸ Sin Rad.</div><div class="dc-num" id="pm-pen">0</div><div class="dc-val" id="pm-pen-v">$0</div></div>
       </div>
     </div>
-    <div id="port-acum-label" style="font-size:10px;color:var(--tx3);text-align:right;margin-top:-4px;"></div>
+    <div id="port-acum-label" style="font-size:10px;color:var(--tx3);text-align:right;"></div>
+  </div>
 
-  </div><!-- /dash-cli -->
-
-  <!-- ════ VISTA INTERNA ════ -->
   <div id="dash-int" style="display:none;">
-    <!-- Alertas vencimiento SOLO en vista interna -->
     <div id="dash-vencimiento" style="margin-bottom:14px;"></div>
     <div class="stats">
       <div class="stat"><div class="sv" id="sd-tot">0</div><div class="sl">Reclamaciones</div></div>
-      <div class="stat"><div class="sv" id="sd-f1">0</div><div class="sl">FURIPS 1 completos</div></div>
-      <div class="stat"><div class="sv" id="sd-it">0</div><div class="sl">Ítems FURIPS 2</div></div>
+      <div class="stat"><div class="sv" id="sd-f1">0</div><div class="sl">FURIPS 1</div></div>
+      <div class="stat"><div class="sv" id="sd-it">0</div><div class="sl">Ítems F2</div></div>
       <div class="stat"><div class="sv" id="sd-vl">$0</div><div class="sl">Total Facturado</div></div>
-      <div class="stat"><div class="sv" id="sd-venc" style="color:var(--red);">0</div><div class="sl">Por vencer ⏰</div></div>
+      <div class="stat"><div class="sv" id="sd-venc" style="color:var(--red);">0</div><div class="sl">Por vencer</div></div>
     </div>
-    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:12px;">
-      <div style="font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">📋 GESTIÓN INTERNA</div>
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;margin-top:12px;">
+      <div style="font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:10px;">GESTIÓN INTERNA</div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
         <div class="stat"><div class="sv" id="sd-g-tot">0</div><div class="sl">Total</div><div class="sv2" id="sd-g-tot-v">$0</div></div>
-        <div class="stat"><div class="sv" id="sd-g-pp">0</div><div class="sl">📥 Por Procesar</div><div class="sv2" id="sd-g-pp-v">$0</div></div>
-        <div class="stat"><div class="sv" id="sd-g-pe">0</div><div class="sl">⏸ Pendiente</div><div class="sv2" id="sd-g-pe-v">$0</div></div>
-        <div class="stat"><div class="sv" id="sd-g-di">0</div><div class="sl">↩ Devuelta IPS</div><div class="sv2" id="sd-g-di-v">$0</div></div>
-        <div class="stat"><div class="sv" id="sd-g-ra">0</div><div class="sl">📬 Radicada</div><div class="sv2" id="sd-g-ra-v">$0</div></div>
-        <div class="stat"><div class="sv" id="sd-g-an">0</div><div class="sl">✕ Anulada</div><div class="sv2" id="sd-g-an-v">$0</div></div>
+        <div class="stat"><div class="sv" id="sd-g-pp">0</div><div class="sl">Por Procesar</div><div class="sv2" id="sd-g-pp-v">$0</div></div>
+        <div class="stat"><div class="sv" id="sd-g-pe">0</div><div class="sl">Pendiente</div><div class="sv2" id="sd-g-pe-v">$0</div></div>
+        <div class="stat"><div class="sv" id="sd-g-di">0</div><div class="sl">Devuelta IPS</div><div class="sv2" id="sd-g-di-v">$0</div></div>
+        <div class="stat"><div class="sv" id="sd-g-ra">0</div><div class="sl">Radicada</div><div class="sv2" id="sd-g-ra-v">$0</div></div>
+        <div class="stat"><div class="sv" id="sd-g-an">0</div><div class="sl">Anulada</div><div class="sv2" id="sd-g-an-v">$0</div></div>
       </div>
     </div>
-    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:10px;">
-      <div style="font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">🏛 RESPUESTA ADRES</div>
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;margin-top:10px;">
+      <div style="font-size:10px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:10px;">RESPUESTA ADRES</div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
         <div class="stat"><div class="sv" id="sd-a-tot">0</div><div class="sl">Total</div><div class="sv2" id="sd-a-tot-v">$0</div></div>
-        <div class="stat"><div class="sv" style="color:#A3D55D;" id="sd-a-ap">0</div><div class="sl">✔ Aprobada</div><div class="sv2" id="sd-a-ap-v">$0</div></div>
-        <div class="stat"><div class="sv" style="color:#9DB455;" id="sd-a-pa">0</div><div class="sl">◐ Aprobada Parc.</div><div class="sv2" id="sd-a-pa-v">$0</div></div>
-        <div class="stat"><div class="sv" style="color:#999899;" id="sd-a-gl">0</div><div class="sl">✕ Glosada</div><div class="sv2" id="sd-a-gl-v">$0</div></div>
-        <div class="stat"><div class="sv" style="color:#00B2E2;" id="sd-a-et">0</div><div class="sl">⏳ En Trámite</div><div class="sv2" id="sd-a-et-v">$0</div></div>
-        <div class="stat"><div class="sv" id="sd-a-an">0</div><div class="sl">∅ Anulada ADRES</div><div class="sv2" id="sd-a-an-v">$0</div></div>
+        <div class="stat"><div class="sv" style="color:#A3D55D;" id="sd-a-ap">0</div><div class="sl">Aprobada</div><div class="sv2" id="sd-a-ap-v">$0</div></div>
+        <div class="stat"><div class="sv" style="color:#9DB455;" id="sd-a-pa">0</div><div class="sl">Aprobada Parc.</div><div class="sv2" id="sd-a-pa-v">$0</div></div>
+        <div class="stat"><div class="sv" style="color:#999899;" id="sd-a-gl">0</div><div class="sl">Glosada</div><div class="sv2" id="sd-a-gl-v">$0</div></div>
+        <div class="stat"><div class="sv" style="color:#00B2E2;" id="sd-a-et">0</div><div class="sl">En Trámite</div><div class="sv2" id="sd-a-et-v">$0</div></div>
+        <div class="stat"><div class="sv" id="sd-a-an">0</div><div class="sl">Anulada ADRES</div><div class="sv2" id="sd-a-an-v">$0</div></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;">
@@ -582,14 +518,12 @@ select option{background:var(--sur2);}
       <div class="stat" style="border-left:3px solid #999899;"><div class="sv" id="pk-glo">0</div><div class="sl">✕ Glosadas</div><div class="sv2" id="pk-glo-v">$0</div></div>
       <div class="stat" style="border-left:3px solid var(--tx3);"><div class="sv" id="pk-pen">0</div><div class="sl">⏸ Sin Radicar</div><div class="sv2" id="pk-pen-v">$0</div></div>
     </div>
-  </div><!-- /dash-int -->
-
-  <!-- IDs ocultos compatibilidad -->
-  <div style="display:none;">
-    <span id="pk-total"></span><span id="pk-total-v"></span><span id="pk-total-n"></span>
-    <span id="dash-rol"></span>
   </div>
 
+  <div style="display:none;">
+    <span id="pk-total"></span><span id="pk-total-v"></span><span id="pk-total-n"></span><span id="dash-rol"></span>
+  </div>
+</div>
 </div>
 <div class="page hidden" id="p-chequeo">
         <div class="ptitle">✅ Chequeo de Soportes</div>
@@ -753,7 +687,9 @@ select option{background:var(--sur2);}
               <label class="fl">IPS Prestadora <span class="req">*</span></label>
               <select id="n-cod-sel" onchange="selIPSp1(this.value)" style="margin-bottom:4px;">
                 <option value="">Seleccione IPS...</option>
-                <option value="otro">Otra IPS (escribir código manualmente)</option>
+                <option value="760011259501">760011259501 — OCCIDENTAL DE SALUD SAS</option>
+                <option value="157590080301">157590080301 — CLÍNICA EL LAGUITO S.A</option>
+                <option value="otro">Otra IPS (escribir código)</option>
               </select>
               <input id="n-cod" maxlength="12" placeholder="Código habilitación 12 dígitos">
               <span class="hint">Se completa al seleccionar la IPS.</span>
@@ -1973,8 +1909,11 @@ select option{background:var(--sur2);}
               <label class="fl">IPS Prestadora <span class="req">*</span></label>
               <select id="tx-cod-sel" onchange="selIPSTxt(this.value)" style="margin-bottom:4px;">
                 <option value="">Seleccione IPS...</option>
+                <option value="760011259501">760011259501 — OCCIDENTAL DE SALUD SAS</option>
+                <option value="157590080301">157590080301 — CLÍNICA EL LAGUITO S.A</option>
+                <option value="otro">Otra IPS (escribir código)</option>
               </select>
-              <input id="tx-cod" maxlength="12" placeholder="Código habilitación (12 dígitos)" style="display:none;">
+              <input id="tx-cod" maxlength="12" placeholder="Código habilitación (12 dígitos)">
             </div>
             <div class="field"><label class="fl">Fecha Generación <span class="req">*</span></label><input id="tx-fec" type="date"></div>
           </div>
@@ -2149,13 +2088,13 @@ select option{background:var(--sur2);}
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
             <div class="field" style="flex:1;min-width:200px;">
               <label class="fl">Digitador</label>
-              <select id="asig-digitador" style="width:100%;">
+              <select id="asig-digitador" style="width:100%;" onchange="cargarAsignaciones()">
                 <option value="">— Seleccione digitador —</option>
               </select>
             </div>
             <div class="field" style="flex:1;min-width:200px;">
               <label class="fl">Buscar factura para asignar</label>
-              <input id="asig-buscar" placeholder="N° factura o consecutivo..."  style="width:100%;">
+              <input id="asig-buscar" placeholder="N° factura o consecutivo..." oninput="buscarParaAsignar(this.value)" style="width:100%;">
             </div>
           </div>
           <div id="asig-resultados" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;margin-bottom:12px;"></div>
@@ -2163,7 +2102,7 @@ select option{background:var(--sur2);}
           <!-- Asignación masiva -->
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
             <button class="btn bs" style="font-size:11px;" onclick="document.getElementById('asig-excel-input').click()">📊 Asignar masivo desde Excel</button>
-            <input type="file" id="asig-excel-input" accept=".xlsx,.xls" style="display:none">
+            <input type="file" id="asig-excel-input" accept=".xlsx,.xls" style="display:none" onchange="window.asignarMasivoExcel(this.files[0])">
             <button class="btn bs" style="font-size:11px;" onclick="descargarPlantillaAsignacion()">⬇ Plantilla</button>
             <button class="btn bs" style="font-size:11px;" onclick="asignarTodasSinAsignar()">📋 Asignar todas las sin asignar</button>
             <span id="asig-masivo-status" style="font-size:11px;color:var(--tx3);"></span>
@@ -2198,9 +2137,9 @@ service cloud.firestore {
   }
 }</div>
         </div>
+      </div>
 
       <!-- CARGA MASIVA DE FECHAS DE EVENTO -->
-      </div>
       <div class="page hidden" id="p-fchevt">
         <div class="ptitle">📅 Fechas de Evento · Carga Masiva</div>
         <div class="psub">Actualiza el campo C22 (Fecha Ocurrencia) de múltiples reclamaciones desde un Excel.</div>
@@ -2497,18 +2436,14 @@ window.aplicarFiltroCliente = function(){
   if(!CLIENTE_ACTIVO || CLIENTE_ACTIVO.nit === '*'){
     RECS = RECS_ALL.slice();
   } else {
-    const nit = CLIENTE_ACTIVO.nit;
-    RECS = RECS_ALL.filter(r =>
-      (r.nitIPS && r.nitIPS === nit) ||
-      (!r.nitIPS && (r.codHab||'') === nit) ||
-      (!r.nitIPS && (r.codHab||'').startsWith(nit)) ||
-      (!r.nitIPS && r.furips1?.c4 === nit)
+    const nit=CLIENTE_ACTIVO.nit;
+    RECS = RECS_ALL.filter(r=>
+      (r.nitIPS&&r.nitIPS===nit)||
+      (!r.nitIPS&&(r.codHab||'')===nit)||
+      (!r.nitIPS&&(r.codHab||'').startsWith(nit))||
+      (!r.nitIPS&&r.furips1?.c4===nit)
     );
-    // Si el filtro deja vacío pero hay datos, usar todo RECS_ALL (fallback)
-    if(RECS.length === 0 && RECS_ALL.length > 0){
-      console.warn('[FURIPS] Filtro IPS sin coincidencias para nit:',nit,'— mostrando todos');
-      RECS = RECS_ALL.slice();
-    }
+    if(RECS.length===0&&RECS_ALL.length>0) RECS=RECS_ALL.slice();
   }
 };
 
@@ -4848,14 +4783,6 @@ function updStats(){
   const vencidas=RECS.filter(r=>{ if(getEstadoGestion(r)==='radicada') return false; const v=calcVencimiento(r); return v&&v.vencida; }).length;
   const sdv=g('sd-venc'); if(sdv){ sdv.textContent=porVencer+(vencidas>0?'+'+vencidas:''); sdv.style.color=vencidas>0?'var(--red)':porVencer>0?'var(--warn)':'var(--green)'; }
   _s('sd-tot',n);_s('sd-f1',f1);_s('sd-it',it);_s('sd-vl','$'+vl.toLocaleString('es-CO'));_s('rec-badge',n+' reclamaciones');
-  // Update Vista Cliente header
-  const cliTotEl = g('dash-cli-total-v');
-  if(cliTotEl) cliTotEl.textContent = '$' + vl.toLocaleString('es-CO');
-  const cliNEl = g('dash-cli-total-n');
-  if(cliNEl) cliNEl.textContent = n + ' reclamaciones';
-  // Refrescar módulo TXT si está abierto
-  if(g('p-txt')?.classList.contains('on')) loadTxt();
-  if(g('p-xl')?.classList.contains('on'))  loadXL();
 
   // NUEVO: conteos por estado de gestión y respuesta ADRES + valores monetarios (c97)
   const cG = { por_procesar:0, pendiente:0, devuelta_ips:0, radicada:0, anulada:0 };
@@ -4894,310 +4821,7 @@ function updStats(){
 // ═══════════════════════════════════════════════════════
 // ══ ESTADO DEL PORTAFOLIO — KPIs
 // ═══════════════════════════════════════════════════════
-function poblarMesesPortafolio(){
-  const sel = g('port-mes-sel'); if(!sel) return;
-  const toYYYYMM = s => {
-    if(!s) return null; s=String(s).trim();
-    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){ const [,m,y]=s.split('/'); return `${y}-${m}`; }
-    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.substring(0,7);
-    if(/^\d{4}-\d{2}$/.test(s)) return s;
-    return null;
-  };
-  const mesesSet = new Set();
-  RECS.forEach(r => {
-    const fRad = toYYYYMM(r.radicado?.fecha);
-    if(fRad) mesesSet.add(fRad);
-    else if(r.radicado?.registradoEn?.toDate){
-      const d=r.radicado.registradoEn.toDate();
-      mesesSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    }
-    const fEv = toYYYYMM(r.fechaEvento)||toYYYYMM(r.furips1?.c22)||toYYYYMM(r.furips1?.c11);
-    if(fEv) mesesSet.add(fEv);
-    if(!fRad && !fEv && r.creado?.toDate){
-      const d=r.creado.toDate();
-      mesesSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    }
-  });
-  const meses = Array.from(mesesSet).sort().reverse();
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">Todo el historial</option>' +
-    meses.map(m => {
-      const [y,mo] = m.split('-');
-      const label = new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
-      return `<option value="${m}" ${cur===m?'selected':''}>${label.charAt(0).toUpperCase()+label.slice(1)}</option>`;
-    }).join('');
-}
 
-// ── Tab switcher Dashboard ──
-window.switchDashTab = function(tab){
-  const cli = document.getElementById('dash-cli');
-  const int = document.getElementById('dash-int');
-  const tCli = document.getElementById('tab-dash-cli');
-  const tInt = document.getElementById('tab-dash-int');
-  if(tab==='cli'){
-    if(cli) cli.style.display='block';
-    if(int) int.style.display='none';
-    if(tCli){ tCli.style.background='#00B2E2'; tCli.style.color='#fff'; }
-    if(tInt){ tInt.style.background='var(--sur2)'; tInt.style.color='var(--tx2)'; }
-  } else {
-    if(cli) cli.style.display='none';
-    if(int) int.style.display='block';
-    if(tInt){ tInt.style.background='#00B2E2'; tInt.style.color='#fff'; }
-    if(tCli){ tCli.style.background='var(--sur2)'; tCli.style.color='var(--tx2)'; }
-  }
-};
-
-window.updPortafolio = function(){
-  const mesFiltro = g('port-mes-sel')?.value || '';
-  const fm = v => '$' + (v||0).toLocaleString('es-CO');
-  const pct = (a,b) => b>0 ? Math.round(a/b*100) : 0;
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
-
-  // Normaliza cualquier formato a YYYY-MM
-  const toYYYYMM = s => {
-    if(!s) return null; s=s.trim();
-    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){ const [,m,y]=s.split('/'); return `${y}-${m}`; }
-    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.substring(0,7);
-    if(/^\d{4}-\d{2}$/.test(s)) return s;
-    return null;
-  };
-  const getMesRec = r => {
-    const fuentes=[r.fechaEvento,r.furips1?.c22,r.furips1?.c11,r.fechaEgreso,r.furips1?.c12,r.radicado?.fecha];
-    for(const f of fuentes){ const m=toYYYYMM(f); if(m) return m; }
-    if(r.creado?.toDate){ const d=r.creado.toDate(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-    return null;
-  };
-
-  // Usar RECS si tiene datos, si no RECS_ALL como fallback
-  const BASE = (RECS && RECS.length > 0) ? RECS : (typeof RECS_ALL!=='undefined' && RECS_ALL.length > 0 ? RECS_ALL : []);
-  let recs = BASE;
-  if(mesFiltro){
-    recs = BASE.filter(r => getMesRec(r) === mesFiltro);
-  }
-  const recsAcum = BASE;
-
-  const val = r => parseInt(r.furips1?.c97 || r.furips1?.c96 || 0) || 0;
-
-  // ── KPIs principales ──
-  const total    = recsAcum.length;
-  const totalVal = recsAcum.reduce((a,r)=>a+val(r),0);
-
-  const pagadas   = recsAcum.filter(r => ['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
-  const glosadas  = recsAcum.filter(r => getRespuestaAdres(r)==='glosada');
-  const radicadas = recsAcum.filter(r => getEstadoGestion(r)==='radicada' && !getRespuestaAdres(r));
-  const sinRad    = recsAcum.filter(r => !r.radicado?.numero);
-
-  // ── Acumulado KPIs ──
-  _s('pk-pag',  pagadas.length);  _s('pk-pag-v', fm(pagadas.reduce((a,r)=>a+val(r),0)));
-  _s('pk-rad',  radicadas.length);_s('pk-rad-v', fm(radicadas.reduce((a,r)=>a+val(r),0)));
-  _s('pk-glo',  glosadas.length); _s('pk-glo-v', fm(glosadas.reduce((a,r)=>a+val(r),0)));
-  _s('pk-pen',  sinRad.length);   _s('pk-pen-v', fm(sinRad.reduce((a,r)=>a+val(r),0)));
-
-  // ── Vista Cliente: cifras que cuadran ──
-  const pagV   = pagadas.reduce((a,r)=>a+val(r),0);
-  const radV   = radicadas.reduce((a,r)=>a+val(r),0);
-  const gloV   = glosadas.reduce((a,r)=>a+val(r),0);
-  const sinV   = sinRad.reduce((a,r)=>a+val(r),0);
-  const tramV  = recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').reduce((a,r)=>a+val(r),0);
-  // Radicadas total = en trámite + pagadas + glosadas + aprobada parcial + anuladas ADRES
-  const radTotal = recsAcum.filter(r=>r.radicado?.numero);
-  const radTotalN = radTotal.length;
-  const radTotalV = radTotal.reduce((a,r)=>a+val(r),0);
-
-  const pct2 = (a,b) => b>0?Math.round(a/b*100):0;
-
-  // Header cliente
-  const cliIPS = document.getElementById('dash-cli-ips');
-  if(cliIPS) cliIPS.textContent = (typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas las IPS';
-  const cliPer = document.getElementById('dash-cli-periodo');
-  const mesFiltro2 = g('port-mes-sel')?.value||'';
-  if(cliPer) cliPer.textContent = mesFiltro2 ? (() => {
-    const [y,mo]=mesFiltro2.split('-');
-    return new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
-  })() : 'Todo el historial · ' + new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
-  const cliTotV = document.getElementById('dash-cli-total-v');
-  if(cliTotV) cliTotV.textContent = fm(totalVal);
-  const cliTotN = document.getElementById('dash-cli-total-n');
-  if(cliTotN) cliTotN.textContent = total + ' reclamaciones';
-
-  // Cards cliente
-  const setCard = (pfx,n,v,t) => {
-    _s(pfx+'-n', n);
-    _s(pfx+'-v', fm(v));
-    const pEl = document.getElementById(pfx+'-pct');
-    if(pEl) pEl.textContent = pct2(n,t)+'%';
-  };
-  setCard('cli-sinrad', sinRad.length,   sinV,  total);
-  setCard('cli-rad',    radTotalN,        radTotalV, total);
-  setCard('cli-pag',    pagadas.length,   pagV,  total);
-  setCard('cli-glo',    glosadas.length,  gloV,  total);
-
-  // Desglose cuadrado
-  const des = document.getElementById('cli-desglose');
-  if(des && total > 0){
-    const items = [
-      {label:'⏸ Sin radicar',          n:sinRad.length,  v:sinV,      color:'#999899'},
-      {label:'📬 Radicadas (total)',    n:radTotalN,      v:radTotalV, color:'#00B2E2'},
-      {label:'  ⏳ · En trámite ADRES', n:recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').length, v:tramV, color:'#00B2E2', indent:true},
-      {label:'  ✔ · Reconocidas',       n:pagadas.length, v:pagV,      color:'#A3D55D', indent:true},
-      {label:'  ↩ · En glosa',          n:glosadas.length,v:gloV,      color:'#9DB455', indent:true},
-    ];
-    des.innerHTML = items.map(it=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:${it.indent?'3px 4px 3px 20px':'5px 4px'};border-radius:6px;${it.indent?'':'background:var(--sur2);margin-bottom:2px;'}">
-        <span style="font-size:${it.indent?'10':'11'}px;color:${it.indent?'var(--tx3)':'var(--tx)'};font-weight:${it.indent?'400':'600'};">${it.label}</span>
-        <span style="display:flex;gap:12px;align-items:center;">
-          <span style="font-family:var(--mono);font-size:${it.indent?'10':'12'}px;font-weight:700;color:${it.color};">${it.n}</span>
-          <span style="font-family:var(--mono);font-size:${it.indent?'10':'11'}px;color:var(--tx3);min-width:90px;text-align:right;">${fm(it.v)}</span>
-        </span>
-      </div>`).join('') +
-      `<div style="border-top:2px solid var(--brd);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;font-weight:700;">
-        <span style="font-size:11px;">TOTAL PORTAFOLIO</span>
-        <span style="display:flex;gap:12px;"><span style="font-family:var(--mono);color:#00B2E2;">${total}</span><span style="font-family:var(--mono);color:#00B2E2;min-width:90px;text-align:right;">${fm(totalVal)}</span></span>
-      </div>`;
-  }
-
-  // ── Antigüedad de cartera (no pagadas) ──
-  const noPagadas = recs.filter(r => getRespuestaAdres(r)!=='aprobada' && getRespuestaAdres(r)!=='aprobada_parcial');
-  const totalNPVal = noPagadas.reduce((a,r)=>a+val(r),0);
-
-  const rangos = [
-    { id:'pa-0-90',    label:'0 – 90 días',    color:'#3fb950', min:0,   max:90  },
-    { id:'pa-91-180',  label:'91 – 180 días',  color:'#e3b341', min:91,  max:180 },
-    { id:'pa-181-360', label:'181 – 360 días', color:'#db6d28', min:181, max:360 },
-    { id:'pa-361',     label:'> 360 días',     color:'#f85149', min:361, max:9999},
-    { id:'pa-venc',    label:'⚠ VENCIDAS',     color:'#8b949e', min:-9999,max:-1 },
-  ];
-
-  // Calcular max para escala relativa
-  const allItems = rangos.map(rg => noPagadas.filter(r=>{
-    const v=calcVencimiento(r); if(!v) return false;
-    if(rg.min<0) return v.vencida;
-    return !v.vencida&&v.diasRestantes>=rg.min&&v.diasRestantes<=rg.max;
-  }));
-  const maxN2 = Math.max(...allItems.map(a=>a.length), 1);
-
-  rangos.forEach((rg,ri) => {
-    const el = g(rg.id); if(!el) return;
-    const items = allItems[ri];
-    const n = items.length;
-    const v = items.reduce((a,r)=>a+val(r),0);
-    const p = pct(v, totalNPVal);
-    const barH = Math.max(4, Math.round(n/maxN2*80));
-    el.innerHTML = `
-      <div style="height:80px;display:flex;align-items:flex-end;justify-content:center;">
-        <div style="width:44px;height:${barH}px;background:${rg.color};border-radius:5px 5px 0 0;transition:height .5s;position:relative;">
-          ${n>0?`<div style="position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;color:${rg.color};font-family:var(--mono);white-space:nowrap;">${n}</div>`:''}
-        </div>
-      </div>
-      <div style="font-size:10px;color:var(--tx2);text-align:center;font-weight:600;margin-top:4px;">${rg.label}</div>
-      <div style="font-size:10px;color:${rg.color};text-align:center;font-family:var(--mono);font-weight:700;">${p}%</div>
-      <div style="font-size:9px;color:var(--tx3);text-align:center;">${fm(v)}</div>`;
-  });
-
-  // ── Indicadores clave ──
-  const efectividad = pct(pagadas.reduce((a,r)=>a+val(r),0), totalVal);
-  const tasaRechazo = total > 0 ? pct(recs.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres').length, total) : 0;
-  const tasaGlosa   = total > 0 ? pct(glosadas.length, total) : 0;
-  const diasProm    = (() => {
-    const rad = recs.filter(r=>r.radicado?.fecha && (r.fechaEvento||r.furips1?.c22));
-    if(!rad.length) return null;
-    const parseF = s => { if(!s||s.length!==10) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
-    let sum = 0, cnt = 0;
-    rad.forEach(r => {
-      const fEv  = parseF(r.fechaEvento||r.furips1?.c22||'');
-      const fRad = parseF(r.radicado.fecha);
-      if(fEv && fRad){ sum += Math.max(0, Math.round((fRad-fEv)/86400000)); cnt++; }
-    });
-    return cnt > 0 ? Math.round(sum/cnt) : null;
-  })();
-
-  const ind = g('port-indicadores'); if(!ind) return;
-  const sem = (v,b,m,inv=false) => inv?(v<=b?'🟢':v<=m?'🟡':'🔴'):(v>=b?'🟢':v>=m?'🟡':'🔴');
-  const kpiR = (lbl,valor,emoji,meta,sub='') => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);">
-      <span style="font-size:20px;">${emoji}</span>
-      <div style="flex:1;">
-        <div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>
-        ${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}
-      </div>
-      <span style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--tx);">${valor}</span>
-    </div>`;
-  ind.innerHTML =
-    kpiR('Efectividad de cobro', efectividad+'%', sem(efectividad,70,40), '>70%', 'Pagado/Reclamado') +
-    kpiR('Tasa de glosa', tasaGlosa+'%', sem(tasaGlosa,10,25,true), '<10%', `${glosadas.length} de ${total}`) +
-    kpiR('Tasa de rechazo', tasaRechazo+'%', sem(tasaRechazo,5,15,true), '<5%', 'Anuladas/Total') +
-    (diasProm!==null ? kpiR('Días evento→radicación', diasProm+' días', sem(diasProm,30,90,true), '<30 días', 'Oportunidad') : '') +
-    kpiR('Sin radicar', sinRad.length, sinRad.length===0?'🟢':sinRad.length<=5?'🟡':'🔴', '0', fm(sinRad.reduce((a,r)=>a+val(r),0)));
-
-  // Donut SVG
-  const donut = g('dash-donut');
-  if(donut && total > 0){
-    const R=45,cx=60,cy=60,sw=16,circ=2*Math.PI*R;
-    const segs=[
-      {n:pagadas.length,color:'#A3D55D'},
-      {n:radicadas.length,color:'#00B2E2'},
-      {n:glosadas.length,color:'#999899'},
-      {n:sinRad.length,color:'#9DB455'},
-      {n:recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length,color:'#db6d28'},
-    ].filter(s=>s.n>0);
-    let off=0, paths='';
-    segs.forEach(s=>{
-      const len=s.n/total*circ;
-      paths+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(circ-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
-      off+=len;
-    });
-    const pag=pagadas.reduce((a,x)=>a+val(x),0);
-    const ef=pct(pag,totalVal);
-    donut.innerHTML=paths+
-      `<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace">${ef}%</text>`+
-      `<text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="9" fill="var(--tx3)">efectividad</text>`;
-  }
-  // Leyenda
-  const ley = g('dash-barra-leyenda');
-  if(ley && total > 0){
-    const legItems=[
-      {label:'Pagadas',n:pagadas.length,color:'#A3D55D'},
-      {label:'En Cobro',n:radicadas.length,color:'#00B2E2'},
-      {label:'Glosadas',n:glosadas.length,color:'#999899'},
-      {label:'Sin Radicar',n:sinRad.length,color:'#9DB455'},
-    ].filter(e=>e.n>0);
-    ley.innerHTML=legItems.map(e=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;">
-        <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2);">
-          <span style="width:10px;height:10px;border-radius:2px;background:${e.color};display:inline-block;"></span>${e.label}
-        </span>
-        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${e.color};">${e.n}</span>
-      </div>`).join('');
-  }
-
-  // ── Barra de distribución por estados ──
-  const estados = [
-    { label:'Sin radicar',  color:'#8b949e', n: sinRad.length },
-    { label:'Radicada',     color:'#79c0ff', n: radicadas.length },
-    { label:'En trámite',   color:'#e3b341', n: recs.filter(r=>getRespuestaAdres(r)==='en_tramite').length },
-    { label:'Glosa',        color:'#f85149', n: glosadas.length },
-    { label:'Aprobada',     color:'#3fb950', n: pagadas.length },
-    { label:'Devuelta IPS', color:'#db6d28', n: recs.filter(r=>getEstadoGestion(r)==='devuelta_ips').length },
-    { label:'Anulada',      color:'#6e7681', n: recs.filter(r=>getEstadoGestion(r)==='anulada').length },
-  ].filter(e=>e.n>0);
-
-  const barra = g('port-barra-estados');
-  const leyenda = g('port-barra-leyenda');
-  if(barra && total > 0){
-    barra.innerHTML = estados.map(e => {
-      const p = pct(e.n, total);
-      return `<div title="${e.label}: ${e.n} (${p}%)" style="flex:${e.n};background:${e.color};min-width:${p>0?'4px':'0'};transition:flex .4s;"></div>`;
-    }).join('');
-    if(leyenda) leyenda.innerHTML = estados.map(e =>
-      `<span style="display:flex;align-items:center;gap:4px;">
-        <span style="width:10px;height:10px;border-radius:2px;background:${e.color};flex-shrink:0;"></span>
-        <span style="color:var(--tx2);">${e.label} <strong style="font-family:var(--mono);">${e.n}</strong> <span style="color:var(--tx3);">(${pct(e.n,total)}%)</span></span>
-      </span>`
-    ).join('');
-  } else if(barra){
-    barra.innerHTML = '<div style="width:100%;background:var(--sur2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3);">Sin datos</div>';
-  }
-};
 
 // ── Descargar informe mensual Excel ──
 window.descargarInformeMensual = function(){
@@ -5984,18 +5608,9 @@ window.go=(id)=>{
   if(id==='radmas') loadRadicacion();
   if(id==='respadres') loadRespuestaAdres();
   if(id==='adm'){
+    setTimeout(()=>{ if(typeof cargarUsers==='function') cargarUsers(); if(typeof poblarSelectDigitadores==='function') poblarSelectDigitadores(); },200);
     const mn=g('mi-nombre'); if(mn) mn.value=USER.nombre||'';
-    setTimeout(()=>{ cargarUsers(); poblarSelectDigitadores(); }, 200);
-  }
-  // Poblar select digitadores siempre que se abra cualquier sección
-  // para que asig-digitador tenga datos aunque no se haya ido a Admin
-  if(id==='adm' || id==='lista' || id==='dash'){
-    setTimeout(()=>{
-      const selDig = document.getElementById('asig-digitador');
-      if(selDig && selDig.options.length <= 1 && typeof cargarUsers==='function'){
-        cargarUsers();
-      }
-    }, 500);
+    cargarUsers();
   }
   if(id==='inf'){
     if(USER.rol!=='superadmin'){ toast('Solo el Super Admin puede acceder a Informes.','w'); return; }
@@ -6029,149 +5644,6 @@ function prepNueva(){
 }
 
 // Helper para obtener el próximo consecutivo disponible
-// ══════════════════════════════════════════════════════════════
-// ██ ADMIN — Gestión de usuarios
-// ══════════════════════════════════════════════════════════════
-window.cargarUsers = async function(){
-  const el = document.getElementById('users-list');
-  if(!el) return;
-  el.innerHTML = '<div style="color:var(--tx3);font-size:12px;padding:8px;">Cargando usuarios...</div>';
-  if(!db){ el.innerHTML='<div class="alert ae">Firebase no inicializado. Recarga.</div>'; return; }
-
-  // Mostrar usuario actual como mínimo mientras carga
-  if(USER){
-    const rolColor={superadmin:'#f97316',admin:'#3b82f6',digitador:'#22c55e'};
-    el.innerHTML = `<div style="padding:8px 12px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:10px;opacity:.6;">
-      <div style="font-size:11px;color:var(--tx3);">👤 ${USER.nombre||USER.email} — <strong>${USER.rol}</strong> (tú)</div>
-    </div><div style="color:var(--tx3);font-size:11px;padding:8px;">Cargando resto...</div>`;
-  }
-
-  try{
-    // Usar onSnapshot una vez para obtener todos los usuarios
-    const colRef = collection(db,'usuarios');
-    const snap   = await getDocs(colRef);
-
-    const users = [];
-    snap.forEach(d => {
-      const data = d.data();
-      if(!data.eliminado) users.push({id:d.id, ...data});
-    });
-    users.sort((a,b)=>(a.nombre||a.email||'').localeCompare(b.nombre||b.email||''));
-
-    if(!users.length){
-      el.innerHTML='<div style="color:var(--tx3);font-size:12px;padding:8px;">No hay usuarios registrados aún.</div>';
-      return;
-    }
-
-    // Poblar select de digitadores
-    const selDig = document.getElementById('asig-digitador');
-    if(selDig){
-      const digs = users.filter(u=>u.rol==='digitador'||u.rol==='admin');
-      selDig.innerHTML = '<option value="">— Seleccione digitador —</option>' +
-        digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');
-    }
-
-    const rolColor={superadmin:'#f97316',admin:'#3b82f6',digitador:'#22c55e'};
-    const rolLbl  ={superadmin:'⭐ Super Admin',admin:'👤 Admin',digitador:'✏ Digitador'};
-    el.innerHTML = users.map(u=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);gap:8px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:200px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:${rolColor[u.rol]||'#666'}22;border:2px solid ${rolColor[u.rol]||'#666'};display:flex;align-items:center;justify-content:center;font-size:14px;">👤</div>
-          <div>
-            <div style="font-weight:600;font-size:12px;">${u.nombre||'Sin nombre'}</div>
-            <div style="font-size:11px;color:var(--tx3);">${u.email||u.id}</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="background:${rolColor[u.rol]||'#666'}22;color:${rolColor[u.rol]||'#666'};font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">${rolLbl[u.rol]||u.rol||'—'}</span>
-          <select onchange="cambiarRolUser('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--brd);" ${u.id===USER?.uid?'disabled title="Tu propio usuario"':''}>
-            <option value="digitador" ${u.rol==='digitador'?'selected':''}>Digitador</option>
-            <option value="admin"     ${u.rol==='admin'    ?'selected':''}>Admin</option>
-            <option value="superadmin"${u.rol==='superadmin'?'selected':''}>Super Admin</option>
-          </select>
-          ${u.id!==USER?.uid?`<button onclick="eliminarUser('${u.id}','${(u.nombre||u.email||'').replace(/'/g,'')}','${(u.email||'').replace(/'/g,'')}')"
-            style="background:none;border:1px solid var(--red);color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">✕</button>`:''}
-        </div>
-      </div>`).join('');
-
-  }catch(e){
-    el.innerHTML=`<div class="alert ae" style="font-size:11px;">
-      ❌ Error al cargar usuarios: <strong>${e.message}</strong><br>
-      <small>Verifica las reglas de Firestore: Firebase Console → Firestore → Reglas → publicar<br>
-      <code>allow read, write: if request.auth != null;</code></small>
-      <br><button class="btn bs" style="margin-top:8px;font-size:11px;" onclick="cargarUsers()">🔄 Reintentar</button>
-    </div>`;
-    console.error('cargarUsers:', e);
-  }
-};
-
-window.crearUser = async function(){
-  const nombre = (document.getElementById('u-nom')?.value||'').trim();
-  const email  = (document.getElementById('u-eml')?.value||'').trim();
-  const pass   = (document.getElementById('u-pas')?.value||'').trim();
-  const rol    = document.getElementById('u-rol')?.value || 'digitador';
-  const alr    = document.getElementById('u-alr');
-
-  if(!nombre||!email||!pass){
-    if(alr){ alr.className='alert aw'; alr.textContent='⚠ Nombre, correo y contraseña son obligatorios.'; }
-    return;
-  }
-  if(pass.length < 6){
-    if(alr){ alr.className='alert aw'; alr.textContent='⚠ La contraseña debe tener mínimo 6 caracteres.'; }
-    return;
-  }
-  if(alr){ alr.className='alert ai'; alr.textContent='⏳ Creando usuario…'; }
-
-  try{
-    // Crear en Firebase Auth mediante la API REST (sin cerrar sesión actual)
-    const apiKey = 'AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g';
-    const resp = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email, password:pass, returnSecureToken:true})
-    });
-    const data = await resp.json();
-    if(data.error){ throw new Error(data.error.message); }
-    const newUid = data.localId;
-
-    // Guardar en Firestore
-    await setDoc(doc(db,'usuarios',newUid),{
-      nombre, email, rol,
-      creadoPor: USER.uid,
-      creadoPorNombre: USER.nombre||USER.email||'',
-      creado: serverTimestamp()
-    });
-
-    if(alr){ alr.className='alert as'; alr.textContent=`✔ Usuario "${nombre}" creado. Comparte: ${email} / ${pass}`; }
-    ['u-nom','u-eml','u-pas'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    cargarUsers();
-    toast(`✔ Usuario ${nombre} creado`,'ok');
-  }catch(e){
-    if(alr){ alr.className='alert ae'; alr.textContent=`❌ Error: ${e.message}`; }
-    console.error('crearUser:',e);
-  }
-};
-
-window.cambiarRolUser = async function(uid, nuevoRol){
-  try{
-    await updateDoc(doc(db,'usuarios',uid),{ rol:nuevoRol, actualizado:serverTimestamp() });
-    toast(`✔ Rol actualizado a ${nuevoRol}`,'ok');
-    cargarUsers();
-  }catch(e){ toast('Error: '+e.message,'e'); }
-};
-
-window.eliminarUser = async function(uid, nombre, email){
-  if(!confirm(`¿Eliminar usuario "${nombre}" (${email})? Esta acción no elimina el acceso de Firebase Auth, solo el registro en Firestore.`)) return;
-  try{
-    await updateDoc(doc(db,'usuarios',uid),{ eliminado:true, rol:'bloqueado', actualizado:serverTimestamp() });
-    toast(`✔ Usuario ${nombre} bloqueado`,'ok');
-    cargarUsers();
-  }catch(e){ toast('Error: '+e.message,'e'); }
-};
-
-// ══════════════════════════════════════════════════════════════
-// FIN ADMIN USUARIOS
-// ══════════════════════════════════════════════════════════════
-
 window.getProximoConsecutivo = () => {
   const consecs = RECS.map(r => parseInt(r.consec)||0);
   const next = consecs.length > 0 ? Math.max(...consecs) + 1 : 1;
@@ -7814,141 +7286,437 @@ const F1_PAD_ZEROS = { 'c32': 20 };
 // Genera el contenido TXT del FURIPS 1 para una reclamación.
 // Devuelve un string con UNA SOLA LÍNEA con los campos separados por comas.
 
-// ══════════════════════════════════════════════════
-// ██ MÓDULO TXT — carga robusta y generación
-// ══════════════════════════════════════════════════
-
-// Poblar select IPS con los clientes disponibles
-window.poblarSelectTxt = function(){
-  const sel = g('tx-cod-sel'); if(!sel) return;
-  let lista = CLIENTES_IPS || [];
-  if(CLIENTE_ACTIVO && CLIENTE_ACTIVO.nit !== '*')
-    lista = lista.filter(x => x.nit === CLIENTE_ACTIVO.nit);
-  const opts = lista.map(x =>
-    `<option value="${x.nit}">${x.codHab||x.nit} — ${x.razon}</option>`
-  ).join('');
-  sel.innerHTML = `<option value="">Seleccione IPS...</option>${opts}<option value="otro">Otra IPS (escribir código)</option>`;
-  // Si solo hay una IPS activa, preseleccionar
-  if(lista.length === 1){
-    sel.value = lista[0].nit;
-    selIPSTxt(lista[0].nit);
-  } else if(CLIENTE_ACTIVO && CLIENTE_ACTIVO.nit !== '*'){
-    sel.value = CLIENTE_ACTIVO.nit;
-    selIPSTxt(CLIENTE_ACTIVO.nit);
+// ══ switchDashTab ══
+window.switchDashTab = function(tab){
+  const cli=document.getElementById('dash-cli'),int2=document.getElementById('dash-int');
+  const tCli=document.getElementById('tab-dash-cli'),tInt=document.getElementById('tab-dash-int');
+  if(tab==='cli'){
+    if(cli)cli.style.display='block'; if(int2)int2.style.display='none';
+    if(tCli){tCli.style.background='#00B2E2';tCli.style.color='#fff';}
+    if(tInt){tInt.style.background='var(--sur2)';tInt.style.color='var(--tx2)';}
+  }else{
+    if(cli)cli.style.display='none'; if(int2)int2.style.display='block';
+    if(tInt){tInt.style.background='#00B2E2';tInt.style.color='#fff';}
+    if(tCli){tCli.style.background='var(--sur2)';tCli.style.color='var(--tx2)';}
   }
 };
 
-// Mostrar/ocultar input manual de código
-window.selIPSTxt = function(val){
-  const inp = g('tx-cod'); if(!inp) return;
-  if(val === 'otro'){
-    inp.style.display = 'block'; inp.value = ''; inp.focus();
-  } else {
-    inp.style.display = 'none'; inp.value = val || '';
-  }
-};
-
-// Cargar módulo TXT — robusto: siempre muestra el formulario si RECS tiene datos
-window.loadTxt = function(){
-  // Poblar select IPS actualizado
-  poblarSelectTxt();
-
-  const usar = (RECS && RECS.length > 0) ? RECS : (RECS_ALL && RECS_ALL.length > 0 ? RECS_ALL : []);
-
-  const noEl = g('txt-no'), fmEl = g('txt-fm');
-  if(usar.length === 0){
-    if(noEl) noEl.classList.remove('hidden');
-    if(fmEl) fmEl.classList.add('hidden');
-    return;
-  }
-  if(noEl) noEl.classList.add('hidden');
-  if(fmEl) fmEl.classList.remove('hidden');
-
-  // Pre-llenar fecha con hoy
-  const fec = g('tx-fec');
-  if(fec && !fec.value) fec.value = new Date().toISOString().split('T')[0];
-
-  // Pre-llenar rango consecutivos
-  const cons = usar.map(r => parseInt(r.consec||0)).filter(n => n > 0);
-  if(cons.length){
-    const ini = g('tx-cons-ini'), fin = g('tx-cons-fin');
-    if(ini && !ini.value) ini.value = Math.min(...cons);
-    if(fin && !fin.value) fin.value = Math.max(...cons);
-  }
-};
-
-// Cargar módulo Excel
-window.loadXL = function(){
-  const usar = (RECS && RECS.length > 0) ? RECS : (RECS_ALL && RECS_ALL.length > 0 ? RECS_ALL : []);
-  const noEl = g('xl-no'), fmEl = g('xl-fm');
-  if(usar.length === 0){
-    if(noEl) noEl.classList.remove('hidden');
-    if(fmEl) fmEl.classList.add('hidden');
-    return;
-  }
-  if(noEl) noEl.classList.add('hidden');
-  if(fmEl) fmEl.classList.remove('hidden');
-  const inf = g('xl-inf');
-  if(inf) inf.textContent = `${usar.length} reclamaciones · ${usar.filter(r=>r.furips2?.length).length} con FURIPS 2 · IPS: ${CLIENTE_ACTIVO?.razon||'Todas'}`;
-};
-
-// Filtrar reclamaciones para el TXT según los criterios del formulario
-function getRecsTxt(){
-  const selVal = g('tx-cod-sel')?.value || '';
-  const manCod = g('tx-cod')?.value?.trim() || '';
-  const cod    = selVal === 'otro' ? manCod : (selVal || manCod);
-  const ini    = parseInt(g('tx-cons-ini')?.value||'0') || 0;
-  const fin    = parseInt(g('tx-cons-fin')?.value||'0') || 0;
-  // Usar RECS si tiene datos, si no RECS_ALL
-  let recs = (RECS && RECS.length > 0) ? RECS : (RECS_ALL || []);
-  if(cod) recs = recs.filter(r =>
-    r.nitIPS === cod || r.codHab === cod ||
-    (r.codHab||'').startsWith(cod) || r.furips1?.c4 === cod
-  );
-  if(ini > 0) recs = recs.filter(r => parseInt(r.consec||0) >= ini);
-  if(fin > 0) recs = recs.filter(r => parseInt(r.consec||0) <= fin);
-  return recs;
+// ══ poblarMesesPortafolio ══
+function poblarMesesPortafolio(){
+  const sel=g('port-mes-sel'); if(!sel) return;
+  const toYYYYMM=s=>{ if(!s) return null; s=String(s).trim(); if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){const[,m,y]=s.split('/');return`${y}-${m}`;} if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.substring(0,7); if(/^\d{4}-\d{2}$/.test(s)) return s; return null; };
+  const getMesRad=r=>{ const f1=toYYYYMM(r.radicado?.fecha); if(f1) return f1; if(r.radicado?.registradoEn?.toDate){const d=r.radicado.registradoEn.toDate();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;} return null; };
+  const mesesSet=new Set();
+  RECS.forEach(r=>{ const m=getMesRad(r); if(m) mesesSet.add(m); const fEv=toYYYYMM(r.fechaEvento)||toYYYYMM(r.furips1?.c22); if(fEv) mesesSet.add(fEv); });
+  const meses=Array.from(mesesSet).sort().reverse();
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todo el historial</option>'+meses.map(m=>{const[y,mo]=m.split('-');const label=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});return`<option value="${m}" ${cur===m?'selected':''}>${label.charAt(0).toUpperCase()+label.slice(1)}</option>`;}).join('');
 }
 
-// Generar y descargar TXT
-window.expTxt = function(tipo){
-  const recs = getRecsTxt();
-  if(!recs.length){ toast('No hay reclamaciones con ese filtro.','w'); return; }
-  const fec = g('tx-fec')?.value || new Date().toISOString().split('T')[0];
-  const [y,m,d] = fec.split('-');
-  const fd  = `${d||'00'}${m||'00'}${y||'0000'}`;
-  const cod = g('tx-cod')?.value?.trim() || recs[0]?.codHab || recs[0]?.nitIPS || 'IPS';
-  if(tipo === 'FURIPS1'){
-    const lineas = recs.map(r => generarTXT_F1(r)||'').filter(Boolean).join('\n');
-    dl(lineas, `FURIPS1${cod}${fd}.txt`, 'text/plain');
-    toast(`✔ FURIPS 1 .txt · ${recs.length} reclamaciones`, 'ok');
-  } else {
-    const f2 = [];
-    recs.forEach(r => { const t = generarTXT_F2(r); if(t) f2.push(t); });
-    dl(f2.join('\n'), `FURIPS2${cod}${fd}.txt`, 'text/plain');
-    toast(`✔ FURIPS 2 .txt · ${f2.length} ítems`, 'ok');
+// ══ updPortafolio ══
+window.updPortafolio = function(){
+  const mesFiltro=g('port-mes-sel')?.value||'';
+  const fm=v=>'$'+(v||0).toLocaleString('es-CO');
+  const pct=(a,b)=>b>0?Math.round(a/b*100):0;
+  const toYYYYMM=s=>{ if(!s) return null; s=String(s).trim(); if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){const[,m,y]=s.split('/');return`${y}-${m}`;} if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.substring(0,7); return null; };
+  const getMesRec=r=>{ const f1=toYYYYMM(r.radicado?.fecha); if(f1) return f1; if(r.radicado?.registradoEn?.toDate){const d=r.radicado.registradoEn.toDate();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;} return null; };
+
+  const BASE=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
+  let recs=BASE;
+  if(mesFiltro) recs=BASE.filter(r=>getMesRec(r)===mesFiltro);
+  const recsAcum=BASE;
+  const val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+
+  const hasMes=!!mesFiltro;
+  const total=recsAcum.length, totalVal=recsAcum.reduce((a,r)=>a+val(r),0);
+  const pagadas=recsAcum.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+  const glosadas=recsAcum.filter(r=>getRespuestaAdres(r)==='glosada');
+  const radicadas=recsAcum.filter(r=>getEstadoGestion(r)==='radicada'&&!getRespuestaAdres(r));
+  const sinRad=recsAcum.filter(r=>!r.radicado?.numero);
+  const radTotal=recsAcum.filter(r=>r.radicado?.numero);
+
+  // IDs internos
+  _s('pk-pag',pagadas.length); _s('pk-pag-v',fm(pagadas.reduce((a,r)=>a+val(r),0)));
+  _s('pk-rad',radicadas.length); _s('pk-rad-v',fm(radicadas.reduce((a,r)=>a+val(r),0)));
+  _s('pk-glo',glosadas.length); _s('pk-glo-v',fm(glosadas.reduce((a,r)=>a+val(r),0)));
+  _s('pk-pen',sinRad.length); _s('pk-pen-v',fm(sinRad.reduce((a,r)=>a+val(r),0)));
+
+  // Vista cliente cards
+  const pct2=(a,b)=>b>0?Math.round(a/b*100):0;
+  const setCard=(pfx,n,v,t)=>{_s(pfx+'-n',n);_s(pfx+'-v',fm(v));const pEl=document.getElementById(pfx+'-pct');if(pEl)pEl.textContent=pct2(n,t)+'%';};
+  const pagV=pagadas.reduce((a,r)=>a+val(r),0), gloV=glosadas.reduce((a,r)=>a+val(r),0);
+  const radTotalV=radTotal.reduce((a,r)=>a+val(r),0), sinV=sinRad.reduce((a,r)=>a+val(r),0);
+  setCard('cli-sinrad',sinRad.length,sinV,total);
+  setCard('cli-rad',radTotal.length,radTotalV,total);
+  setCard('cli-pag',pagadas.length,pagV,total);
+  setCard('cli-glo',glosadas.length,gloV,total);
+
+  // Header CLI
+  const cliPer=g('dash-cli-periodo');
+  if(cliPer) cliPer.textContent=hasMes?(()=>{const[y,mo]=mesFiltro.split('-');return new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});})():'Todo el historial · '+new Date().toLocaleDateString('es-CO');
+  const lblAcum=g('port-acum-label');
+  if(lblAcum) lblAcum.textContent=hasMes?`Acumulado total: ${total} reclamaciones`:'';
+
+  // MES section
+  const secMes=g('port-seccion-mes'); if(secMes) secMes.style.display=hasMes?'block':'none';
+  if(hasMes){
+    const[y,mo]=mesFiltro.split('-');
+    const mesNom=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
+    const lbl=g('port-mes-label'); if(lbl) lbl.textContent=mesNom.charAt(0).toUpperCase()+mesNom.slice(1);
+    const mesRecs=recs;
+    const mPag=mesRecs.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+    const mGlo=mesRecs.filter(r=>getRespuestaAdres(r)==='glosada');
+    const mRad=mesRecs.filter(r=>getEstadoGestion(r)==='radicada');
+    const mSin=mesRecs.filter(r=>!r.radicado?.numero);
+    _s('pm-total',mesRecs.length); _s('pm-total-v',fm(mesRecs.reduce((a,r)=>a+val(r),0)));
+    _s('pm-pag',mPag.length); _s('pm-pag-v',fm(mPag.reduce((a,r)=>a+val(r),0)));
+    _s('pm-rad',mRad.length); _s('pm-rad-v',fm(mRad.reduce((a,r)=>a+val(r),0)));
+    _s('pm-glo',mGlo.length); _s('pm-glo-v',fm(mGlo.reduce((a,r)=>a+val(r),0)));
+    _s('pm-pen',mSin.length); _s('pm-pen-v',fm(mSin.reduce((a,r)=>a+val(r),0)));
+  }
+
+  // Desglose cuadrado
+  const des=g('cli-desglose');
+  if(des&&total>0){
+    const tramN=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').length;
+    const tramV=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').reduce((a,r)=>a+val(r),0);
+    const devN=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length;
+    const devV=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').reduce((a,r)=>a+val(r),0);
+    const anN=recsAcum.filter(r=>getRespuestaAdres(r)==='anulada_adres').length;
+    const anV=recsAcum.filter(r=>getRespuestaAdres(r)==='anulada_adres').reduce((a,r)=>a+val(r),0);
+    const row=(lbl,n,v,col,indent)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:${indent?'3px 4px 3px 16px':'6px 6px'};border-radius:5px;${indent?'':'background:var(--sur2);margin-bottom:3px;'}"><span style="font-size:${indent?'10':'11'}px;color:${indent?'var(--tx3)':'var(--tx)'};font-weight:${indent?400:600};">${lbl}</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);font-size:${indent?10:11}px;font-weight:600;color:${col};">${n}</span><span style="font-family:var(--mono);font-size:${indent?9:10}px;color:var(--tx3);min-width:85px;text-align:right;">${fm(v)}</span></span></div>`;
+    des.innerHTML=
+      row('⏸ Sin radicar',sinRad.length,sinV,'#999899',false)+
+      row('📬 Radicadas',radTotal.length,radTotalV,'#00B2E2',false)+
+      row('⏳ · En trámite ADRES',tramN,tramV,'#00B2E2',true)+
+      row('✔ · Reconocidas',pagadas.length,pagV,'#A3D55D',true)+
+      row('↩ · En glosa',glosadas.length,gloV,'#9DB455',true)+
+      row('↩ · Devuelta IPS',devN,devV,'#c0c0c0',true)+
+      row('∅ · Anuladas ADRES',anN,anV,'#c0c0c0',true)+
+      `<div style="border-top:1px solid var(--brd);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:700;">TOTAL PORTAFOLIO</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);color:#00B2E2;font-weight:700;">${total}</span><span style="font-family:var(--mono);color:#00B2E2;min-width:85px;text-align:right;">${fm(totalVal)}</span></span></div>`;
+  }
+
+  // KPIs semáforo
+  const ind=g('port-indicadores'); if(!ind) return;
+  const efectividad=pct(pagV,totalVal);
+  const tasaGlosa=pct(glosadas.length,total);
+  const tasaRechazo=pct(recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres').length,total);
+  const parseF=s=>{if(!s||s.length!==10)return null;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+  const radConF=recsAcum.filter(r=>r.radicado?.fecha&&(r.fechaEvento||r.furips1?.c22));
+  let diasProm=null;
+  if(radConF.length){const sum=radConF.reduce((a,r)=>{const fe=parseF(r.fechaEvento||r.furips1?.c22||''),fr=parseF(r.radicado.fecha);return a+(fe&&fr?Math.max(0,Math.round((fr-fe)/86400000)):0);},0);diasProm=Math.round(sum/radConF.length);}
+  const sem=(v,b,m2,inv=false)=>inv?(v<=b?'🟢':v<=m2?'🟡':'🔴'):(v>=b?'🟢':v>=m2?'🟡':'🔴');
+  const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
+  ind.innerHTML=
+    kpiR('Efectividad de cobro',efectividad+'%',sem(efectividad,70,40),'>70%','Pagado/Reclamado')+
+    kpiR('Tasa de glosa',tasaGlosa+'%',sem(tasaGlosa,10,25,true),'<10%',`${glosadas.length} de ${total}`)+
+    kpiR('Tasa de rechazo',tasaRechazo+'%',sem(tasaRechazo,5,15,true),'<5%','Anuladas/Total')+
+    (diasProm!==null?kpiR('Días evento→radicación',diasProm+' días',sem(diasProm,30,90,true),'<30 días','Oportunidad'):'')+
+    kpiR('Sin radicar',sinRad.length,sinRad.length===0?'🟢':sinRad.length<=10?'🟡':'🔴','0',fm(sinV));
+
+  // Barra distribución
+  const barra=g('port-barra-estados'), leyenda=g('port-barra-leyenda');
+  if(barra&&total>0){
+    const estados=[
+      {label:'Sin radicar',color:'#999899',n:sinRad.length},
+      {label:'En trámite',color:'#00B2E2',n:recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').length},
+      {label:'Pagadas',color:'#A3D55D',n:pagadas.length},
+      {label:'Glosadas',color:'#9DB455',n:glosadas.length},
+      {label:'Devuelta IPS',color:'#c8c6c6',n:recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length},
+      {label:'Anuladas',color:'#e0e0e0',n:recsAcum.filter(r=>getEstadoGestion(r)==='anulada').length},
+    ].filter(e=>e.n>0);
+    barra.innerHTML=estados.map(e=>`<div style="flex:${e.n};background:${e.color};min-width:3px;" title="${e.label}: ${e.n}"></div>`).join('');
+    if(leyenda) leyenda.innerHTML=estados.map(e=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:1px;background:${e.color};display:inline-block;"></span><span style="color:var(--tx2);">${e.label} <strong style="font-family:var(--mono);">${e.n}</strong></span></span>`).join('');
+  }
+
+  // Antigüedad
+  const noPag=recsAcum.filter(r=>!['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r))&&getEstadoGestion(r)!=='anulada'&&getRespuestaAdres(r)!=='anulada_adres');
+  const npVal=noPag.reduce((a,r)=>a+val(r),0);
+  const rangos=[
+    {id:'pa-0-90',label:'0–90d',color:'#A3D55D',min:0,max:90},
+    {id:'pa-91-180',label:'91–180d',color:'#00B2E2',min:91,max:180},
+    {id:'pa-181-360',label:'181–360d',color:'#9DB455',min:181,max:360},
+    {id:'pa-361',label:'>360d',color:'#999899',min:361,max:9999},
+    {id:'pa-venc',label:'⚠Venc.',color:'#c0c0c0',min:-1,max:-1},
+  ];
+  const allItems=rangos.map(rg=>noPag.filter(r=>{const v=calcVencimiento(r);if(!v)return false;if(rg.min<0)return v.vencida;return!v.vencida&&v.diasRestantes>=rg.min&&v.diasRestantes<=rg.max;}));
+  const maxN=Math.max(...allItems.map(a=>a.length),1);
+  rangos.forEach((rg,ri)=>{
+    const el=g(rg.id); if(!el) return;
+    const items=allItems[ri],n=items.length,v=items.reduce((a,r)=>a+val(r),0),p=pct(v,npVal);
+    const barH=Math.max(4,Math.round(n/maxN*72));
+    el.innerHTML=`<div style="height:72px;display:flex;align-items:flex-end;justify-content:center;"><div style="width:40px;height:${barH}px;background:${rg.color};border-radius:4px 4px 0 0;position:relative;">${n>0?`<div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;color:${rg.color};font-family:var(--mono);white-space:nowrap;">${n}</div>`:''}</div></div><div style="font-size:9px;color:var(--tx2);text-align:center;font-weight:600;margin-top:4px;">${rg.label}</div><div style="font-size:9px;color:${rg.color};text-align:center;font-family:var(--mono);">${p}%</div>`;
+  });
+
+  // Donut
+  const donut=g('dash-donut');
+  if(donut&&total>0){
+    const R=40,cx=55,cy=55,sw=14,circ=2*Math.PI*R;
+    const segs=[
+      {n:pagadas.length,color:'#A3D55D'},{n:radTotal.length-pagadas.length-glosadas.length,color:'#00B2E2'},
+      {n:glosadas.length,color:'#9DB455'},{n:sinRad.length,color:'#999899'},
+    ].filter(s=>s.n>0);
+    let off=0,paths='';
+    segs.forEach(s=>{const len=s.n/total*circ;paths+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(circ-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;off+=len;});
+    const ef=pct(pagV,totalVal);
+    donut.innerHTML=paths+`<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace">${ef}%</text><text x="${cy}" y="${cy+12}" text-anchor="middle" font-size="9" fill="var(--tx3)">de cobro</text>`;
+    const ley=g('dash-barra-leyenda');
+    if(ley) ley.innerHTML=[{l:'Pagadas',n:pagadas.length,c:'#A3D55D'},{l:'En cobro',n:radTotal.length,c:'#00B2E2'},{l:'Glosadas',n:glosadas.length,c:'#9DB455'},{l:'Sin rad.',n:sinRad.length,c:'#999899'}].filter(e=>e.n>0).map(e=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2);"><span style="width:7px;height:7px;border-radius:1px;background:${e.c};display:inline-block;"></span>${e.l}</span><span style="font-family:var(--mono);font-size:10px;color:${e.c};font-weight:600;">${e.n}</span></div>`).join('');
   }
 };
 
-// Previsualizar TXT (primeras 3 reclamaciones)
-window.prevTxt = function(){
-  const recs = getRecsTxt();
-  if(!recs.length){ toast('No hay reclamaciones con ese filtro.','w'); return; }
-  const ms = recs.slice(0,3);
-  const f1 = ms.map(r => generarTXT_F1(r)||'').filter(Boolean).join('\n');
-  const f2 = [];
-  ms.forEach(r => { const t = generarTXT_F2(r); if(t) f2.push(t); });
-  const pvF1 = g('pv-f1'), pvF2 = g('pv-f2'), pvW = g('prev-w');
-  if(pvF1) pvF1.textContent = f1 || '(sin datos FURIPS 1)';
-  if(pvF2) pvF2.textContent = f2.join('\n') || '(sin datos FURIPS 2)';
-  if(pvW)  pvW.classList.remove('hidden');
-  pvW?.scrollIntoView({behavior:'smooth',block:'start'});
-  toast(`👁 Vista previa: ${ms.length} de ${recs.length} reclamaciones`, 'ok');
+// ══ loadTxt / loadXL ══
+window.loadTxt=function(){
+  poblarSelectTxt();
+  const usar=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
+  const noEl=g('txt-no'),fmEl=g('txt-fm');
+  if(usar.length===0){if(noEl)noEl.classList.remove('hidden');if(fmEl)fmEl.classList.add('hidden');return;}
+  if(noEl)noEl.classList.add('hidden'); if(fmEl)fmEl.classList.remove('hidden');
+  const fec=g('tx-fec'); if(fec&&!fec.value) fec.value=new Date().toISOString().split('T')[0];
+  const cons=usar.map(r=>parseInt(r.consec||0)).filter(n=>n>0);
+  if(cons.length){const ini=g('tx-cons-ini'),fin=g('tx-cons-fin');if(ini&&!ini.value)ini.value=Math.min(...cons);if(fin&&!fin.value)fin.value=Math.max(...cons);}
+};
+window.loadXL=function(){
+  const usar=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
+  const noEl=g('xl-no'),fmEl=g('xl-fm');
+  if(usar.length===0){if(noEl)noEl.classList.remove('hidden');if(fmEl)fmEl.classList.add('hidden');return;}
+  if(noEl)noEl.classList.add('hidden'); if(fmEl)fmEl.classList.remove('hidden');
 };
 
-// ══════════════════════════════════════════════════
-// FIN MÓDULO TXT
-// ══════════════════════════════════════════════════
+// ══ poblarSelectTxt / selIPSTxt ══
+window.poblarSelectTxt=function(){
+  const sel=g('tx-cod-sel'); if(!sel) return;
+  let lista=CLIENTES_IPS||[];
+  if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*') lista=lista.filter(x=>x.nit===CLIENTE_ACTIVO.nit);
+  const opts=lista.map(x=>`<option value="${x.nit}">${x.codHab||x.nit} — ${x.razon}</option>`).join('');
+  sel.innerHTML=`<option value="">Seleccione IPS...</option>${opts}<option value="otro">Otra IPS (código manual)</option>`;
+  if(lista.length===1){sel.value=lista[0].nit;selIPSTxt(lista[0].nit);}
+  else if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'){sel.value=CLIENTE_ACTIVO.nit;selIPSTxt(CLIENTE_ACTIVO.nit);}
+};
+window.selIPSTxt=function(val){
+  const el=g('tx-cod'); if(!el) return;
+  if(val==='otro'){el.value='';el.style.display='block';el.focus();}
+  else{el.value=val||'';el.style.display=val?'none':'block';}
+};
+
+// ══ poblarSelectIPS ══
+window.poblarSelectIPS=function(){
+  const sel=g('n-cod-sel'); if(!sel) return;
+  let lista=CLIENTES_IPS||[];
+  if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*') lista=lista.filter(x=>x.nit===CLIENTE_ACTIVO.nit);
+  const opts=lista.map(x=>`<option value="${x.nit}" data-codhab="${x.codHab||''}">${x.codHab||x.nit} — ${x.razon}</option>`).join('');
+  sel.innerHTML=`<option value="">Seleccione IPS...</option>${opts}<option value="otro">Otra IPS (código manual)</option>`;
+  if(lista.length===1){sel.value=lista[0].nit;if(typeof selIPSp1==='function')selIPSp1(lista[0].nit);}
+};
+
+// ══ expTxt / prevTxt ══
+function getRecsTxt(){
+  const selVal=g('tx-cod-sel')?.value||'',manCod=g('tx-cod')?.value?.trim()||'';
+  const cod=selVal==='otro'?manCod:(selVal||manCod);
+  const ini=parseInt(g('tx-cons-ini')?.value||'0')||0,fin=parseInt(g('tx-cons-fin')?.value||'0')||0;
+  let recs=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
+  if(cod) recs=recs.filter(r=>r.nitIPS===cod||r.codHab===cod||(r.codHab||'').startsWith(cod)||r.furips1?.c4===cod);
+  if(ini>0) recs=recs.filter(r=>parseInt(r.consec||0)>=ini);
+  if(fin>0) recs=recs.filter(r=>parseInt(r.consec||0)<=fin);
+  return recs;
+}
+window.expTxt=function(tipo){
+  const recs=getRecsTxt();
+  if(!recs.length){toast('No hay reclamaciones con ese filtro.','w');return;}
+  const fec=g('tx-fec')?.value||new Date().toISOString().split('T')[0];
+  const[y,m,d]=fec.split('-');const fd=`${d||'00'}${m||'00'}${y||'0000'}`;
+  const cod=recs[0]?.codHab||recs[0]?.nitIPS||'IPS';
+  if(tipo==='FURIPS1'){dl(recs.map(r=>generarTXT_F1(r)||'').join('\n'),`FURIPS1${cod}${fd}.txt`,'text/plain');toast(`✔ FURIPS 1 · ${recs.length} reclamaciones`,'ok');}
+  else{const f2=[];recs.forEach(r=>{const t=generarTXT_F2(r);if(t)f2.push(t);});dl(f2.join('\n'),`FURIPS2${cod}${fd}.txt`,'text/plain');toast(`✔ FURIPS 2 · ${f2.length} ítems`,'ok');}
+};
+window.prevTxt=function(){
+  const recs=getRecsTxt();
+  if(!recs.length){toast('No hay reclamaciones con ese filtro.','w');return;}
+  const ms=recs.slice(0,3);
+  const f2=[];ms.forEach(r=>{const t=generarTXT_F2(r);if(t)f2.push(t);});
+  const pf1=g('pv-f1'),pf2=g('pv-f2'),pw=g('prev-w');
+  if(pf1)pf1.textContent=ms.map(r=>generarTXT_F1(r)||'').join('\n')||'(sin datos)';
+  if(pf2)pf2.textContent=f2.join('\n')||'(sin datos)';
+  if(pw)pw.classList.remove('hidden');
+  toast(`👁 Previsualización: ${ms.length} de ${recs.length}`,'ok');
+};
+
+// ══ cargarUsers ══
+window.cargarUsers=async function(){
+  const el=document.getElementById('users-list'); if(!el) return;
+  el.innerHTML='<div style="color:var(--tx3);font-size:12px;padding:8px;">Cargando usuarios...</div>';
+  if(!db){el.innerHTML='<div class="alert ae">Firebase no inicializado.</div>';return;}
+  try{
+    const snap=await getDocs(collection(db,'usuarios'));
+    const users=[]; snap.forEach(d=>{const data=d.data();if(!data.eliminado)users.push({id:d.id,...data});});
+    users.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    const selDig=document.getElementById('asig-digitador');
+    if(selDig){
+      const digs=users.filter(u=>['digitador','admin','superadmin'].includes(u.rol));
+      selDig.innerHTML='<option value="">— Seleccione digitador —</option>'+digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');
+    }
+    if(!users.length){el.innerHTML='<div style="color:var(--tx3);font-size:12px;padding:8px;">No hay usuarios registrados.</div>';return;}
+    const rolColor={superadmin:'#f97316',admin:'#3b82f6',digitador:'#A3D55D'};
+    const rolLbl={superadmin:'⭐ Super Admin',admin:'👤 Admin',digitador:'✏ Digitador'};
+    el.innerHTML=users.map(u=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:180px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:${rolColor[u.rol]||'#999'}22;border:2px solid ${rolColor[u.rol]||'#999'};display:flex;align-items:center;justify-content:center;">👤</div>
+        <div><div style="font-weight:600;font-size:12px;">${u.nombre||'—'}</div><div style="font-size:11px;color:var(--tx3);">${u.email||u.id}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="background:${rolColor[u.rol]||'#999'}22;color:${rolColor[u.rol]||'#999'};font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">${rolLbl[u.rol]||u.rol}</span>
+        <select onchange="cambiarRolUser('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--brd);" ${u.id===USER?.uid?'disabled':''}>
+          <option value="digitador" ${u.rol==='digitador'?'selected':''}>Digitador</option>
+          <option value="admin" ${u.rol==='admin'?'selected':''}>Admin</option>
+          <option value="superadmin" ${u.rol==='superadmin'?'selected':''}>Super Admin</option>
+        </select>
+        ${u.id!==USER?.uid?`<button onclick="eliminarUser('${u.id}','${(u.nombre||u.email||'').replace(/'/g,'')}','${(u.email||'').replace(/'/g,'')}')" style="background:none;border:1px solid var(--red);color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">✕</button>`:''}
+      </div>
+    </div>`).join('');
+  }catch(e){
+    if(document.getElementById('users-list'))
+      document.getElementById('users-list').innerHTML=`<div class="alert ae" style="font-size:11px;">❌ Error: ${e.message}<br><small>Verifica reglas de Firestore: allow read, write: if request.auth != null;</small><br><button class="btn bs" style="margin-top:6px;font-size:11px;" onclick="cargarUsers()">🔄 Reintentar</button></div>`;
+    console.error('cargarUsers:',e);
+  }
+};
+window.crearUser=async function(){
+  const nombre=(document.getElementById('u-nom')?.value||'').trim();
+  const email=(document.getElementById('u-eml')?.value||'').trim();
+  const pass=(document.getElementById('u-pas')?.value||'').trim();
+  const rol=document.getElementById('u-rol')?.value||'digitador';
+  const alr=document.getElementById('u-alr');
+  if(!nombre||!email||!pass){if(alr){alr.className='alert aw';alr.textContent='⚠ Nombre, correo y contraseña son obligatorios.';}return;}
+  if(pass.length<6){if(alr){alr.className='alert aw';alr.textContent='⚠ Contraseña mínimo 6 caracteres.';}return;}
+  if(alr){alr.className='alert ai';alr.textContent='⏳ Creando usuario...';}
+  try{
+    const apiKey='AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g';
+    const resp=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass,returnSecureToken:true})});
+    const data=await resp.json();
+    if(data.error) throw new Error(data.error.message);
+    await setDoc(doc(db,'usuarios',data.localId),{nombre,email,rol,creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'',creado:serverTimestamp()});
+    if(alr){alr.className='alert as';alr.textContent=`✔ Usuario "${nombre}" creado. Credenciales: ${email} / ${pass}`;}
+    ['u-nom','u-eml','u-pas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    cargarUsers();
+    toast(`✔ Usuario ${nombre} creado`,'ok');
+  }catch(e){if(alr){alr.className='alert ae';alr.textContent=`❌ Error: ${e.message}`;}console.error('crearUser:',e);}
+};
+window.cambiarRolUser=async function(uid,nuevoRol){
+  try{await updateDoc(doc(db,'usuarios',uid),{rol:nuevoRol,actualizado:serverTimestamp()});toast(`✔ Rol actualizado`,'ok');cargarUsers();}catch(e){toast('Error: '+e.message,'e');}
+};
+window.eliminarUser=async function(uid,nombre,email){
+  if(!confirm(`¿Bloquear usuario "${nombre}" (${email})?`)) return;
+  try{await updateDoc(doc(db,'usuarios',uid),{eliminado:true,rol:'bloqueado',actualizado:serverTimestamp()});toast(`✔ Usuario ${nombre} bloqueado`,'ok');cargarUsers();}catch(e){toast('Error: '+e.message,'e');}
+};
+
+// ══ Asignación de reclamaciones ══
+window.poblarSelectDigitadores=async function(){
+  const selDig=document.getElementById('asig-digitador'); if(!selDig) return;
+  if(selDig.options.length>1) return;
+  try{
+    const snap=await getDocs(collection(db,'usuarios'));
+    const digs=[];
+    snap.forEach(d=>{const u=d.data();if(!u.eliminado&&['digitador','admin','superadmin'].includes(u.rol))digs.push({id:d.id,...u});});
+    digs.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+    selDig.innerHTML='<option value="">— Seleccione digitador —</option>'+digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');
+  }catch(e){console.warn('poblarSelectDigitadores:',e.message);}
+};
+window.cargarAsignaciones=function(){
+  const sel=document.getElementById('asig-digitador'),lista=document.getElementById('asig-lista');
+  const uid=sel?.value; if(!lista) return;
+  if(!uid){lista.innerHTML='<div style="color:var(--tx3);font-size:11px;">Seleccione un digitador para ver sus reclamaciones asignadas.</div>';return;}
+  const digNom=sel.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
+  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const asignadas=src.filter(r=>r.asignadoA===uid);
+  if(!asignadas.length){lista.innerHTML=`<div style="color:var(--tx3);font-size:11px;">${digNom} no tiene reclamaciones asignadas.</div>`;return;}
+  lista.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px;">${digNom} — ${asignadas.length} asignadas</div><div style="max-height:280px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">`+
+    asignadas.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid var(--brd);font-size:11px;"><div style="display:flex;gap:12px;"><span style="color:var(--tx3);font-family:var(--mono);">${r.consec}</span><strong>${r.factura}</strong><span style="color:var(--tx2);">${r.fechaEvento||r.furips1?.c22||'—'}</span></div><button id="des-${r.id}" style="background:none;border:1px solid var(--brd);color:var(--tx3);border-radius:4px;padding:1px 8px;cursor:pointer;font-size:10px;">✕</button></div>`).join('')+
+    '</div>';
+  asignadas.forEach(r=>{const btn=document.getElementById('des-'+r.id);if(btn)btn.addEventListener('click',()=>desasignar(r.id));});
+};
+window.buscarParaAsignar=function(q){
+  const res=document.getElementById('asig-resultados'); if(!res) return;
+  q=(q||'').trim().toLowerCase();
+  if(q.length<1){res.style.display='none';return;}
+  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  if(!src.length){res.style.display='block';res.innerHTML='<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No hay reclamaciones cargadas.</div>';return;}
+  const found=src.filter(r=>(r.factura||'').toLowerCase().includes(q)||(r.consec||'').toString().includes(q)).slice(0,15);
+  if(!found.length){res.style.display='block';res.innerHTML=`<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No se encontró "${q}" en ${src.length} reclamaciones.</div>`;return;}
+  res.style.display='block';
+  res.innerHTML=found.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);"><div style="font-size:12px;"><span style="font-family:var(--mono);color:var(--tx3);">${r.consec}</span><strong style="margin:0 8px;">${r.factura}</strong><span style="color:var(--tx2);font-size:11px;">${r.fechaEvento||r.furips1?.c22||'—'}</span>${r.asignadoA?`<span style="color:var(--warn);font-size:10px;margin-left:6px;">⚠ ${r.asignadoANombre||'asignada'}</span>`:''}</div><button id="btn-asig-${r.id}" style="background:#00B2E2;color:#fff;border:none;border-radius:4px;padding:3px 12px;cursor:pointer;font-size:11px;">Asignar</button></div>`).join('');
+  found.forEach(r=>{const btn=document.getElementById('btn-asig-'+r.id);if(btn)btn.addEventListener('click',()=>asignarFactura(r.id));});
+};
+window.asignarFactura=async function(recId){
+  const sel=document.getElementById('asig-digitador'),digUid=sel?.value,digNom=sel?.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
+  if(!digUid){toast('Selecciona un digitador primero.','w');return;}
+  try{
+    await updateDoc(doc(db,'reclamaciones',recId),{asignadoA:digUid,asignadoANombre:digNom,asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});
+    const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+    const idx2=src.findIndex(r=>r.id===recId);
+    if(idx2>=0){src[idx2].asignadoA=digUid;src[idx2].asignadoANombre=digNom;}
+    const rec=src.find(r=>r.id===recId);
+    toast(`✔ ${rec?.factura||''} asignada a ${digNom}`,'ok');
+    const buscar=document.getElementById('asig-buscar');if(buscar)buscar.value='';
+    const res=document.getElementById('asig-resultados');if(res)res.style.display='none';
+    cargarAsignaciones();
+  }catch(e){toast('Error: '+e.message,'e');}
+};
+window.desasignar=async function(recId){
+  if(!confirm('¿Quitar la asignación?')) return;
+  try{
+    await updateDoc(doc(db,'reclamaciones',recId),{asignadoA:null,asignadoANombre:null,actualizado:serverTimestamp()});
+    const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+    const idx2=src.findIndex(r=>r.id===recId);
+    if(idx2>=0){src[idx2].asignadoA=null;src[idx2].asignadoANombre=null;}
+    toast('✔ Asignación eliminada','ok');cargarAsignaciones();
+  }catch(e){toast('Error: '+e.message,'e');}
+};
+window.asignarTodasSinAsignar=async function(){
+  const sel=document.getElementById('asig-digitador'),digUid=sel?.value,digNom=sel?.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
+  if(!digUid){toast('Selecciona un digitador primero.','w');return;}
+  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const sinAsignar=src.filter(r=>!r.asignadoA);
+  if(!sinAsignar.length){toast('No hay reclamaciones sin asignar.','w');return;}
+  if(!confirm(`¿Asignar ${sinAsignar.length} reclamaciones a "${digNom}"?`)) return;
+  const status=document.getElementById('asig-masivo-status');
+  let ok=0,err=0;
+  for(let i=0;i<sinAsignar.length;i++){
+    const rec=sinAsignar[i];
+    if(status)status.textContent=`⏳ ${i+1}/${sinAsignar.length}...`;
+    try{await updateDoc(doc(db,'reclamaciones',rec.id),{asignadoA:digUid,asignadoANombre:digNom,asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});rec.asignadoA=digUid;rec.asignadoANombre=digNom;ok++;}
+    catch(e){err++;}
+  }
+  aplicarFiltroCliente();renderLista();updStats();
+  const msg=`✔ ${ok} asignadas${err?' · ⚠ '+err+' errores':''}`;
+  if(status)status.textContent=msg;toast(msg,err?'w':'ok');
+};
+window.descargarPlantillaAsignacion=function(){
+  const selDig=document.getElementById('asig-digitador');
+  const digitadores=[];
+  if(selDig)Array.from(selDig.options).forEach(opt=>{if(opt.value)digitadores.push({uid:opt.value,nombre:opt.text.split(' (')[0]});});
+  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const S='\t',N='\n';
+  let csv='PLANTILLA ASIGNACION DIGITADORES'+N+'factura'+S+'consecutivo'+S+'digitadorNombre'+S+'observacion'+N;
+  src.forEach(r=>{csv+=[r.factura||'',r.consec||'','',''].join(S)+N;});
+  csv+=N+'=== DIGITADORES DISPONIBLES ==='+N+'nombre'+S+'uid'+N;
+  digitadores.forEach(d=>{csv+=d.nombre+S+d.uid+N;});
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Plantilla_Asignacion_Digitadores.csv';a.click();URL.revokeObjectURL(a.href);
+  toast('⬇ Plantilla descargada','ok');
+};
+
+// ══ Event listeners asignación ══
+(function setupAsig(){
+  const setup=()=>{
+    const inp=document.getElementById('asig-excel-input');
+    if(inp)inp.addEventListener('change',function(){if(this.files[0])asignarMasivoExcel(this.files[0]);});
+    const digSel=document.getElementById('asig-digitador');
+    if(digSel)digSel.addEventListener('change',function(){cargarAsignaciones();});
+    const buscar=document.getElementById('asig-buscar');
+    if(buscar){const nb=buscar.cloneNode(true);buscar.parentNode.replaceChild(nb,buscar);nb.addEventListener('input',function(){buscarParaAsignar(this.value);});}
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);
+  else setup();
+})();
 
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
@@ -9353,20 +9121,11 @@ window.exportarRecsConRespuestaAdres = () => {
 };
 
 // ── IPS PRESTADORA ──
-window.poblarSelectIPS=function(){
-  const sel=g('n-cod-sel'); if(!sel) return;
-  let lista=CLIENTES_IPS;
-  if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*') lista=CLIENTES_IPS.filter(x=>x.nit===CLIENTE_ACTIVO.nit);
-  const opts=lista.map(x=>`<option value="${x.nit}" data-codhab="${x.codHab||''}">${x.codHab||x.nit} — ${x.razon}</option>`).join('');
-  sel.innerHTML=`<option value="">Seleccione IPS...</option>${opts}<option value="otro">Otra IPS (escribir código manualmente)</option>`;
-  if(lista.length===1){ sel.value=lista[0].nit; selIPSp1(lista[0].nit); }
-  else if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'){ sel.value=CLIENTE_ACTIVO.nit; selIPSp1(CLIENTE_ACTIVO.nit); }
-};
 window.selIPSp1=(val)=>{
   const el=g('n-cod'); if(!el) return;
-  if(val==='otro'){ el.value=''; el.readOnly=false; el.placeholder='Escriba el código habilitación (12 dígitos)'; el.focus(); }
-  else if(val){ const ips=CLIENTES_IPS.find(x=>x.nit===val); if(ips&&ips.codHab){el.value=ips.codHab;el.readOnly=true;}else{const opt=g('n-cod-sel')?.querySelector(`option[value="${val}"]`);const ch=opt?.dataset?.codhab||'';el.value=ch;el.readOnly=!!ch;} }
-  else{ el.value=''; el.readOnly=false; }
+  if(val==='otro'){ el.value=''; el.readOnly=false; el.placeholder='Escriba el código (12 dígitos)'; el.focus(); }
+  else if(val){ el.value=val; el.readOnly=true; }
+  else { el.value=''; el.readOnly=false; }
 };
 const _s=(id,v)=>{ const e=g(id); if(e) e.textContent=v; };
 const _s2=(id,v)=>{ const e=g(id); if(e) e.textContent=v; };
@@ -9417,8 +9176,7 @@ async function cargarIPSdeFirestore(){
     const snap=await getDocs(collection(db,'ips')); if(snap.empty) return;
     const nits=CLIENTES_IPS.map(x=>x.nit);
     snap.forEach(d=>{ const data=d.data(); if(!nits.includes(data.nit)){ CLIENTES_IPS.push({id:d.id,...data}); nits.push(data.nit); } });
-    renderClientes(); if(typeof poblarSelectIPS==='function') poblarSelectIPS();
-    if(typeof poblarSelectTxt==='function') poblarSelectTxt();
+    renderClientes();
   }catch(e){ console.warn('cargarIPSdeFirestore:',e.message); }
 }
 
@@ -9594,81 +9352,8 @@ window.volverAPanel = function(){
   showPanelClientes();
 };
 
-const _DEPTOS={"05":"Antioquia","08":"Atlántico","11":"Bogotá D.C.","13":"Bolívar","15":"Boyacá","17":"Caldas","18":"Caquetá","19":"Cauca","20":"Cesar","23":"Córdoba","25":"Cundinamarca","27":"Chocó","41":"Huila","44":"La Guajira","47":"Magdalena","50":"Meta","52":"Nariño","54":"Norte de Santander","63":"Quindío","66":"Risaralda","68":"Santander","70":"Sucre","73":"Tolima","76":"Valle del Cauca","81":"Arauca","85":"Casanare","86":"Putumayo","88":"San Andrés y Providencia","91":"Amazonas","94":"Guainía","95":"Guaviare","97":"Vaupés","99":"Vichada"};
-const _MPIOS={"05":{"001":"Medellín","088":"Bello","252":"Envigado","306":"Itagüí","321":"La Estrella","495":"Rionegro","541":"Sabaneta","670":"Turbo"},"08":{"001":"Barranquilla","758":"Soledad","433":"Malambo"},"11":{"001":"Bogotá D.C."},"13":{"001":"Cartagena","360":"Magangué"},"15":{"001":"Tunja","761":"Sogamoso"},"17":{"001":"Manizales","380":"La Dorada"},"18":{"001":"Florencia"},"19":{"001":"Popayán","630":"Santander de Quilichao"},"20":{"001":"Valledupar","011":"Aguachica"},"23":{"001":"Montería","555":"Planeta Rica"},"25":{"001":"Agua de Dios","307":"Girardot","269":"Facatativá","290":"Fusagasugá","754":"Soacha","899":"Zipaquirá","175":"Chía","430":"Madrid"},"27":{"001":"Quibdó"},"41":{"001":"Neiva","298":"Garzón","551":"Pitalito"},"44":{"001":"Riohacha","420":"Maicao"},"47":{"001":"Santa Marta","189":"Ciénaga"},"50":{"001":"Villavicencio","006":"Acacías"},"52":{"001":"Pasto","356":"Ipiales","786":"San Andrés de Tumaco"},"54":{"001":"Cúcuta","498":"Pamplona","480":"Ocaña"},"63":{"001":"Armenia","077":"Calarcá"},"66":{"001":"Pereira","170":"Dosquebradas","682":"Santa Rosa de Cabal"},"68":{"001":"Bucaramanga","276":"Floridablanca","307":"Girón","547":"Piedecuesta","081":"Barrancabermeja"},"70":{"001":"Sincelejo","130":"Corozal"},"73":{"001":"Ibagué","190":"Espinal","443":"Melgar"},"76":{"001":"Cali","109":"Buenaventura","111":"Buga","147":"Cartago","520":"Palmira","834":"Tuluá","892":"Yumbo","364":"Jamundí"},"81":{"001":"Arauca","736":"Saravena"},"85":{"001":"Yopal","010":"Aguazul","250":"Paz de Ariporo"},"86":{"001":"Mocoa","418":"Puerto Asís"},"88":{"001":"San Andrés"},"91":{"001":"Leticia"},"94":{"001":"Inírida"},"95":{"001":"San José del Guaviare"},"97":{"001":"Mitú"},"99":{"001":"Puerto Carreño"}};
-function _dOpts(){return Object.entries(_DEPTOS).sort((a,b)=>a[1].localeCompare(b[1])).map(([k,v])=>`<option value="${k}">${k} — ${v}</option>`).join('');}
-function _mOpts(dep){return Object.entries(_MPIOS[dep]||{}).sort((a,b)=>a[1].localeCompare(b[1])).map(([k,v])=>`<option value="${k}">${dep}${k} — ${v}</option>`).join('');}
-window.nuevaIPS=function(){
-  const old=document.getElementById('modal-nueva-ips');if(old)old.remove();
-  const ov=document.createElement('div');ov.id='modal-nueva-ips';
-  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
-  ov.innerHTML=`<div style="background:var(--sur);border:1px solid var(--brd);border-radius:12px;width:min(580px,100%);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.3);">
-    <div style="padding:14px 20px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(0,178,226,.06),rgba(157,180,85,.04));">
-      <div><div style="font-family:var(--mono);font-size:13px;font-weight:700;">🏥 Nueva IPS</div><div style="font-size:11px;color:var(--tx2);">Registrar institución prestadora</div></div>
-      <button id="nips-x" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--tx2);">×</button>
-    </div>
-    <div style="overflow-y:auto;padding:18px 20px;flex:1;">
-      <div id="nips-alr"></div>
-      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:10px;">I. IDENTIFICACIÓN</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-        <div class="field" style="grid-column:span 2;"><label class="fl">Razón Social <span class="req">*</span></label><input id="nips-razon" maxlength="120" placeholder="Nombre completo" style="text-transform:uppercase;"></div>
-        <div class="field"><label class="fl">Sigla <span class="req">*</span></label><input id="nips-corto" maxlength="10" placeholder="Ej: OCC" style="font-family:var(--mono);text-transform:uppercase;"></div>
-        <div class="field"><label class="fl">NIT <span class="req">*</span></label><input id="nips-nit" maxlength="15" inputmode="numeric" style="font-family:var(--mono);"></div>
-        <div class="field"><label class="fl">Código Habilitación <span class="req">*</span></label><input id="nips-codhab" maxlength="12" inputmode="numeric" placeholder="12 dígitos" style="font-family:var(--mono);"></div>
-        <div class="field"><label class="fl">Tipo</label><select id="nips-tipo"><option value="IPS">IPS</option><option value="CLINICA">Clínica</option><option value="HOSPITAL">Hospital</option><option value="CONSULTA">Consulta Externa</option><option value="LAB">Laboratorio</option><option value="OTRO">Otro</option></select></div>
-      </div>
-      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:10px;">II. UBICACIÓN</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-        <div class="field"><label class="fl">Departamento <span class="req">*</span></label><select id="nips-depto"><option value="">Seleccione...</option></select></div>
-        <div class="field"><label class="fl">Municipio <span class="req">*</span></label><select id="nips-mpio"><option value="">Seleccione...</option></select></div>
-        <div class="field" style="grid-column:span 2;"><label class="fl">Dirección <span class="req">*</span></label><input id="nips-dir" maxlength="150" style="text-transform:uppercase;"></div>
-      </div>
-      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:10px;">III. CONTACTO</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div class="field"><label class="fl">Teléfono</label><input id="nips-tel" maxlength="15" style="font-family:var(--mono);"></div>
-        <div class="field"><label class="fl">Correo</label><input id="nips-email" type="email" maxlength="80"></div>
-        <div class="field"><label class="fl">Representante</label><input id="nips-responsable" maxlength="80" style="text-transform:uppercase;"></div>
-        <div class="field"><label class="fl">Régimen</label><select id="nips-regimen"><option value="">No especificado</option><option value="contributivo">Contributivo</option><option value="subsidiado">Subsidiado</option><option value="ambos">Ambos</option></select></div>
-        <div class="field" style="grid-column:span 2;"><label class="fl">Observaciones</label><textarea id="nips-obs" maxlength="300" style="min-height:52px;resize:vertical;"></textarea></div>
-      </div>
-    </div>
-    <div style="padding:12px 20px;border-top:1px solid var(--brd);display:flex;gap:8px;justify-content:flex-end;background:var(--sur2);">
-      <button id="nips-cancel" class="btn bs">Cancelar</button>
-      <button id="nips-guardar" class="btn bp">💾 Guardar IPS</button>
-    </div>
-  </div>`;
-  document.body.appendChild(ov);
-  const ds=document.getElementById('nips-depto');
-  ds.innerHTML='<option value="">Seleccione...</option>'+_dOpts();
-  document.getElementById('nips-x').addEventListener('click',()=>ov.remove());
-  document.getElementById('nips-cancel').addEventListener('click',()=>ov.remove());
-  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
-  ds.addEventListener('change',()=>{const ms=document.getElementById('nips-mpio');ms.innerHTML='<option value="">Seleccione...</option>'+_mOpts(ds.value);});
-  document.getElementById('nips-guardar').addEventListener('click',async()=>{
-    const btn=document.getElementById('nips-guardar'),alr=document.getElementById('nips-alr');
-    const gv=id=>(document.getElementById(id)?.value||'').trim();
-    const razon=gv('nips-razon').toUpperCase(),corto=gv('nips-corto').toUpperCase();
-    const nit=gv('nips-nit').replace(/\D/g,''),codHab=gv('nips-codhab').replace(/\D/g,'');
-    const tipo=gv('nips-tipo')||'IPS';
-    const mpioEl=document.getElementById('nips-mpio'),deptoEl=document.getElementById('nips-depto');
-    const mpioCode=mpioEl.value||'',mpioTxt=mpioEl.options[mpioEl.selectedIndex]?.text?.replace(/^\d+\s*—\s*/,'')||'';
-    const deptoTxt=deptoEl.options[deptoEl.selectedIndex]?.text?.replace(/^\d+\s*—\s*/,'')||'';
-    const ciudad=mpioTxt&&deptoTxt?`${mpioTxt}, ${deptoTxt}`:'';
-    const dir=gv('nips-dir').toUpperCase();
-    const errs=[];
-    if(!razon)errs.push('Razón social');if(!corto)errs.push('Sigla');if(!nit)errs.push('NIT');if(!codHab)errs.push('Código habilitación');if(!mpioCode)errs.push('Municipio');if(!dir)errs.push('Dirección');
-    if(errs.length){alr.innerHTML=`<div class="alert ae" style="margin-bottom:10px;">⚠ Obligatorios: <strong>${errs.join(', ')}</strong></div>`;return;}
-    if(CLIENTES_IPS.find(x=>x.nit===nit)){alr.innerHTML=`<div class="alert aw" style="margin-bottom:10px;">⚠ Ya existe IPS con NIT <strong>${nit}</strong></div>`;return;}
-    btn.disabled=true;btn.textContent='⏳ Guardando...';alr.innerHTML='';
-    const data={nit,razon,corto,codHab,tipo,estado:'activo',ciudad,municipioCod:mpioCode,direccion:dir,telefono:gv('nips-tel'),email:gv('nips-email'),responsable:gv('nips-responsable').toUpperCase(),regimen:gv('nips-regimen'),observaciones:gv('nips-obs'),creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'',creado:serverTimestamp(),actualizado:serverTimestamp()};
-    try{
-      const ref=await addDoc(collection(db,'ips'),data);
-      CLIENTES_IPS.push({id:ref.id,nit,razon,corto,ciudad,tipo,estado:'activo',codHab});
-      renderClientes();if(typeof poblarSelectIPS==='function')poblarSelectIPS();
-      if(typeof poblarSelectTxt==='function')poblarSelectTxt();
-      ov.remove();toast(`✔ IPS "${razon}" registrada`,'ok');
-    }catch(e){alr.innerHTML=`<div class="alert ae" style="margin-bottom:10px;">❌ Error: ${e.message}</div>`;btn.disabled=false;btn.textContent='💾 Guardar IPS';}
-  });
+window.nuevaIPS = function(){
+  alert('Formulario para registrar nueva IPS (implementar en Fase 4).');
 };
 
 window.cerrarSesionPanel = function(){
@@ -9693,343 +9378,6 @@ window.limpiarFchevt = () => {
   const inp = g('fchevt-input'); if(inp) inp.value = '';
   const prog = g('fchevt-prog'); if(prog) prog.classList.add('hidden');
   const btn = g('btn-fchevt-guardar'); if(btn) btn.disabled = true;
-};
-
-// ══ ASIGNACIÓN MASIVA DE RECLAMACIONES A DIGITADORES ══════════
-// ══════════════════════════════════════════════════════════════
-// ██ MÓDULO ASIGNACIÓN DE RECLAMACIONES A DIGITADORES
-// ══════════════════════════════════════════════════════════════
-
-// Cargar reclamaciones asignadas al digitador seleccionado
-// Poblar select de digitadores desde RECS_ALL o desde Firestore
-window.poblarSelectDigitadores = async function(){
-  const selDig = document.getElementById('asig-digitador');
-  if(!selDig) return;
-  if(selDig.options.length > 1) return; // ya tiene datos
-  // Intentar cargar desde Firestore directamente
-  try{
-    const snap = await getDocs(collection(db,'usuarios'));
-    const digs = [];
-    snap.forEach(d=>{
-      const u = d.data();
-      if(!u.eliminado && (u.rol==='digitador'||u.rol==='admin'||u.rol==='superadmin')){
-        digs.push({id:d.id,...u});
-      }
-    });
-    digs.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
-    selDig.innerHTML = '<option value="">— Seleccione digitador —</option>' +
-      digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');
-  }catch(e){ console.warn('poblarSelectDigitadores:',e.message); }
-};
-
-window.cargarAsignaciones = function(){
-  const sel   = document.getElementById('asig-digitador');
-  const lista = document.getElementById('asig-lista');
-  const uid   = sel?.value;
-  if(!lista) return;
-  if(!uid){
-    lista.innerHTML='<div style="color:var(--tx3);font-size:11px;">Seleccione un digitador para ver sus reclamaciones asignadas.</div>';
-    return;
-  }
-  const digNom = sel.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
-  const _recs = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
-  const asignadas = _recs.filter(r=>r.asignadoA===uid);
-  if(!asignadas.length){
-    lista.innerHTML=`<div style="color:var(--tx3);font-size:11px;">El digitador <strong>${digNom}</strong> no tiene reclamaciones asignadas aún.</div>`;
-    return;
-  }
-  lista.innerHTML=`
-    <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px;">
-      ${digNom} — ${asignadas.length} reclamación${asignadas.length!==1?'es':''} asignada${asignadas.length!==1?'s':''}
-    </div>
-    <div style="max-height:300px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">
-      ${asignadas.map(r=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--brd);font-size:11px;">
-          <div style="display:flex;gap:12px;align-items:center;">
-            <span style="font-family:var(--mono);color:var(--tx3);">${r.consec}</span>
-            <span style="font-weight:600;">${r.factura}</span>
-            <span style="color:var(--tx2);">${r.fechaEvento||r.furips1?.c22||'—'}</span>
-          </div>
-          <button onclick="desasignar('${r.id}')"
-            style="background:none;border:1px solid var(--brd);color:var(--tx3);border-radius:4px;padding:1px 8px;cursor:pointer;font-size:10px;"
-            title="Quitar asignación">✕ Desasignar</button>
-        </div>`).join('')}
-    </div>`;
-};
-
-// Buscar factura para asignar individualmente
-window.buscarParaAsignar = function(q){
-  const res = document.getElementById('asig-resultados');
-  if(!res) return;
-  q = (q||'').trim().toLowerCase();
-  if(q.length < 1){ res.style.display='none'; return; }
-  // Usar RECS o RECS_ALL — el que tenga datos
-  const fuente = (typeof window.FURIPS_STATE!=='undefined' && window.FURIPS_STATE.getRecs().length>0)
-    ? window.FURIPS_STATE.getRecs()
-    : (typeof RECS!=='undefined' && RECS.length>0 ? RECS : []);
-  if(!fuente.length){
-    res.style.display='block';
-    res.innerHTML='<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No hay reclamaciones cargadas. Recarga la página.</div>';
-    return;
-  }
-  const found = fuente.filter(r=>
-    (r.factura||'').toLowerCase().includes(q) ||
-    (r.consec||'').toString().includes(q)
-  ).slice(0,15);
-  if(!found.length){
-    res.style.display='block';
-    res.innerHTML=`<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No se encontró "${q}" en ${fuente.length} reclamaciones.</div>`;
-    return;
-  }
-  res.style.display='block';
-  res.innerHTML = found.map(r=>{
-    const yaAsig = r.asignadoA ? `<span style="color:var(--warn);font-size:10px;margin-left:6px;">⚠ ${r.asignadoANombre||'asignada'}</span>` : '';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);">
-      <div style="font-size:12px;">
-        <span style="font-family:var(--mono);color:var(--tx3);">${r.consec}</span>
-        <strong style="margin:0 8px;">${r.factura}</strong>
-        <span style="color:var(--tx2);font-size:11px;">${r.fechaEvento||r.furips1?.c22||'—'}</span>
-        ${yaAsig}
-      </div>
-      <button id="btn-asig-${r.id}"
-        style="background:var(--acc);color:#fff;border:none;border-radius:4px;padding:3px 12px;cursor:pointer;font-size:11px;">
-        Asignar
-      </button>
-    </div>`;
-  }).join('');
-  // Agregar listeners a los botones (no inline onclick)
-  found.forEach(r=>{
-    const btn = document.getElementById('btn-asig-'+r.id);
-    if(btn) btn.addEventListener('click', ()=>asignarFactura(r.id));
-  });
-};
-
-// Asignar una factura individual al digitador seleccionado
-window.asignarFactura = async function(recId){
-  const sel    = document.getElementById('asig-digitador');
-  const digUid = sel?.value;
-  const digNom = sel?.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
-  if(!digUid){ toast('Selecciona un digitador primero.','w'); return; }
-  try{
-    await updateDoc(doc(db,'reclamaciones',recId),{
-      asignadoA: digUid,
-      asignadoANombre: digNom,
-      asignadoEn: serverTimestamp(),
-      actualizado: serverTimestamp()
-    });
-    const _all = window.FURIPS_STATE?.getRecs() || [];
-    const idx = _all.findIndex(r=>r.id===recId);
-    if(idx>=0){ _all[idx].asignadoA=digUid; _all[idx].asignadoANombre=digNom; }
-    const rec = RECS_ALL.find(r=>r.id===recId);
-    toast(`✔ Factura ${rec?.factura||''} asignada a ${digNom}`,'ok');
-    // Limpiar búsqueda y recargar lista
-    const buscar = document.getElementById('asig-buscar');
-    if(buscar) buscar.value='';
-    const res = document.getElementById('asig-resultados');
-    if(res) res.style.display='none';
-    cargarAsignaciones();
-  }catch(e){ toast('Error: '+e.message,'e'); }
-};
-
-// Quitar asignación
-window.desasignar = async function(recId){
-  if(!confirm('¿Quitar la asignación de esta reclamación?')) return;
-  try{
-    await updateDoc(doc(db,'reclamaciones',recId),{
-      asignadoA: null, asignadoANombre: null,
-      actualizado: serverTimestamp()
-    });
-    const idx = RECS_ALL.findIndex(r=>r.id===recId);
-    if(idx>=0){ RECS_ALL[idx].asignadoA=null; RECS_ALL[idx].asignadoANombre=null; }
-    toast('✔ Asignación eliminada','ok');
-    cargarAsignaciones();
-  }catch(e){ toast('Error: '+e.message,'e'); }
-};
-
-// ══ FIN ASIGNACIÓN INDIVIDUAL
-window.asignarMasivoExcel = async (file) => {
-  if(!file){ toast('No se recibió archivo.','w'); return; }
-  toast('📂 Leyendo archivo...','ok');
-  const status = document.getElementById('asig-masivo-status');
-  if(status){ status.textContent = '⏳ Leyendo archivo...'; status.style.color='var(--acc)'; }
-
-  // Leer el CSV/Excel
-  let rows = [];
-  try{
-    if(typeof XLSX !== 'undefined'){
-      const buf = await file.arrayBuffer();
-      const wb  = XLSX.read(buf, {type:'array'});
-      const ws  = wb.Sheets[wb.SheetNames[0]];
-      rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-    } else {
-      // Leer como texto (CSV)
-      const txt = await file.text();
-      const lines = txt.split('\n').filter(l=>l.trim() && !l.startsWith('PLANTILLA') && !l.startsWith('==='));
-      if(!lines.length){ toast('Archivo vacío.','w'); return; }
-      const headers = lines[0].split('\t').map(h=>h.trim().toLowerCase());
-      rows = lines.slice(1).map(l=>{
-        const vals = l.split('\t');
-        const obj = {};
-        headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
-        return obj;
-      }).filter(r=>r.factura);
-    }
-  }catch(e){ toast('Error leyendo archivo: '+e.message,'e'); return; }
-
-  if(!rows.length){ toast('No se encontraron filas válidas.','w'); return; }
-
-  // Validar y mapear
-  const selDig = document.getElementById('asig-digitador');
-  const digitadores = {};
-  if(selDig) Array.from(selDig.options).forEach(opt=>{
-    if(opt.value) digitadores[opt.text.split(' (')[0].trim().toLowerCase()] = { uid:opt.value, nombre:opt.text.split(' (')[0].trim() };
-  });
-
-  const digitadorSel = selDig?.value || '';
-  const digitadorNom = selDig?.options[selDig.selectedIndex]?.text?.split(' (')[0] || '';
-
-  const asignaciones = [];
-  const errores = [];
-
-  rows.forEach((r,i) => {
-    const factura = String(r.factura||r.FACTURA||'').trim();
-    if(!factura || factura.startsWith('===') || factura.startsWith('PLANT')) return;
-    const nomDig = String(r.digitadornombre||r.digitadorNombre||r.digitador||'').trim().toLowerCase();
-    const obs    = String(r.observacion||r.obs||'').trim();
-
-    // Buscar digitador: primero por nombre en el archivo, luego usar el seleccionado
-    let digUid = '', digNom = '';
-    if(nomDig && digitadores[nomDig]){
-      digUid = digitadores[nomDig].uid;
-      digNom = digitadores[nomDig].nombre;
-    } else if(digitadorSel){
-      digUid = digitadorSel;
-      digNom = digitadorNom;
-    }
-
-    if(!digUid){ errores.push(`Fila ${i+2}: "${factura}" — sin digitador`); return; }
-
-    // Buscar la reclamación
-    const _src = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
-    const rec = _src.find(r2 => r2.factura === factura);
-    if(!rec){ errores.push(`Fila ${i+2}: "${factura}" — no encontrada`); return; }
-
-    asignaciones.push({ rec, digUid, digNom, obs });
-  });
-
-  if(!asignaciones.length){
-    const msg = errores.length ? `Sin asignaciones válidas. Errores: ${errores.slice(0,3).join(' | ')}` : 'Sin filas válidas.';
-    toast(msg,'w'); if(status) status.textContent='⚠ '+msg; return;
-  }
-
-  if(!confirm(`¿Asignar ${asignaciones.length} reclamaciones a los digitadores indicados?${errores.length?' ('+errores.length+' omitidas)':''}`)) return;
-
-  if(status) status.textContent = `⏳ Asignando 0/${asignaciones.length}...`;
-  let ok=0, err=0;
-
-  for(let i=0; i<asignaciones.length; i++){
-    const {rec, digUid, digNom, obs} = asignaciones[i];
-    if(status) status.textContent = `⏳ Asignando ${i+1}/${asignaciones.length}...`;
-    try{
-      await updateDoc(doc(db,'reclamaciones',rec.id),{
-        asignadoA: digUid,
-        asignadoANombre: digNom,
-        asignadoObs: obs||'',
-        asignadoEn: serverTimestamp(),
-        actualizado: serverTimestamp()
-      });
-      // Actualizar en memoria
-      const idx2 = RECS_ALL.findIndex(r=>r.id===rec.id);
-      if(idx2>=0){ RECS_ALL[idx2].asignadoA=digUid; RECS_ALL[idx2].asignadoANombre=digNom; }
-      ok++;
-    }catch(e){ console.error(rec.factura,e.message); err++; }
-  }
-
-  aplicarFiltroCliente(); renderLista(); updStats();
-  const msg2 = `✔ ${ok} asignadas${err?' · ⚠ '+err+' errores':''}${errores.length?' · '+errores.length+' omitidas':''}`;
-  if(status) status.textContent = msg2;
-  toast(msg2, err?'w':'ok');
-  // Limpiar input
-  const inp = document.getElementById('asig-excel-input');
-  if(inp) inp.value='';
-};
-
-window.asignarTodasSinAsignar = async () => {
-  const selDig = document.getElementById('asig-digitador');
-  const digUid = selDig?.value;
-  const digNom = selDig?.options[selDig.selectedIndex]?.text?.split(' (')[0]||'';
-  if(!digUid){ toast('Selecciona un digitador primero.','w'); return; }
-
-  const _rall = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
-  const sinAsignar = _rall.filter(r => !r.asignadoA);
-  if(!sinAsignar.length){ toast('No hay reclamaciones sin asignar.','w'); return; }
-  if(!confirm(`¿Asignar ${sinAsignar.length} reclamaciones sin asignar a "${digNom}"?`)) return;
-
-  const status = document.getElementById('asig-masivo-status');
-  let ok=0, err=0;
-  for(let i=0; i<sinAsignar.length; i++){
-    const rec = sinAsignar[i];
-    if(status) status.textContent=`⏳ ${i+1}/${sinAsignar.length}...`;
-    try{
-      await updateDoc(doc(db,'reclamaciones',rec.id),{
-        asignadoA: digUid, asignadoANombre: digNom,
-        asignadoEn: serverTimestamp(), actualizado: serverTimestamp()
-      });
-      const idx2=RECS_ALL.findIndex(r=>r.id===rec.id);
-      if(idx2>=0){ RECS_ALL[idx2].asignadoA=digUid; RECS_ALL[idx2].asignadoANombre=digNom; }
-      ok++;
-    }catch(e){ err++; }
-  }
-  aplicarFiltroCliente(); renderLista(); updStats();
-  const msg=`✔ ${ok} asignadas a ${digNom}${err?' · ⚠ '+err+' errores':''}`;
-  if(status) status.textContent=msg;
-  toast(msg,err?'w':'ok');
-};
-// ══ FIN ASIGNACIÓN MASIVA ══════════════════════════════════════
-
-window.descargarPlantillaAsignacion = () => {
-  // Obtener digitadores del select
-  const selDig = document.getElementById('asig-digitador');
-  const digitadores = [];
-  if(selDig){
-    Array.from(selDig.options).forEach(opt => {
-      if(opt.value) digitadores.push({ uid: opt.value, nombre: opt.text.split(' (')[0] });
-    });
-  }
-
-  const S = '\t', N = '\n';
-
-  // Hoja: reclamaciones
-  let csv = 'PLANTILLA ASIGNACION DIGITADORES' + N;
-  csv += 'factura' + S + 'consecutivo' + S + 'digitadorNombre' + S + 'observacion' + N;
-
-  const filas = RECS.length > 0 ? RECS : [];
-  if(filas.length > 0){
-    filas.forEach(r => {
-      csv += [r.factura||'', r.consec||'', '', ''].join(S) + N;
-    });
-  } else {
-    csv += ['FE60001','3001','',''].join(S) + N;
-    csv += ['FE60002','3002','',''].join(S) + N;
-  }
-
-  csv += N + N;
-  csv += '=== DIGITADORES DISPONIBLES ===' + N;
-  csv += 'nombre' + S + 'uid' + N;
-  if(digitadores.length > 0){
-    digitadores.forEach(d => { csv += d.nombre + S + d.uid + N; });
-  } else {
-    csv += 'Sin digitadores cargados — abre primero el módulo Admin' + S + '' + N;
-  }
-
-  // Descargar como CSV (Excel lo abre directamente)
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'Plantilla_Asignacion_Digitadores.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('⬇ Plantilla descargada', 'ok');
 };
 
 window.descargarPlantillaFechas = () => {
@@ -10226,37 +9574,6 @@ window.guardarFechasEvento = async () => {
 };
 
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-// ══ Event listeners para módulo de asignación ══
-(function setupAsignacionListeners(){
-  const setup = () => {
-    // File input para asignación masiva
-    const inp = document.getElementById('asig-excel-input');
-    if(inp) inp.addEventListener('change', function(){
-      if(this.files[0]) asignarMasivoExcel(this.files[0]);
-    });
-    // Select digitador
-    const digSel = document.getElementById('asig-digitador');
-    if(digSel) digSel.addEventListener('change', function(){
-      cargarAsignaciones();
-    });
-    // Input búsqueda — remover cualquier handler previo y agregar nuevo
-    const buscar = document.getElementById('asig-buscar');
-    if(buscar){
-      const newBuscar = buscar.cloneNode(true);
-      buscar.parentNode.replaceChild(newBuscar, buscar);
-      newBuscar.addEventListener('input', function(){
-        buscarParaAsignar(this.value);
-      });
-    }
-  };
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', setup);
-  } else {
-    setup();
-  }
-})();
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
