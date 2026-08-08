@@ -7398,9 +7398,13 @@ window.updPortafolio = function(){
 
   // KPIs semáforo
   const ind=g('port-indicadores'); if(!ind) return;
-  const efectividad=pct(pagV,totalVal);
-  const tasaGlosa=pct(glosadas.length,total);
-  const tasaRechazo=pct(recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres').length,total);
+  // Efectividad: solo sobre lo que ADRES ya respondió (pagadas + glosadas + anuladas ADRES)
+  const conRespuestaAdres = recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada','anulada_adres'].includes(getRespuestaAdres(r)));
+  const conRespuestaV = conRespuestaAdres.reduce((a,r)=>a+val(r),0);
+  const efectividad = pct(pagV, conRespuestaV); // pagadas / total con respuesta ADRES
+  const tasaGlosa = pct(glosadas.length, conRespuestaAdres.length); // glosadas / con respuesta
+  const anuladas = recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
+  const tasaRechazo = pct(anuladas.length, conRespuestaAdres.length); // anuladas / con respuesta
   const parseF=s=>{if(!s||s.length!==10)return null;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
   const radConF=recsAcum.filter(r=>r.radicado?.fecha&&(r.fechaEvento||r.furips1?.c22));
   let diasProm=null;
@@ -7408,9 +7412,9 @@ window.updPortafolio = function(){
   const sem=(v,b,m2,inv=false)=>inv?(v<=b?'🟢':v<=m2?'🟡':'🔴'):(v>=b?'🟢':v>=m2?'🟡':'🔴');
   const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
   ind.innerHTML=
-    kpiR('Efectividad de cobro',efectividad+'%',sem(efectividad,70,40),'>70%','Pagado/Reclamado')+
-    kpiR('Tasa de glosa',tasaGlosa+'%',sem(tasaGlosa,10,25,true),'<10%',`${glosadas.length} de ${total}`)+
-    kpiR('Tasa de rechazo',tasaRechazo+'%',sem(tasaRechazo,5,15,true),'<5%','Anuladas/Total')+
+    kpiR('Efectividad de cobro',efectividad+'%',sem(efectividad,70,40),'>70%',`${pagadas.length} pagadas de ${conRespuestaAdres.length} con respuesta ADRES`)+
+    kpiR('Tasa de glosa',tasaGlosa+'%',sem(tasaGlosa,10,25,true),'<10%',`${glosadas.length} de ${conRespuestaAdres.length} con respuesta ADRES`)+
+    kpiR('Tasa de rechazo',tasaRechazo+'%',sem(tasaRechazo,5,15,true),'<5%',`${anuladas.length} anuladas de ${conRespuestaAdres.length} con respuesta ADRES`)+
     (diasProm!==null?kpiR('Días evento→radicación',diasProm+' días',sem(diasProm,30,90,true),'<30 días','Oportunidad'):'')+
     kpiR('Sin radicar',sinRad.length,sinRad.length===0?'🟢':sinRad.length<=10?'🟡':'🔴','0',fm(sinV));
 
@@ -7452,16 +7456,26 @@ window.updPortafolio = function(){
   const donut=g('dash-donut');
   if(donut&&total>0){
     const R=40,cx=55,cy=55,sw=14,circ=2*Math.PI*R;
-    const segs=[
-      {n:pagadas.length,color:'#A3D55D'},{n:radTotal.length-pagadas.length-glosadas.length,color:'#00B2E2'},
-      {n:glosadas.length,color:'#9DB455'},{n:sinRad.length,color:'#999899'},
+    // Donut solo sobre lo que ADRES ya respondió
+  const anulAdr=recsAcum.filter(r=>getRespuestaAdres(r)==='anulada_adres');
+  const tramite=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite');
+  const segs=[
+      {n:pagadas.length,color:'#A3D55D',label:'Pagadas'},
+      {n:glosadas.length,color:'#9DB455',label:'Glosadas'},
+      {n:anulAdr.length,color:'#999899',label:'Anuladas'},
+      {n:tramite.length,color:'#e0e0e0',label:'En trámite'},
     ].filter(s=>s.n>0);
     let off=0,paths='';
     segs.forEach(s=>{const len=s.n/total*circ;paths+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(circ-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;off+=len;});
-    const ef=pct(pagV,totalVal);
-    donut.innerHTML=paths+`<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace">${ef}%</text><text x="${cy}" y="${cy+12}" text-anchor="middle" font-size="9" fill="var(--tx3)">de cobro</text>`;
+    const ef=pct(pagV,conRespuestaV); // efectividad real sobre lo respondido por ADRES
+    donut.innerHTML=paths+`<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace">${ef}%</text><text x="${cy}" y="${cy+12}" text-anchor="middle" font-size="9" fill="var(--tx3)">de lo resuelto</text>`;
     const ley=g('dash-barra-leyenda');
-    if(ley) ley.innerHTML=[{l:'Pagadas',n:pagadas.length,c:'#A3D55D'},{l:'En cobro',n:radTotal.length,c:'#00B2E2'},{l:'Glosadas',n:glosadas.length,c:'#9DB455'},{l:'Sin rad.',n:sinRad.length,c:'#999899'}].filter(e=>e.n>0).map(e=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2);"><span style="width:7px;height:7px;border-radius:1px;background:${e.c};display:inline-block;"></span>${e.l}</span><span style="font-family:var(--mono);font-size:10px;color:${e.c};font-weight:600;">${e.n}</span></div>`).join('');
+    if(ley) ley.innerHTML=[
+      {l:'✔ Pagadas',n:pagadas.length,c:'#A3D55D'},
+      {l:'✕ Glosadas',n:glosadas.length,c:'#9DB455'},
+      {l:'∅ Anuladas',n:anulAdr.length,c:'#999899'},
+      {l:'⏳ En trámite',n:tramite.length,c:'#c0c0c0'},
+    ].filter(e=>e.n>0).map(e=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2);"><span style="width:7px;height:7px;border-radius:1px;background:${e.c};display:inline-block;"></span>${e.l}</span><span style="font-family:var(--mono);font-size:10px;color:${e.c};font-weight:600;">${e.n}</span></div>`).join('');
   }
 };
 
