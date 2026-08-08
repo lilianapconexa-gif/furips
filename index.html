@@ -7398,13 +7398,16 @@ window.updPortafolio = function(){
 
   // KPIs semáforo
   const ind=g('port-indicadores'); if(!ind) return;
-  // Efectividad: solo sobre lo que ADRES ya respondió (pagadas + glosadas + anuladas ADRES)
-  const conRespuestaAdres = recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada','anulada_adres'].includes(getRespuestaAdres(r)));
-  const conRespuestaV = conRespuestaAdres.reduce((a,r)=>a+val(r),0);
-  const efectividad = pct(pagV, conRespuestaV); // pagadas / total con respuesta ADRES
-  const tasaGlosa = pct(glosadas.length, conRespuestaAdres.length); // glosadas / con respuesta
+  // Efectividad: solo pagadas / (pagadas + glosadas)
+  // Las anuladas NO entran porque se retiraron antes de llegar a auditoría ADRES
+  const auditadasAdres = recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
+  const auditadasV = auditadasAdres.reduce((a,r)=>a+val(r),0);
+  const conRespuestaAdres = auditadasAdres; // alias para los KPI tooltips
+  const conRespuestaV = auditadasV;
+  const efectividad = pct(pagV, auditadasV); // pagadas / (pagadas + glosadas)
+  const tasaGlosa = pct(glosadas.length, auditadasAdres.length);
   const anuladas = recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
-  const tasaRechazo = pct(anuladas.length, conRespuestaAdres.length); // anuladas / con respuesta
+  const tasaRechazo = pct(anuladas.length, total); // anuladas sobre total portafolio
   const parseF=s=>{if(!s||s.length!==10)return null;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
   const radConF=recsAcum.filter(r=>r.radicado?.fecha&&(r.fechaEvento||r.furips1?.c22));
   let diasProm=null;
