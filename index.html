@@ -482,6 +482,20 @@ select option{background:var(--sur2);}
       <div id="pa-0-90"></div><div id="pa-91-180"></div>
       <div id="pa-181-360"></div><div id="pa-361"></div><div id="pa-venc"></div>
     </div>
+    <!-- ── Conclusiones IA ── -->
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);">🤖 Conclusiones del Portafolio</div>
+        <button id="btn-generar-conclusiones" onclick="generarConclusiones()"
+          style="background:#00B2E2;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">
+          ✨ Generar conclusiones
+        </button>
+      </div>
+      <div id="conclusiones-output" style="font-size:12px;color:var(--tx2);line-height:1.7;">
+        <span style="color:var(--tx3);font-style:italic;">Haz clic en "Generar conclusiones" para obtener un análisis ejecutivo del portafolio con IA.</span>
+      </div>
+    </div>
+
     <div id="port-seccion-mes" style="display:none;margin-bottom:12px;">
       <div style="font-size:10px;font-weight:700;color:#00B2E2;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span style="background:#00B2E2;color:#fff;padding:2px 8px;border-radius:4px;font-size:9px;">MES</span><span id="port-mes-label"></span></div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
@@ -7935,6 +7949,112 @@ window.descargarPDF = async function(){
   }catch(e){
     console.error('PDF error:',e);
     toast('Error generando PDF: '+e.message,'e');
+  }
+};
+
+
+// ══ Conclusiones con IA ══
+window.generarConclusiones = async function(){
+  const btn = document.getElementById('btn-generar-conclusiones');
+  const out = document.getElementById('conclusiones-output');
+  if(!out) return;
+
+  // Recolectar datos del portafolio
+  const BASE = (RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
+  if(!BASE.length){ toast('No hay datos para analizar.','w'); return; }
+
+  const fm2 = v => '$'+(v||0).toLocaleString('es-CO');
+  const pct2 = (a,b) => b>0?Math.round(a/b*100):0;
+  const val = r => parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+
+  const total = BASE.length;
+  const totalV = BASE.reduce((a,r)=>a+val(r),0);
+  const pagadas = BASE.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+  const glosadas = BASE.filter(r=>getRespuestaAdres(r)==='glosada');
+  const enTramite = BASE.filter(r=>getRespuestaAdres(r)==='en_tramite');
+  const sinRad2 = BASE.filter(r=>!r.radicado?.numero && getEstadoGestion(r)!=='devuelta_ips');
+  const devueltas = BASE.filter(r=>getEstadoGestion(r)==='devuelta_ips');
+  const anuladas = BASE.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
+  const radTotal = BASE.filter(r=>r.radicado?.numero);
+  const auditadas = BASE.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
+
+  const pagV = pagadas.reduce((a,r)=>a+val(r),0);
+  const gloV = glosadas.reduce((a,r)=>a+val(r),0);
+  const tramV = enTramite.reduce((a,r)=>a+val(r),0);
+  const sinV2 = sinRad2.reduce((a,r)=>a+val(r),0);
+
+  const efectividad = pct2(pagV, auditadas.reduce((a,r)=>a+val(r),0));
+  const coberturaRad = pct2(radTotal.length, total);
+  const tasaGlosa = pct2(glosadas.length, Math.max(auditadas.length,1));
+
+  const ips = (CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'la IPS';
+  const periodo = document.getElementById('port-mes-sel')?.value||'';
+  const periodoLabel = periodo ? (() => {
+    const [y,mo]=periodo.split('-');
+    return new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
+  })() : 'todo el historial';
+
+  const contexto = `
+Eres un analista experto en gestión de cartera SOAT en Colombia.
+Genera un análisis ejecutivo conciso (5-7 puntos) del siguiente portafolio de reclamaciones SOAT gestionado por CONEXA ante ADRES.
+El informe es para presentar a gerentes de ${ips}.
+Usa lenguaje positivo que resalte la gestión de CONEXA. Sé específico con los números.
+Formato: lista de viñetas con bullet •. Sin títulos ni encabezados. Máximo 250 palabras.
+Idioma: español colombiano profesional.
+
+DATOS DEL PORTAFOLIO (${periodoLabel}):
+• IPS: ${ips}
+• Total reclamaciones: ${total} por ${fm2(totalV)}
+• Radicadas ante ADRES: ${radTotal.length} (${coberturaRad}% cobertura) por ${fm2(radTotal.reduce((a,r)=>a+val(r),0))}
+• Auditadas por ADRES: ${auditadas.length} reclamaciones
+• Pagadas/Aprobadas: ${pagadas.length} por ${fm2(pagV)}
+• En trámite ADRES: ${enTramite.length} por ${fm2(tramV)}
+• Glosadas: ${glosadas.length} por ${fm2(gloV)}
+• Sin radicar: ${sinRad2.length} por ${fm2(sinV2)}
+• Devueltas a IPS para corrección: ${devueltas.length}
+• Anuladas: ${anuladas.length}
+• Efectividad de cobro: ${efectividad}% (sobre lo auditado por ADRES)
+• Tasa de glosa: ${tasaGlosa}%
+• Valor potencial en trámite: ${fm2(tramV)}
+`;
+
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Analizando...'; }
+  out.innerHTML = '<div style="color:var(--tx3);font-style:italic;">Generando análisis con IA...</div>';
+
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role:'user', content: contexto }]
+      })
+    });
+    const data = await resp.json();
+    const texto = data.content?.[0]?.text || '';
+    if(!texto){ out.innerHTML='<span style="color:var(--red);">Error al generar conclusiones.</span>'; return; }
+
+    // Render bullets
+    const lineas = texto.split('\n').filter(l=>l.trim());
+    out.innerHTML = lineas.map(l => {
+      const limpio = l.replace(/^[•*-]\s*/,'').trim();
+      if(!limpio) return '';
+      return `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">
+        <span style="color:#00B2E2;font-size:14px;flex-shrink:0;margin-top:1px;">•</span>
+        <span>${limpio}</span>
+      </div>`;
+    }).join('') +
+    `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--brd);font-size:9px;color:var(--tx3);">
+      Análisis generado por IA · ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} · CONEXA Sistema FURIPS
+    </div>`;
+
+    toast('✔ Conclusiones generadas','ok');
+  }catch(e){
+    out.innerHTML=`<span style="color:var(--red);">Error: ${e.message}</span>`;
+    console.error('generarConclusiones:',e);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='✨ Generar conclusiones'; }
   }
 };
 
