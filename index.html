@@ -8021,33 +8021,60 @@ DATOS DEL PORTAFOLIO (${periodoLabel}):
   if(btn){ btn.disabled=true; btn.textContent='⏳ Analizando...'; }
   out.innerHTML = '<div style="color:var(--tx3);font-style:italic;">Generando análisis con IA...</div>';
 
+  // Generar conclusiones localmente con lógica inteligente
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [{ role:'user', content: contexto }]
-      })
-    });
-    const data = await resp.json();
-    const texto = data.content?.[0]?.text || '';
-    if(!texto){ out.innerHTML='<span style="color:var(--red);">Error al generar conclusiones.</span>'; return; }
+    const conclusiones = [];
+    const fecha = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
 
-    // Render bullets
-    const lineas = texto.split('\n').filter(l=>l.trim());
-    out.innerHTML = lineas.map(l => {
-      const limpio = l.replace(/^[•*-]\s*/,'').trim();
-      if(!limpio) return '';
-      return `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">
-        <span style="color:#00B2E2;font-size:14px;flex-shrink:0;margin-top:1px;">•</span>
-        <span>${limpio}</span>
+    // 1. Cobertura de radicación
+    if(coberturaRad >= 80)
+      conclusiones.push(`CONEXA ha mantenido una <strong>cobertura de radicación del ${coberturaRad}%</strong>, enviando ${radTotal.length} de ${total} reclamaciones ante ADRES, lo que refleja una gestión de cobro oportuna y consistente.`);
+    else if(coberturaRad >= 60)
+      conclusiones.push(`Se ha logrado radiar el <strong>${coberturaRad}% del portafolio</strong> (${radTotal.length} reclamaciones) ante ADRES. El proceso de radicación continúa activo para las ${sinRad2.length} cuentas pendientes de soportes completos.`);
+    else
+      conclusiones.push(`El proceso de radicación avanza progresivamente con <strong>${radTotal.length} reclamaciones enviadas</strong> a ADRES (${coberturaRad}% del portafolio). Las ${sinRad2.length} cuentas restantes están en proceso de completar documentación.`);
+
+    // 2. Valor en trámite (potencial de caja)
+    if(tramV > 0)
+      conclusiones.push(`Existe un <strong>potencial de cobro de ${fm2(tramV)}</strong> correspondiente a ${enTramite.length} reclamaciones actualmente en auditoría ADRES, representando ingresos proyectados para los próximos meses.`);
+
+    // 3. Efectividad
+    if(efectividad >= 70)
+      conclusiones.push(`La <strong>efectividad de cobro del ${efectividad}%</strong> sobre las cuentas auditadas por ADRES supera la meta del 80%, evidenciando la calidad en la preparación y presentación de las reclamaciones por parte de CONEXA.`);
+    else if(efectividad >= 40)
+      conclusiones.push(`La efectividad de cobro se sitúa en <strong>${efectividad}%</strong> sobre las ${auditadas.length} reclamaciones auditadas por ADRES. Con ${enTramite.length} cuentas aún en proceso de auditoría, se proyecta un incremento significativo en este indicador.`);
+    else
+      conclusiones.push(`De las <strong>${auditadas.length} reclamaciones auditadas por ADRES</strong>, se han reconocido ${pagadas.length} por ${fm2(pagV)}. El ${enTramite.length} restante en trámite representa el mayor potencial de recuperación del portafolio.`);
+
+    // 4. Glosas
+    if(tasaGlosa <= 10)
+      conclusiones.push(`La <strong>tasa de glosa del ${tasaGlosa}%</strong> se mantiene dentro de los parámetros óptimos, reflejando la calidad técnica y documental con que CONEXA prepara y presenta cada reclamación.`);
+    else if(tasaGlosa <= 25)
+      conclusiones.push(`La tasa de glosa del <strong>${tasaGlosa}%</strong> (${glosadas.length} reclamaciones por ${fm2(gloV)}) está siendo gestionada activamente. CONEXA realiza seguimiento caso a caso para su resolución ante ADRES.`);
+    else
+      conclusiones.push(`Se registran <strong>${glosadas.length} reclamaciones glosadas</strong> por ${fm2(gloV)}, correspondientes al ${tasaGlosa}% de las auditadas. CONEXA gestiona la subsanación de observaciones para lograr su reconocimiento.`);
+
+    // 5. Pagos logrados
+    conclusiones.push(`A la fecha se han <strong>reconocido ${fm2(pagV)}</strong> en ${pagadas.length} reclamaciones aprobadas por ADRES, representando el resultado tangible de la gestión de cobro realizada por CONEXA en nombre de ${ips}.`);
+
+    // 6. Devueltas a IPS
+    if(devueltas.length > 0)
+      conclusiones.push(`<strong>${devueltas.length} reclamaciones</strong> fueron devueltas a ${ips} para ajuste de soportes. Una vez subsanadas, serán reradicadas ante ADRES para continuar el proceso de cobro.`);
+
+    // 7. Total portafolio
+    conclusiones.push(`El portafolio total gestionado asciende a <strong>${fm2(totalV)}</strong> en ${total} reclamaciones, de las cuales el ${coberturaRad}% ya se encuentra en proceso ante ADRES, demostrando el compromiso de CONEXA en la recuperación de cartera de ${ips}.`);
+
+    const renderConclusiones = conclusiones.map(t =>
+      `<div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;padding:8px 10px;background:var(--sur2);border-radius:6px;border-left:3px solid #00B2E2;">
+        <span style="color:#00B2E2;font-size:16px;flex-shrink:0;">•</span>
+        <span style="font-size:12px;line-height:1.6;">${t}</span>
+      </div>`
+    ).join('');
+
+    out.innerHTML = renderConclusiones +
+      `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--brd);font-size:9px;color:var(--tx3);text-align:right;">
+        Análisis generado automáticamente · ${fecha} · CONEXA Sistema FURIPS
       </div>`;
-    }).join('') +
-    `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--brd);font-size:9px;color:var(--tx3);">
-      Análisis generado por IA · ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} · CONEXA Sistema FURIPS
-    </div>`;
 
     toast('✔ Conclusiones generadas','ok');
   }catch(e){
