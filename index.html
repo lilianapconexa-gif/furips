@@ -7416,12 +7416,26 @@ window.updPortafolio = function(){
   if(radConF.length){const sum=radConF.reduce((a,r)=>{const fe=parseF(r.fechaEvento||r.furips1?.c22||''),fr=parseF(r.radicado.fecha);return a+(fe&&fr?Math.max(0,Math.round((fr-fe)/86400000)):0);},0);diasProm=Math.round(sum/radConF.length);}
   const sem=(v,b,m2,inv=false)=>inv?(v<=b?'🟢':v<=m2?'🟡':'🔴'):(v>=b?'🟢':v>=m2?'🟡':'🔴');
   const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
+  // KPIs con metas ajustadas a la realidad operativa
+  const semEfect = efectividad>=60?'🟢':efectividad>=30?'🟡':'🔴'; // meta real 60%+ (916 en trámite aún)
+  const semGlosa = tasaGlosa<=15?'🟢':tasaGlosa<=30?'🟡':'🔴';    // meta <15% sobre auditadas ADRES
+  const semRech  = tasaRechazo<=5?'🟢':tasaRechazo<=10?'🟡':'🔴'; // meta <5% sobre portafolio
+  // Días: semáforo basado en plazo legal 18m=540d. Si ya radicó = OK. Si no, cuenta el riesgo
+  const semDias  = diasProm===null?'⚪':diasProm<=180?'🟢':diasProm<=360?'🟡':'🔴'; // plazo legal 540d
+  // Sin radicar: margen de 30 (se radica durante el mes)
+  const semSinR  = sinRad.length<=30?'🟢':sinRad.length<=60?'🟡':'🔴';
+
   ind.innerHTML=
-    kpiR('Efectividad de cobro',efectividad+'%',sem(efectividad,70,40),'>70%',`${pagadas.length} pagadas de ${conRespuestaAdres.length} con respuesta ADRES`)+
-    kpiR('Tasa de glosa',tasaGlosa+'%',sem(tasaGlosa,10,25,true),'<10%',`${glosadas.length} de ${conRespuestaAdres.length} con respuesta ADRES`)+
-    kpiR('Tasa de rechazo',tasaRechazo+'%',sem(tasaRechazo,5,15,true),'<5%',`${anuladas.length} anuladas de ${conRespuestaAdres.length} con respuesta ADRES`)+
-    (diasProm!==null?kpiR('Días evento→radicación',diasProm+' días',sem(diasProm,30,90,true),'<30 días','Oportunidad'):'')+
-    kpiR('Sin radicar',sinRad.length,sinRad.length===0?'🟢':sinRad.length<=10?'🟡':'🔴','0',fm(sinV));
+    kpiR('Efectividad de cobro', efectividad+'%', semEfect, '>60%',
+      `${pagadas.length} pagadas / ${auditadasAdres.length} auditadas por ADRES · (excluye ${total-auditadasAdres.length} aún en proceso)`)+
+    kpiR('Tasa de glosa', tasaGlosa+'%', semGlosa, '<15%',
+      `${glosadas.length} glosadas de ${auditadasAdres.length} auditadas por ADRES`)+
+    kpiR('Tasa de rechazo/anulación', tasaRechazo+'%', semRech, '<5%',
+      `${anuladas.length} anuladas — retiros antes de auditoría ADRES`)+
+    (diasProm!==null?kpiR('Días factura→radicación', diasProm+' días', semDias, '<180 días',
+      `Plazo legal: 18 meses (540 días) desde el egreso · La cuenta puede llegar meses después del evento`):'')+
+    kpiR('Sin radicar (pendientes)', sinRad.length, semSinR, '<30',
+      `${fm(sinV)} · Se radican durante el mes al recibir soportes completos`);
 
   // Barra distribución
   const barra=g('port-barra-estados'), leyenda=g('port-barra-leyenda');
