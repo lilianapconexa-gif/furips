@@ -7332,7 +7332,9 @@ window.updPortafolio = function(){
   const pagadas=recsAcum.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
   const glosadas=recsAcum.filter(r=>getRespuestaAdres(r)==='glosada');
   const radicadas=recsAcum.filter(r=>getEstadoGestion(r)==='radicada'&&!getRespuestaAdres(r));
-  const sinRad=recsAcum.filter(r=>!r.radicado?.numero);
+  // Sin radicar = nunca han tenido radicado Y no están devueltas a IPS
+  // Las devueltas ya tuvieron radicado, ADRES las devolvió para corrección
+  const sinRad=recsAcum.filter(r=>!r.radicado?.numero && getEstadoGestion(r)!=='devuelta_ips');
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
 
   // IDs internos
