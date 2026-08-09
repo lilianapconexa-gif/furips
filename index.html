@@ -712,6 +712,9 @@ select option{background:var(--sur2);}
           <button id="adres-btn-procesar" onclick="procesarReporteADRES()" class="btn bp" style="font-size:12px;font-weight:700;padding:8px 20px;" disabled>
             🔄 Procesar y sincronizar
           </button>
+          <button onclick="limpiarDuplicadosADRES()" class="btn bs" style="font-size:11px;margin-left:8px;" title="Corregir entradas duplicadas de sincronizaciones anteriores">
+            🧹 Limpiar duplicados
+          </button>
         </div>
 
         <!-- Progress -->
@@ -8601,21 +8604,9 @@ window.procesarReporteADRES = async function(){
       const cambios = {};
       let hayCambios = false;
 
-      // Obtener o inicializar array de respuestasAdres
+      // Obtener array existente — NO migrar el singular para evitar duplicados
+      // El singular (respuestaAdres) se actualiza por separado al final
       const respActuales = rec.respuestasAdres ? [...rec.respuestasAdres] : [];
-      // Si no hay array pero hay respuestaAdres singular, migrarla
-      if(!respActuales.length && rec.radicado?.numero){
-        respActuales.push({
-          numero: rec.radicado.numero,
-          lote: rec.radicado.lote||'',
-          fecha: rec.radicado.fecha||'',
-          estado: rec.respuestaAdres?.estado||'',
-          valorAprobado: rec.respuestaAdres?.valorAprobado||0,
-          valorGlosado: rec.respuestaAdres?.valorGlosado||0,
-          descripcion: rec.respuestaAdres?.descripcion||'',
-          fuente: 'migrado',
-        });
-      }
 
       // Ordenar filas ADRES por fecha de radicación
       adresFilas.sort((a,b)=>{
@@ -8638,6 +8629,8 @@ window.procesarReporteADRES = async function(){
           (estadoRec.toLowerCase().includes('girado') ? 'aprobada' : 'en_tramite');
 
         // Buscar si ya existe esta radicación en el historial
+        // numRad debe ser válido para poder identificar la entrada
+        if(!numRad){ return; } // sin número de radicación no podemos trazar
         const idx = respActuales.findIndex(r=>String(r.numero||'').trim()===numRad);
 
         const entradaNueva = {
@@ -8673,9 +8666,14 @@ window.procesarReporteADRES = async function(){
 
       if(!hayCambios){ sinCambios++; continue; }
 
-      // Determinar estado actual = última radicación
-      const ultima = respActuales[respActuales.length-1];
-      const penultima = respActuales.length>1 ? respActuales[respActuales.length-2] : null;
+      // Determinar estado actual = entrada más reciente (por fecha de radicación)
+      const respOrdenadas = [...respActuales].sort((a,b)=>{
+        const fa = String(a.fecha||'').split('/').reverse().join('-');
+        const fb = String(b.fecha||'').split('/').reverse().join('-');
+        return fa.localeCompare(fb);
+      });
+      const ultima = respOrdenadas[respOrdenadas.length-1];
+      const penultima = respOrdenadas.length>1 ? respOrdenadas[respOrdenadas.length-2] : null;
 
       cambios['respuestasAdres'] = respActuales;
       cambios['respuestaAdres'] = {
@@ -8767,6 +8765,65 @@ window.procesarReporteADRES = async function(){
 };
 
 // ══ FIN TRAZABILIDAD ══════════════════════════════════════════
+
+
+// ══ LIMPIEZA DE DUPLICADOS ADRES (uso único para corregir sync anterior) ══
+window.limpiarDuplicadosADRES = async function(){
+  if(USER?.rol !== 'superadmin'){ toast('Solo Super Admin.','w'); return; }
+  if(!confirm('¿Limpiar entradas duplicadas en respuestasAdres? Esto mantiene solo una entrada por número de radicación.')) return;
+
+  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const afectadas = src.filter(r => r.respuestasAdres?.length > 0);
+  
+  let corregidas = 0, errores = 0;
+  toast(`⏳ Revisando ${afectadas.length} reclamaciones...`,'ok');
+
+  for(const rec of afectadas){
+    const rads = rec.respuestasAdres;
+    
+    // Deduplicar por número de radicación — mantener la entrada más reciente
+    const seen = {};
+    rads.forEach(r => {
+      const num = String(r.numero||'').trim();
+      if(!num) return;
+      // Mantener la más reciente (mayor fechaSync o última en aparecer)
+      if(!seen[num] || (r.fechaSync && (!seen[num].fechaSync || r.fechaSync > seen[num].fechaSync))){
+        seen[num] = r;
+      }
+    });
+    
+    const dedup = Object.values(seen);
+    
+    // Solo actualizar si hay cambio real
+    if(dedup.length === rads.length) continue;
+    
+    // Recalcular estado actual desde la entrada más reciente
+    const ordenadas = [...dedup].sort((a,b) => String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const ultima = ordenadas[ordenadas.length-1];
+    
+    try{
+      await updateDoc(doc(db,'reclamaciones',rec.id), {
+        respuestasAdres: dedup,
+        'respuestaAdres.estado': ultima?.estado || rec.respuestaAdres?.estado || '',
+        'respuestaAdres.valorAprobado': ultima?.valorAprobado || 0,
+        'respuestaAdres.valorGlosado': ultima?.valorGlosado || 0,
+        actualizado: serverTimestamp()
+      });
+      // Actualizar en memoria
+      rec.respuestasAdres = dedup;
+      if(rec.respuestaAdres){
+        rec.respuestaAdres.estado = ultima?.estado || '';
+        rec.respuestaAdres.valorAprobado = ultima?.valorAprobado || 0;
+        rec.respuestaAdres.valorGlosado = ultima?.valorGlosado || 0;
+      }
+      corregidas++;
+    }catch(e){ errores++; console.error(rec.factura, e.message); }
+  }
+
+  aplicarFiltroCliente(); renderLista(); updStats();
+  toast(`✔ Limpieza completada: ${corregidas} corregidas${errores?' · ⚠ '+errores+' errores':''}`, errores?'w':'ok');
+};
+// ══ FIN LIMPIEZA ══
 
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
