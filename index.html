@@ -413,8 +413,8 @@ select option{background:var(--sur2);}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <select id="port-mes-sel" onchange="updPortafolio();" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);cursor:pointer;"><option value="">Todo el historial</option></select>
       <button onclick="descargarInformeMensual()" style="background:#A3D55D;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;">⬇ Informe Comité</button>
-      <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;">🖨 Imprimir</button>
       <button onclick="descargarPDF()" style="background:#9DB455;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;">⬇ PDF</button>
+      <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;">🖨 Imprimir</button>
     </div>
   </div>
 
@@ -452,20 +452,15 @@ select option{background:var(--sur2);}
         <div id="port-indicadores"></div>
       </div>
     </div>
-    <!-- ── GESTIÓN CONEXA: Funnel + Tendencia + Valor ── -->
     <div style="margin-bottom:12px;">
-
-      <!-- Funnel de gestión -->
       <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:10px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:14px;">🔄 PIPELINE DE GESTIÓN CONEXA</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:14px;">🔄 Pipeline de Gestión CONEXA</div>
         <div id="dash-funnel" style="display:flex;align-items:stretch;gap:2px;"></div>
         <div id="dash-funnel-labels" style="display:flex;gap:2px;margin-top:6px;"></div>
       </div>
-
-      <!-- Tendencia mensual + Donut -->
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;">
         <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">📈 TENDENCIA DE RADICACIÓN MENSUAL</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">📈 Tendencia de Radicación Mensual</div>
           <div id="dash-tendencia" style="display:flex;align-items:flex-end;gap:6px;height:80px;"></div>
           <div id="dash-tendencia-labels" style="display:flex;gap:6px;margin-top:6px;"></div>
         </div>
@@ -476,26 +471,13 @@ select option{background:var(--sur2);}
         </div>
       </div>
     </div>
-
-    <!-- IDs de compatibilidad antigüedad (ocultos) -->
-    <div style="display:none;">
-      <div id="pa-0-90"></div><div id="pa-91-180"></div>
-      <div id="pa-181-360"></div><div id="pa-361"></div><div id="pa-venc"></div>
-    </div>
-    <!-- ── Conclusiones IA ── -->
     <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);">🤖 Conclusiones del Portafolio</div>
-        <button id="btn-generar-conclusiones" onclick="generarConclusiones()"
-          style="background:#00B2E2;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">
-          ✨ Generar conclusiones
-        </button>
+        <button id="btn-generar-conclusiones" onclick="generarConclusiones()" style="background:#00B2E2;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">✨ Generar conclusiones</button>
       </div>
-      <div id="conclusiones-output" style="font-size:12px;color:var(--tx2);line-height:1.7;">
-        <span style="color:var(--tx3);font-style:italic;">Haz clic en "Generar conclusiones" para obtener un análisis ejecutivo del portafolio con IA.</span>
-      </div>
+      <div id="conclusiones-output" style="font-size:12px;color:var(--tx2);line-height:1.7;"><span style="color:var(--tx3);font-style:italic;">Haz clic en "Generar conclusiones" para obtener un análisis ejecutivo.</span></div>
     </div>
-
     <div id="port-seccion-mes" style="display:none;margin-bottom:12px;">
       <div style="font-size:10px;font-weight:700;color:#00B2E2;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span style="background:#00B2E2;color:#fff;padding:2px 8px;border-radius:4px;font-size:9px;">MES</span><span id="port-mes-label"></span></div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
@@ -547,7 +529,6 @@ select option{background:var(--sur2);}
       <div class="stat" style="border-left:3px solid var(--tx3);"><div class="sv" id="pk-pen">0</div><div class="sl">⏸ Sin Radicar</div><div class="sv2" id="pk-pen-v">$0</div></div>
     </div>
   </div>
-
   <div style="display:none;">
     <span id="pk-total"></span><span id="pk-total-v"></span><span id="pk-total-n"></span><span id="dash-rol"></span>
   </div>
@@ -619,40 +600,28 @@ select option{background:var(--sur2);}
           <!-- TAB: Resumen -->
           <div id="chq-pane-resumen" style="display:none;">
             <div id="chq-resumen-html"></div>
-            <!-- Estado de radicación con soportes -->
+            <!-- Estado radicación -->
             <div style="margin-top:14px;background:var(--sur2);border-radius:8px;padding:14px;border:1px solid var(--brd);">
-              <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:10px;font-family:var(--mono);letter-spacing:.5px;">📋 ESTADO DE RADICACIÓN CON SOPORTES</div>
+              <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:10px;">📋 ESTADO DE RADICACIÓN CON SOPORTES</div>
               <div style="display:flex;flex-direction:column;gap:8px;">
-                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
-                  <input type="radio" name="chq-rad-estado" id="chq-rad-completo" value="completo" style="margin-top:3px;accent-color:#A3D55D;">
-                  <div>
-                    <div style="font-size:12px;font-weight:600;color:#A3D55D;">✅ Soportes completos</div>
-                    <div style="font-size:10px;color:var(--tx3);">Radicada con documentación completa, sin observaciones</div>
-                  </div>
+                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
+                  <input type="radio" name="chq-rad-estado" id="chq-rad-completo" value="completo" style="margin-top:3px;accent-color:#A3D55D;" checked>
+                  <div><div style="font-size:12px;font-weight:600;color:#A3D55D;">✅ Soportes completos</div><div style="font-size:10px;color:var(--tx3);">Radicada con documentación completa, sin observaciones</div></div>
                 </label>
-                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
+                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
                   <input type="radio" name="chq-rad-estado" id="chq-rad-faltantes" value="faltantes_autorizados" style="margin-top:3px;accent-color:#e3b341;">
-                  <div>
-                    <div style="font-size:12px;font-weight:600;color:#e3b341;">⚠️ Radicada con faltantes — autorización IPS</div>
-                    <div style="font-size:10px;color:var(--tx3);">La IPS autorizó radiar con soportes incompletos. Glosa esperada y justificada.</div>
-                  </div>
+                  <div><div style="font-size:12px;font-weight:600;color:#e3b341;">⚠️ Radicada con faltantes — autorización IPS</div><div style="font-size:10px;color:var(--tx3);">La IPS autorizó radiar con soportes incompletos. Glosa esperada y justificada.</div></div>
                 </label>
-                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
+                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
                   <input type="radio" name="chq-rad-estado" id="chq-rad-obs" value="observacion_interna" style="margin-top:3px;accent-color:#999899;">
-                  <div>
-                    <div style="font-size:12px;font-weight:600;color:#999899;">📋 Observación interna CONEXA</div>
-                    <div style="font-size:10px;color:var(--tx3);">Nota interna sobre condiciones especiales de esta radicación</div>
-                  </div>
+                  <div><div style="font-size:12px;font-weight:600;color:#999899;">📋 Observación interna CONEXA</div><div style="font-size:10px;color:var(--tx3);">Nota interna sobre condiciones especiales de esta radicación</div></div>
                 </label>
               </div>
               <div id="chq-rad-justificacion-wrap" style="margin-top:10px;display:none;">
                 <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:4px;">Justificación / Nota de autorización</label>
-                <textarea id="chq-rad-justificacion" rows="3"
-                  placeholder="Ej: La IPS autorizó por correo el 15/07/2026 radicar sin epicrisis por demora del médico tratante. Se espera glosa serie 3101."
-                  style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;resize:vertical;"></textarea>
+                <textarea id="chq-rad-justificacion" rows="3" placeholder="Ej: La IPS autorizó por correo radiar sin epicrisis por demora del médico tratante." style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;resize:vertical;"></textarea>
               </div>
             </div>
-
             <div style="margin-top:14px;">
               <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px;">Observaciones generales del revisor</label>
               <textarea id="chq-obs" rows="4" placeholder="Ej: Falta epicrisis de UCI, soporte de radiología sin firma de especialista..."
@@ -673,48 +642,28 @@ select option{background:var(--sur2);}
 
       </div>
 
-      <!-- ── CARGA MASIVA DE SOPORTES ── -->
+      <!-- Carga masiva soportes -->
       <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:14px;">
         <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">📊 ACTUALIZACIÓN MASIVA DE ESTADO DE SOPORTES</div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;">
-          Descarga la plantilla, completa el estado de soportes para cada reclamación y sube el archivo para actualizar todas en Firestore.
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;">Descarga la plantilla, completa el estado de soportes y sube el archivo para actualizar todas en Firestore.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <div style="background:var(--sur2);border-radius:8px;padding:12px;border:1px solid var(--brd);">
-            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① Descargar plantilla</div>
-            <div style="font-size:10px;color:var(--tx3);margin-bottom:10px;">Excel con todas las reclamaciones listas para completar</div>
-            <button onclick="descargarPlantillaSoportes()" class="btn bp" style="font-size:11px;width:100%;">⬇ Descargar plantilla Excel</button>
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① Descargar plantilla Excel</div>
+            <button onclick="descargarPlantillaSoportes()" class="btn bp" style="font-size:11px;width:100%;">⬇ Descargar plantilla</button>
           </div>
           <div style="background:var(--sur2);border-radius:8px;padding:12px;border:1px solid var(--brd);">
             <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">② Subir archivo completado</div>
-            <div style="font-size:10px;color:var(--tx3);margin-bottom:10px;">Sube el Excel con los estados de soportes completados</div>
             <input type="file" id="chq-masivo-input" accept=".xlsx,.xls,.csv" style="display:none;">
             <button onclick="document.getElementById('chq-masivo-input').click()" class="btn bs" style="font-size:11px;width:100%;">📂 Seleccionar archivo</button>
           </div>
         </div>
-
-        <!-- Instrucciones columnas -->
-        <div style="background:rgba(0,178,226,.06);border:1px solid rgba(0,178,226,.2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;">
-          <div style="font-weight:700;color:#00B2E2;margin-bottom:6px;">📋 Columnas de la plantilla:</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;color:var(--tx2);">
-            <div><strong>factura</strong> — N° factura (no editar)</div>
-            <div><strong>consecutivo</strong> — Consecutivo (no editar)</div>
-            <div><strong>estadoActual</strong> — Estado actual (referencia)</div>
-            <div><strong style="color:#00B2E2;">soporteEstado</strong> — <em>completo</em> / <em>faltantes_autorizados</em> / <em>observacion_interna</em></div>
-            <div><strong style="color:#00B2E2;">soporteJustificacion</strong> — Nota de justificación (si aplica)</div>
-            <div><strong>soporteActual</strong> — Estado actual guardado (referencia)</div>
-          </div>
+        <div style="background:rgba(0,178,226,.06);border:1px solid rgba(0,178,226,.2);border-radius:8px;padding:10px;font-size:10px;color:var(--tx2);margin-bottom:10px;">
+          <strong style="color:#00B2E2;">Columnas a completar:</strong> <code>soporteEstado</code> (completo / faltantes_autorizados / observacion_interna) y <code>soporteJustificacion</code> (nota de autorización)
         </div>
-
-        <!-- Progress -->
-        <div id="chq-masivo-status" style="display:none;margin-bottom:10px;">
+        <div id="chq-masivo-status" style="display:none;">
           <div style="font-size:11px;color:var(--tx2);margin-bottom:6px;" id="chq-masivo-txt">Procesando...</div>
-          <div style="height:6px;background:var(--sur2);border-radius:3px;overflow:hidden;">
-            <div id="chq-masivo-barra" style="height:100%;background:#00B2E2;width:0%;transition:width .2s;border-radius:3px;"></div>
-          </div>
+          <div style="height:6px;background:var(--sur2);border-radius:3px;overflow:hidden;"><div id="chq-masivo-barra" style="height:100%;background:#00B2E2;width:0%;transition:width .2s;border-radius:3px;"></div></div>
         </div>
-
       </div>
 
       <!-- NUEVA -->
@@ -2542,14 +2491,7 @@ window.aplicarFiltroCliente = function(){
   if(!CLIENTE_ACTIVO || CLIENTE_ACTIVO.nit === '*'){
     RECS = RECS_ALL.slice();
   } else {
-    const nit=CLIENTE_ACTIVO.nit;
-    RECS = RECS_ALL.filter(r=>
-      (r.nitIPS&&r.nitIPS===nit)||
-      (!r.nitIPS&&(r.codHab||'')===nit)||
-      (!r.nitIPS&&(r.codHab||'').startsWith(nit))||
-      (!r.nitIPS&&r.furips1?.c4===nit)
-    );
-    if(RECS.length===0&&RECS_ALL.length>0) RECS=RECS_ALL.slice();
+    RECS = RECS_ALL.filter(r => (r.codHab||'') === CLIENTE_ACTIVO.nit);
   }
 };
 
@@ -2939,10 +2881,10 @@ window.crearRec = async ()=>{
   loader(true);
   try{
     const fev=gv('n-fev'),feg=gv('n-feg');
-    const nitIPS=(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*')?CLIENTE_ACTIVO.nit:'';const data={factura:fac,consec:con,codHab:cod,nitIPS,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],fur:{},fur_ser:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre',creado:serverTimestamp(),actualizado:serverTimestamp()};
+    const data={factura:fac,consec:con,codHab:cod,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre',creado:serverTimestamp(),actualizado:serverTimestamp()};
     const ref=await addDoc(collection(db,'reclamaciones'),data);
     CUR_ID=ref.id;
-    const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,nitIPS,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],fur:{},fur_ser:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
+    const recLocal={id:ref.id,factura:fac,consec:con,codHab:cod,fechaEvento:fev||null,fechaEgreso:feg||null,furips1:{c1:rgo,c2:fac,c3:con,c4:cod,c22:fev||'',c12:feg||''},furips2:[],creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'Sin nombre'};
     // ── Inyectar datos de víctima del FURIPS anterior si se seleccionó uno ──
     if (window._furips1Previo?.furips1) {
       const prev = window._furips1Previo.furips1;
@@ -4922,6 +4864,11 @@ function updStats(){
   // Actualizar portafolio KPI
   updPortafolio();
   poblarMesesPortafolio();
+
+  const cliTotEl=g('dash-cli-total-v'); if(cliTotEl) cliTotEl.textContent='$'+vl.toLocaleString('es-CO');
+  const cliNEl=g('dash-cli-total-n'); if(cliNEl) cliNEl.textContent=n+' reclamaciones';
+  if(typeof updPortafolio==='function') updPortafolio();
+  if(typeof poblarMesesPortafolio==='function') poblarMesesPortafolio();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -5456,14 +5403,6 @@ function chqCargarRec(id){
   // Cargar obs guardadas
   const obs=g('chq-obs');
   if(obs) obs.value = CHQ_REC.chequeo_soportes?.obs||'';
-  // Cargar estado de radicación con soportes
-  const radEst2 = CHQ_REC.chequeo_soportes?.soporteRadicacion || 'completo';
-  const radJus2 = CHQ_REC.chequeo_soportes?.soporteJustificacion || '';
-  document.querySelectorAll('input[name="chq-rad-estado"]').forEach(r=>{ r.checked = r.value===radEst2; });
-  const justWrap2 = document.getElementById('chq-rad-justificacion-wrap');
-  const justTA2   = document.getElementById('chq-rad-justificacion');
-  if(justWrap2) justWrap2.style.display = radEst2!=='completo'?'block':'none';
-  if(justTA2)   justTA2.value = radJus2;
 };
 
 function chqRenderHeader(){
@@ -5656,33 +5595,14 @@ function chqBuildResumen(){
     </table>`:''}`;
 }
 
-// ── Estado radicación: mostrar/ocultar justificación ──
-(function setupChqRadEstado(){
-  const setup = () => {
-    document.querySelectorAll('input[name="chq-rad-estado"]').forEach(radio => {
-      radio.addEventListener('change', function(){
-        const wrap = document.getElementById('chq-rad-justificacion-wrap');
-        if(wrap) wrap.style.display = (this.value !== 'completo') ? 'block' : 'none';
-      });
-    });
-  };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup);
-  else setup();
-})();
-
 window.chqGuardar=async()=>{
   if(!CHQ_REC){ toast('No hay reclamación seleccionada.','w'); return; }
   const soportes=chqSoportesAplican(CHQ_REC);
   const obs=g('chq-obs')?.value||'';
-  // Leer estado de radicación con soportes
-  const radEstado = document.querySelector('input[name="chq-rad-estado"]:checked')?.value || 'completo';
-  const radJustif = g('chq-rad-justificacion')?.value?.trim() || '';
   const payload={
     chequeo_soportes:{
       items: CHQ_ESTADO,
       obs,
-      soporteRadicacion: radEstado,
-      soporteJustificacion: radJustif,
       revisadoPor: USER.nombre||USER.email||'',
       revisadoPorUid: USER.uid,
       fecha: new Date().toISOString(),
@@ -5733,7 +5653,7 @@ window.go=(id)=>{
   if(pg){ pg.classList.add('on'); pg.style.display='block'; }
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('active'));
   const ni=g('n-'+id); if(ni) ni.classList.add('active');
-  if(id==='nueva'){ prepNueva(); if(typeof poblarSelectIPS==='function') poblarSelectIPS(); }
+  if(id==='nueva') prepNueva();
   if(id==='lista'){ renderLista(); }
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
@@ -7418,8 +7338,10 @@ const F1_PAD_ZEROS = { 'c32': 20 };
 
 // Genera el contenido TXT del FURIPS 1 para una reclamación.
 // Devuelve un string con UNA SOLA LÍNEA con los campos separados por comas.
+// ══════════════════════════════════════════════════════════
+// NUEVAS FUNCIONES FURIPS — Dashboard + Asignación + Soportes
+// ══════════════════════════════════════════════════════════
 
-// ══ switchDashTab ══
 window.switchDashTab = function(tab){
   const cli=document.getElementById('dash-cli'),int2=document.getElementById('dash-int');
   const tCli=document.getElementById('tab-dash-cli'),tInt=document.getElementById('tab-dash-int');
@@ -7434,459 +7356,216 @@ window.switchDashTab = function(tab){
   }
 };
 
-// ══ poblarMesesPortafolio ══
 function poblarMesesPortafolio(){
-  const sel=g('port-mes-sel'); if(!sel) return;
-  const toYYYYMM=s=>{ if(!s) return null; s=String(s).trim(); if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){const[,m,y]=s.split('/');return`${y}-${m}`;} if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.substring(0,7); if(/^\d{4}-\d{2}$/.test(s)) return s; return null; };
-  const getMesRad=r=>{ const f1=toYYYYMM(r.radicado?.fecha); if(f1) return f1; if(r.radicado?.registradoEn?.toDate){const d=r.radicado.registradoEn.toDate();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;} return null; };
+  const sel=document.getElementById('port-mes-sel'); if(!sel) return;
+  const toYM=s=>{if(!s)return null;s=String(s).trim();if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s))return s.substring(0,7);if(/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/.test(s)){const[,m,y]=s.split('/');return`${y}-${m}`;}return null;};
   const mesesSet=new Set();
-  RECS.forEach(r=>{ const m=getMesRad(r); if(m) mesesSet.add(m); const fEv=toYYYYMM(r.fechaEvento)||toYYYYMM(r.furips1?.c22); if(fEv) mesesSet.add(fEv); });
+  RECS.forEach(r=>{
+    const f1=toYM(r.radicado?.fecha);
+    if(f1)mesesSet.add(f1);
+    else if(r.radicado?.registradoEn?.toDate){const d=r.radicado.registradoEn.toDate();mesesSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}
+    const fEv=toYM(r.fechaEvento)||toYM(r.furips1?.c22);
+    if(fEv)mesesSet.add(fEv);
+  });
   const meses=Array.from(mesesSet).sort().reverse();
   const cur=sel.value;
-  sel.innerHTML='<option value="">Todo el historial</option>'+meses.map(m=>{const[y,mo]=m.split('-');const label=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});return`<option value="${m}" ${cur===m?'selected':''}>${label.charAt(0).toUpperCase()+label.slice(1)}</option>`;}).join('');
+  sel.innerHTML='<option value="">Todo el historial</option>'+meses.map(m=>{const[y,mo]=m.split('-');const lbl=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});return`<option value="${m}" ${cur===m?'selected':''}>${lbl.charAt(0).toUpperCase()+lbl.slice(1)}</option>`;}).join('');
 }
 
-// ══ updPortafolio ══
 window.updPortafolio = function(){
-  const mesFiltro=g('port-mes-sel')?.value||'';
+  const mesFiltro=document.getElementById('port-mes-sel')?.value||'';
   const fm=v=>'$'+(v||0).toLocaleString('es-CO');
   const pct=(a,b)=>b>0?Math.round(a/b*100):0;
-  const toYYYYMM=s=>{ if(!s) return null; s=String(s).trim(); if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){const[,m,y]=s.split('/');return`${y}-${m}`;} if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.substring(0,7); return null; };
-  const getMesRec=r=>{ const f1=toYYYYMM(r.radicado?.fecha); if(f1) return f1; if(r.radicado?.registradoEn?.toDate){const d=r.radicado.registradoEn.toDate();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;} return null; };
-
-  const BASE=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
+  const toYM=s=>{if(!s)return null;s=String(s).trim();if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s))return s.substring(0,7);if(/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/.test(s)){const[,m,y]=s.split('/');return`${y}-${m}`;}return null;};
+  const getMes=r=>{const f1=toYM(r.radicado?.fecha);if(f1)return f1;if(r.radicado?.registradoEn?.toDate){const d=r.radicado.registradoEn.toDate();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}return null;};
+  const BASE=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0?RECS_ALL:[]);
   let recs=BASE;
-  if(mesFiltro) recs=BASE.filter(r=>getMesRec(r)===mesFiltro);
+  if(mesFiltro)recs=BASE.filter(r=>getMes(r)===mesFiltro);
   const recsAcum=BASE;
   const val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
-
-  const hasMes=!!mesFiltro;
-  const total=recsAcum.length, totalVal=recsAcum.reduce((a,r)=>a+val(r),0);
+  const total=recsAcum.length,totalVal=recsAcum.reduce((a,r)=>a+val(r),0);
   const pagadas=recsAcum.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
   const glosadas=recsAcum.filter(r=>getRespuestaAdres(r)==='glosada');
-  const radicadas=recsAcum.filter(r=>getEstadoGestion(r)==='radicada'&&!getRespuestaAdres(r));
-  // Sin radicar = nunca han tenido radicado Y no están devueltas a IPS
-  // Las devueltas ya tuvieron radicado, ADRES las devolvió para corrección
-  const sinRad=recsAcum.filter(r=>!r.radicado?.numero && getEstadoGestion(r)!=='devuelta_ips');
+  const sinRad=recsAcum.filter(r=>!r.radicado?.numero&&getEstadoGestion(r)!=='devuelta_ips');
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
-
-  // IDs internos
-  _s('pk-pag',pagadas.length); _s('pk-pag-v',fm(pagadas.reduce((a,r)=>a+val(r),0)));
-  _s('pk-rad',radicadas.length); _s('pk-rad-v',fm(radicadas.reduce((a,r)=>a+val(r),0)));
-  _s('pk-glo',glosadas.length); _s('pk-glo-v',fm(glosadas.reduce((a,r)=>a+val(r),0)));
-  _s('pk-pen',sinRad.length); _s('pk-pen-v',fm(sinRad.reduce((a,r)=>a+val(r),0)));
-
-  // Vista cliente cards
+  const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
+  const pagV=pagadas.reduce((a,r)=>a+val(r),0),gloV=glosadas.reduce((a,r)=>a+val(r),0);
+  const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
+  const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
+  const anuladas=recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
+  const enTramite=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite');
+  const tramV=enTramite.reduce((a,r)=>a+val(r),0);
+  const coberturaRad=pct(radTotal.length,total);
+  const efectividad=pct(pagV,auditadasV);
+  const tasaGlosa=pct(glosadas.length,Math.max(auditadasAdres.length,1));
+  const tasaRechazo=pct(anuladas.length,total);
+  const _s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  _s('pk-pag',pagadas.length);_s('pk-pag-v',fm(pagV));
+  _s('pk-rad',radTotal.length);_s('pk-rad-v',fm(radTotalV));
+  _s('pk-glo',glosadas.length);_s('pk-glo-v',fm(gloV));
+  _s('pk-pen',sinRad.length);_s('pk-pen-v',fm(sinV));
   const pct2=(a,b)=>b>0?Math.round(a/b*100):0;
   const setCard=(pfx,n,v,t)=>{_s(pfx+'-n',n);_s(pfx+'-v',fm(v));const pEl=document.getElementById(pfx+'-pct');if(pEl)pEl.textContent=pct2(n,t)+'%';};
-  const pagV=pagadas.reduce((a,r)=>a+val(r),0), gloV=glosadas.reduce((a,r)=>a+val(r),0);
-  const radTotalV=radTotal.reduce((a,r)=>a+val(r),0), sinV=sinRad.reduce((a,r)=>a+val(r),0);
   setCard('cli-sinrad',sinRad.length,sinV,total);
   setCard('cli-rad',radTotal.length,radTotalV,total);
   setCard('cli-pag',pagadas.length,pagV,total);
   setCard('cli-glo',glosadas.length,gloV,total);
-
-  // Header CLI
-  const cliPer=g('dash-cli-periodo');
-  if(cliPer) cliPer.textContent=hasMes?(()=>{const[y,mo]=mesFiltro.split('-');return new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});})():'Todo el historial · '+new Date().toLocaleDateString('es-CO');
-  const lblAcum=g('port-acum-label');
-  if(lblAcum) lblAcum.textContent=hasMes?`Acumulado total: ${total} reclamaciones`:'';
-
-  // MES section
-  const secMes=g('port-seccion-mes'); if(secMes) secMes.style.display=hasMes?'block':'none';
+  const cliIPS=document.getElementById('dash-cli-ips');
+  if(cliIPS)cliIPS.textContent=(typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas las IPS';
+  const cliPer=document.getElementById('dash-cli-periodo');
+  if(cliPer)cliPer.textContent=mesFiltro?(()=>{const[y,mo]=mesFiltro.split('-');return new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});})():'Todo el historial';
+  const cliTotV=document.getElementById('dash-cli-total-v');if(cliTotV)cliTotV.textContent=fm(totalVal);
+  const cliTotN=document.getElementById('dash-cli-total-n');if(cliTotN)cliTotN.textContent=total+' reclamaciones';
+  const hasMes=!!mesFiltro;
+  const secMes=document.getElementById('port-seccion-mes');if(secMes)secMes.style.display=hasMes?'block':'none';
   if(hasMes){
-    const[y,mo]=mesFiltro.split('-');
-    const mesNom=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
-    const lbl=g('port-mes-label'); if(lbl) lbl.textContent=mesNom.charAt(0).toUpperCase()+mesNom.slice(1);
-    const mesRecs=recs;
-    const mPag=mesRecs.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
-    const mGlo=mesRecs.filter(r=>getRespuestaAdres(r)==='glosada');
-    const mRad=mesRecs.filter(r=>getEstadoGestion(r)==='radicada');
-    const mSin=mesRecs.filter(r=>!r.radicado?.numero);
-    _s('pm-total',mesRecs.length); _s('pm-total-v',fm(mesRecs.reduce((a,r)=>a+val(r),0)));
-    _s('pm-pag',mPag.length); _s('pm-pag-v',fm(mPag.reduce((a,r)=>a+val(r),0)));
-    _s('pm-rad',mRad.length); _s('pm-rad-v',fm(mRad.reduce((a,r)=>a+val(r),0)));
-    _s('pm-glo',mGlo.length); _s('pm-glo-v',fm(mGlo.reduce((a,r)=>a+val(r),0)));
-    _s('pm-pen',mSin.length); _s('pm-pen-v',fm(mSin.reduce((a,r)=>a+val(r),0)));
+    const[y,mo]=mesFiltro.split('-');const mesNom=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
+    const lbl=document.getElementById('port-mes-label');if(lbl)lbl.textContent=mesNom.charAt(0).toUpperCase()+mesNom.slice(1);
+    const mPag=recs.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+    const mGlo=recs.filter(r=>getRespuestaAdres(r)==='glosada');
+    const mRad=recs.filter(r=>getEstadoGestion(r)==='radicada');
+    const mSin=recs.filter(r=>!r.radicado?.numero&&getEstadoGestion(r)!=='devuelta_ips');
+    _s('pm-total',recs.length);_s('pm-total-v',fm(recs.reduce((a,r)=>a+val(r),0)));
+    _s('pm-pag',mPag.length);_s('pm-pag-v',fm(mPag.reduce((a,r)=>a+val(r),0)));
+    _s('pm-rad',mRad.length);_s('pm-rad-v',fm(mRad.reduce((a,r)=>a+val(r),0)));
+    _s('pm-glo',mGlo.length);_s('pm-glo-v',fm(mGlo.reduce((a,r)=>a+val(r),0)));
+    _s('pm-pen',mSin.length);_s('pm-pen-v',fm(mSin.reduce((a,r)=>a+val(r),0)));
   }
-
-  // Desglose cuadrado
-  const des=g('cli-desglose');
+  const des=document.getElementById('cli-desglose');
   if(des&&total>0){
-    const tramN=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').length;
-    const tramV=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').reduce((a,r)=>a+val(r),0);
-    const devN=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length;
+    const tramN=enTramite.length,devN=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length;
     const devV=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').reduce((a,r)=>a+val(r),0);
-    const anN=recsAcum.filter(r=>getRespuestaAdres(r)==='anulada_adres').length;
-    const anV=recsAcum.filter(r=>getRespuestaAdres(r)==='anulada_adres').reduce((a,r)=>a+val(r),0);
+    const anN=anuladas.length,anV=anuladas.reduce((a,r)=>a+val(r),0);
     const row=(lbl,n,v,col,indent)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:${indent?'3px 4px 3px 16px':'6px 6px'};border-radius:5px;${indent?'':'background:var(--sur2);margin-bottom:3px;'}"><span style="font-size:${indent?'10':'11'}px;color:${indent?'var(--tx3)':'var(--tx)'};font-weight:${indent?400:600};">${lbl}</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);font-size:${indent?10:11}px;font-weight:600;color:${col};">${n}</span><span style="font-family:var(--mono);font-size:${indent?9:10}px;color:var(--tx3);min-width:85px;text-align:right;">${fm(v)}</span></span></div>`;
-    des.innerHTML=
-      row('⏸ Sin radicar',sinRad.length,sinV,'#999899',false)+
-      row('📬 Radicadas',radTotal.length,radTotalV,'#00B2E2',false)+
-      row('⏳ · En trámite ADRES',tramN,tramV,'#00B2E2',true)+
-      row('✔ · Reconocidas',pagadas.length,pagV,'#A3D55D',true)+
-      row('↩ · En glosa',glosadas.length,gloV,'#9DB455',true)+
-      row('↩ · Devuelta IPS',devN,devV,'#c0c0c0',true)+
-      row('∅ · Anuladas ADRES',anN,anV,'#c0c0c0',true)+
-      `<div style="border-top:1px solid var(--brd);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:700;">TOTAL PORTAFOLIO</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);color:#00B2E2;font-weight:700;">${total}</span><span style="font-family:var(--mono);color:#00B2E2;min-width:85px;text-align:right;">${fm(totalVal)}</span></span></div>`;
+    des.innerHTML=row('⏸ Sin radicar',sinRad.length,sinV,'#999899',false)+row('📬 Radicadas',radTotal.length,radTotalV,'#00B2E2',false)+row('⏳ · En trámite ADRES',tramN,tramV,'#00B2E2',true)+row('✔ · Reconocidas',pagadas.length,pagV,'#A3D55D',true)+row('↩ · En glosa',glosadas.length,gloV,'#9DB455',true)+row('↩ · Devuelta IPS',devN,devV,'#c0c0c0',true)+row('∅ · Anuladas ADRES',anN,anV,'#c0c0c0',true)+`<div style="border-top:1px solid var(--brd);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:700;">TOTAL PORTAFOLIO</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);color:#00B2E2;font-weight:700;">${total}</span><span style="font-family:var(--mono);color:#00B2E2;min-width:85px;text-align:right;">${fm(totalVal)}</span></span></div>`;
   }
-
-  // KPIs semáforo
-  const ind=g('port-indicadores'); if(!ind) return;
-  // Efectividad: solo pagadas / (pagadas + glosadas)
-  // Las anuladas NO entran porque se retiraron antes de llegar a auditoría ADRES
-  const auditadasAdres = recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
-  const auditadasV = auditadasAdres.reduce((a,r)=>a+val(r),0);
-  const conRespuestaAdres = auditadasAdres; // alias para los KPI tooltips
-  const conRespuestaV = auditadasV;
-  const efectividad = pct(pagV, auditadasV); // pagadas / (pagadas + glosadas)
-  const tasaGlosa = pct(glosadas.length, auditadasAdres.length);
-  const anuladas = recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
-  const tasaRechazo = pct(anuladas.length, total); // anuladas sobre total portafolio
-  const parseF=s=>{if(!s||s.length!==10)return null;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
-  const radConF=recsAcum.filter(r=>r.radicado?.fecha&&(r.fechaEvento||r.furips1?.c22));
-  let diasProm=null;
-  if(radConF.length){const sum=radConF.reduce((a,r)=>{const fe=parseF(r.fechaEvento||r.furips1?.c22||''),fr=parseF(r.radicado.fecha);return a+(fe&&fr?Math.max(0,Math.round((fr-fe)/86400000)):0);},0);diasProm=Math.round(sum/radConF.length);}
-  const sem=(v,b,m2,inv=false)=>inv?(v<=b?'🟢':v<=m2?'🟡':'🔴'):(v>=b?'🟢':v>=m2?'🟡':'🔴');
+  const ind=document.getElementById('port-indicadores');if(!ind)return;
+  const semEfect=efectividad>=80?'🟢':efectividad>=50?'🟡':'🔴';
+  const semGlosa=tasaGlosa<=10?'🟢':tasaGlosa<=20?'🟡':'🔴';
+  const semRech=tasaRechazo<=5?'🟢':tasaRechazo<=10?'🟡':'🔴';
+  const semCob=coberturaRad>=80?'🟢':coberturaRad>=60?'🟡':'🔴';
   const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
-  // KPIs con metas ajustadas a la realidad operativa
-  // ── Nuevos KPIs operativos ──
-
-  // 1. Valor en riesgo de glosa (lo que ADRES tiene en revisión activa)
-  const enTramiteRecs = recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite');
-  const enTramiteV    = enTramiteRecs.reduce((a,r)=>a+val(r),0);
-
-  // 2. Tasa de recuperación de glosas (glosas que terminaron siendo aprobadas)
-  // Aproximación: aprobada_parcial sobre (aprobada_parcial + glosada)
-  const aparcial = recsAcum.filter(r=>getRespuestaAdres(r)==='aprobada_parcial');
-  const tasaRecGlosa = pct(aparcial.length, Math.max(glosadas.length+aparcial.length,1));
-
-  // 3. Cobertura de radicación (% del portafolio que ya fue enviado a ADRES)
-  const coberturaRad = pct(radTotal.length, total);
-
-  // 4. Valor pendiente de pago (radicado pero aún sin aprobación)
-  const pendientePago = enTramiteRecs;
-  const pendientePagoV = enTramiteV;
-
-  const semEfect = efectividad>=80?'🟢':efectividad>=50?'🟡':'🔴';
-  const semGlosa = tasaGlosa<=10?'🟢':tasaGlosa<=20?'🟡':'🔴';
-  const semRech  = tasaRechazo<=5?'🟢':tasaRechazo<=10?'🟡':'🔴';
-  const semCob   = coberturaRad>=80?'🟢':coberturaRad>=60?'🟡':'🔴';
-  const semRecG  = tasaRecGlosa>=50?'🟢':tasaRecGlosa>=20?'🟡':'🔴';
-
+  const glosasJust=glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
   ind.innerHTML=
-    kpiR('Efectividad de cobro', efectividad+'%', semEfect, '>80%',
-      `${pagadas.length} aprobadas de ${auditadasAdres.length} auditadas por ADRES`)+
-    kpiR('Tasa de glosa', tasaGlosa+'%', semGlosa, '<10%',
-      `${glosadas.length} glosadas de ${auditadasAdres.length} auditadas${glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados').length>0?' · '+glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados').length+' justificadas (autorización IPS)':''}`)+
-    kpiR('Tasa de rechazo', tasaRechazo+'%', semRech, '<5%',
-      `${anuladas.length} anuladas / retiradas del portafolio`)+
-    kpiR('Cobertura de radicación', coberturaRad+'%', semCob, '>80%',
-      `${radTotal.length} de ${total} reclamaciones enviadas a ADRES`)+
-    kpiR('Valor en trámite ADRES', fm(pendientePagoV), pendientePagoV>0?'⏳':'🟢', 'Por cobrar',
-      `${pendientePago.length} reclamaciones pendientes de respuesta ADRES`);
-
-  // ══ FUNNEL DE GESTIÓN CONEXA ══
-  const funnel = g('dash-funnel'), funnelLbl = g('dash-funnel-labels');
-  if(funnel && total > 0){
-    const steps = [
-      { label:'Recibidas',    n:total,              v:totalVal,         color:'#00B2E2', icon:'📥' },
-      { label:'Procesadas',   n:total-sinRad.length,v:totalVal-sinV,    color:'#00B2E2', icon:'⚙' },
-      { label:'Radicadas ADRES', n:radTotal.length, v:radTotal.reduce((a,r)=>a+val(r),0), color:'#A3D55D', icon:'📬' },
-      { label:'Con Respuesta',n:auditadasAdres.length+recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').length, v:auditadasAdres.reduce((a,r)=>a+val(r),0), color:'#A3D55D', icon:'✔' },
-      { label:'Pagadas',      n:pagadas.length,     v:pagV,             color:'#9DB455', icon:'💰' },
-    ];
-    const maxN = steps[0].n || 1;
-    funnel.innerHTML = steps.map((s,i) => {
-      const w = Math.max(8, Math.round(s.n/maxN*100));
-      const pctN = Math.round(s.n/maxN*100);
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative;">
-        <div style="width:100%;height:52px;background:${s.color}${i===0?'':'99'};border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative;clip-path:polygon(0 0,100% 0,${i<steps.length-1?'88% 100%,12% 100%':'100% 100%,0 100%'});">
-          <div style="text-align:center;">
-            <div style="font-size:16px;font-weight:700;font-family:var(--mono);color:#fff;">${s.n}</div>
-            <div style="font-size:9px;color:rgba(255,255,255,.8);">${pctN}%</div>
-          </div>
-        </div>
-        ${i<steps.length-1?'<div style="position:absolute;right:-8px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--tx3);z-index:2;">▶</div>':''}
-      </div>`;
-    }).join('');
-    if(funnelLbl) funnelLbl.innerHTML = steps.map(s =>
-      `<div style="flex:1;text-align:center;font-size:9px;color:var(--tx2);font-weight:600;white-space:pre-line;">${s.icon} ${s.label}
-<span style="font-family:var(--mono);color:var(--tx3);font-size:8px;">${fm(s.v)}</span></div>`
-    ).join('');
+    kpiR('Efectividad de cobro',efectividad+'%',semEfect,'>80%',`${pagadas.length} aprobadas de ${auditadasAdres.length} auditadas ADRES`)+
+    kpiR('Tasa de glosa',tasaGlosa+'%',semGlosa,'<10%',`${glosadas.length} glosadas${glosasJust.length>0?' · '+glosasJust.length+' justificadas (autorización IPS)':''}`)+
+    kpiR('Tasa de rechazo',tasaRechazo+'%',semRech,'<5%',`${anuladas.length} anuladas del portafolio`)+
+    kpiR('Cobertura de radicación',coberturaRad+'%',semCob,'>80%',`${radTotal.length} de ${total} enviadas a ADRES`)+
+    kpiR('Valor en trámite ADRES',fm(tramV),tramV>0?'⏳':'🟢','Por cobrar',`${enTramite.length} reclamaciones en auditoría`);
+  const barra=document.getElementById('port-barra-estados'),leyenda=document.getElementById('port-barra-leyenda');
+  if(barra&&total>0){
+    const estados=[{label:'Sin radicar',color:'#999899',n:sinRad.length},{label:'En trámite',color:'#00B2E2',n:enTramite.length},{label:'Pagadas',color:'#A3D55D',n:pagadas.length},{label:'Glosadas',color:'#9DB455',n:glosadas.length},{label:'Devuelta IPS',color:'#c8c6c6',n:recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length},{label:'Anuladas',color:'#e0e0e0',n:anuladas.length}].filter(e=>e.n>0);
+    barra.innerHTML=estados.map(e=>`<div style="flex:${e.n};background:${e.color};min-width:3px;" title="${e.label}: ${e.n}"></div>`).join('');
+    if(leyenda)leyenda.innerHTML=estados.map(e=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:1px;background:${e.color};display:inline-block;"></span><span style="color:var(--tx2);">${e.label} <strong style="font-family:var(--mono);">${e.n}</strong></span></span>`).join('');
   }
-
-  // ══ TENDENCIA MENSUAL DE RADICACIÓN ══
-  const tend = g('dash-tendencia'), tendLbl = g('dash-tendencia-labels');
-  if(tend && recsAcum.length > 0){
-    const toYYYYMM2 = s => { if(!s) return null; s=String(s).trim(); if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s)) return s.substring(0,7); if(/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/.test(s)){const[,m,y]=s.split('/');return`${y}-${m}`;} return null; };
-    const byMes = {};
-    recsAcum.forEach(r => {
-      let mes = toYYYYMM2(r.radicado?.fecha);
-      if(!mes && r.radicado?.registradoEn?.toDate) { const d=r.radicado.registradoEn.toDate(); mes=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-      if(!mes) return;
-      if(!byMes[mes]) byMes[mes] = { rad:0, pag:0, glo:0 };
+  // Funnel
+  const funnel=document.getElementById('dash-funnel'),funnelLbl=document.getElementById('dash-funnel-labels');
+  if(funnel&&total>0){
+    const steps=[{label:'📥 Recibidas',n:total,v:totalVal,color:'#00B2E2'},{label:'⚙ Procesadas',n:total-sinRad.length,v:totalVal-sinV,color:'#00B2E2'},{label:'📬 Radicadas',n:radTotal.length,v:radTotalV,color:'#A3D55D'},{label:'✔ Con Resp.',n:auditadasAdres.length+enTramite.length,v:auditadasV,color:'#A3D55D'},{label:'💰 Pagadas',n:pagadas.length,v:pagV,color:'#9DB455'}];
+    const maxN=steps[0].n||1;
+    funnel.innerHTML=steps.map((s,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative;"><div style="width:100%;height:52px;background:${s.color}${i===0?'':'88'};border-radius:4px;display:flex;align-items:center;justify-content:center;"><div style="text-align:center;"><div style="font-size:16px;font-weight:700;font-family:var(--mono);color:#fff;">${s.n}</div><div style="font-size:9px;color:rgba(255,255,255,.85);">${Math.round(s.n/maxN*100)}%</div></div></div>${i<steps.length-1?'<div style="position:absolute;right:-8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--tx3);z-index:2;">▶</div>':''}</div>`).join('');
+    if(funnelLbl)funnelLbl.innerHTML=steps.map(s=>`<div style="flex:1;text-align:center;font-size:9px;color:var(--tx2);font-weight:600;">${s.label}<br><span style="font-family:var(--mono);color:var(--tx3);font-size:8px;">${fm(s.v)}</span></div>`).join('');
+  }
+  // Tendencia
+  const tend=document.getElementById('dash-tendencia'),tendLbl=document.getElementById('dash-tendencia-labels');
+  if(tend&&recsAcum.length>0){
+    const toYM2=s=>{if(!s)return null;s=String(s).trim();if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s))return s.substring(0,7);return null;};
+    const byMes={};
+    recsAcum.forEach(r=>{
+      let mes=toYM2(r.radicado?.fecha);
+      if(!mes&&r.radicado?.registradoEn?.toDate){const d=r.radicado.registradoEn.toDate();mes=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+      if(!mes)return;
+      if(!byMes[mes])byMes[mes]={rad:0,pag:0};
       byMes[mes].rad++;
-      if(['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r))) byMes[mes].pag++;
-      if(getRespuestaAdres(r)==='glosada') byMes[mes].glo++;
+      if(['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)))byMes[mes].pag++;
     });
-    const meses = Object.keys(byMes).sort().slice(-8); // últimos 8 meses
-    if(meses.length > 0){
-      const maxRad = Math.max(...meses.map(m=>byMes[m].rad), 1);
-      tend.innerHTML = meses.map(m => {
-        const {rad,pag,glo} = byMes[m];
-        const h = Math.max(4, Math.round(rad/maxRad*72));
-        const hp = Math.max(0, Math.round(pag/maxRad*72));
-        const [y,mo] = m.split('-');
-        const mesNom = new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'short'}).replace('.','');
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;">
-          <div style="font-size:10px;font-weight:700;color:#00B2E2;font-family:var(--mono);">${rad}</div>
-          <div style="width:100%;position:relative;height:${h}px;background:#00B2E222;border-radius:4px 4px 0 0;border:1px solid #00B2E244;">
-            <div style="position:absolute;bottom:0;width:100%;height:${hp}px;background:#A3D55D;border-radius:3px 3px 0 0;" title="${pag} pagadas"></div>
-          </div>
-        </div>`;
-      }).join('');
-      if(tendLbl) tendLbl.innerHTML = meses.map(m => {
-        const [y,mo] = m.split('-');
-        const mesNom = new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'short'}).replace('.','');
-        return `<div style="flex:1;text-align:center;font-size:9px;color:var(--tx3);text-transform:capitalize;">${mesNom}</div>`;
-      }).join('');
+    const meses=Object.keys(byMes).sort().slice(-8);
+    if(meses.length>0){
+      const maxRad=Math.max(...meses.map(m=>byMes[m].rad),1);
+      tend.innerHTML=meses.map(m=>{const{rad,pag}=byMes[m];const h=Math.max(4,Math.round(rad/maxRad*72));const hp=Math.max(0,Math.round(pag/maxRad*72));return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="font-size:10px;font-weight:700;color:#00B2E2;font-family:var(--mono);">${rad}</div><div style="width:100%;position:relative;height:${h}px;background:#00B2E222;border-radius:4px 4px 0 0;border:1px solid #00B2E244;"><div style="position:absolute;bottom:0;width:100%;height:${hp}px;background:#A3D55D;border-radius:3px 3px 0 0;"></div></div></div>`;}).join('');
+      if(tendLbl)tendLbl.innerHTML=meses.map(m=>{const[y,mo]=m.split('-');const mn=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'short'}).replace('.','');return`<div style="flex:1;text-align:center;font-size:9px;color:var(--tx3);text-transform:capitalize;">${mn}</div>`;}).join('');
     }
   }
-
-  // Barra distribución
-  const barra=g('port-barra-estados'), leyenda=g('port-barra-leyenda');
-  if(barra&&total>0){
-    const estados=[
-      {label:'Sin radicar',color:'#999899',n:sinRad.length},
-      {label:'En trámite',color:'#00B2E2',n:recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite').length},
-      {label:'Pagadas',color:'#A3D55D',n:pagadas.length},
-      {label:'Glosadas',color:'#9DB455',n:glosadas.length},
-      {label:'Devuelta IPS',color:'#c8c6c6',n:recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length},
-      {label:'Anuladas',color:'#e0e0e0',n:recsAcum.filter(r=>getEstadoGestion(r)==='anulada').length},
-    ].filter(e=>e.n>0);
-    barra.innerHTML=estados.map(e=>`<div style="flex:${e.n};background:${e.color};min-width:3px;" title="${e.label}: ${e.n}"></div>`).join('');
-    if(leyenda) leyenda.innerHTML=estados.map(e=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:1px;background:${e.color};display:inline-block;"></span><span style="color:var(--tx2);">${e.label} <strong style="font-family:var(--mono);">${e.n}</strong></span></span>`).join('');
-  }
-
-  // Antigüedad
-  const noPag=recsAcum.filter(r=>!['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r))&&getEstadoGestion(r)!=='anulada'&&getRespuestaAdres(r)!=='anulada_adres');
-  const npVal=noPag.reduce((a,r)=>a+val(r),0);
-  const rangos=[
-    {id:'pa-0-90',label:'0–90d',color:'#A3D55D',min:0,max:90},
-    {id:'pa-91-180',label:'91–180d',color:'#00B2E2',min:91,max:180},
-    {id:'pa-181-360',label:'181–360d',color:'#9DB455',min:181,max:360},
-    {id:'pa-361',label:'>360d',color:'#999899',min:361,max:9999},
-    {id:'pa-venc',label:'⚠Venc.',color:'#c0c0c0',min:-1,max:-1},
-  ];
-  const allItems=rangos.map(rg=>noPag.filter(r=>{const v=calcVencimiento(r);if(!v)return false;if(rg.min<0)return v.vencida;return!v.vencida&&v.diasRestantes>=rg.min&&v.diasRestantes<=rg.max;}));
-  const maxN=Math.max(...allItems.map(a=>a.length),1);
-  rangos.forEach((rg,ri)=>{
-    const el=g(rg.id); if(!el) return;
-    const items=allItems[ri],n=items.length,v=items.reduce((a,r)=>a+val(r),0),p=pct(v,npVal);
-    const barH=Math.max(4,Math.round(n/maxN*72));
-    el.innerHTML=`<div style="height:72px;display:flex;align-items:flex-end;justify-content:center;"><div style="width:40px;height:${barH}px;background:${rg.color};border-radius:4px 4px 0 0;position:relative;">${n>0?`<div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;color:${rg.color};font-family:var(--mono);white-space:nowrap;">${n}</div>`:''}</div></div><div style="font-size:9px;color:var(--tx2);text-align:center;font-weight:600;margin-top:4px;">${rg.label}</div><div style="font-size:9px;color:${rg.color};text-align:center;font-family:var(--mono);">${p}%</div>`;
-  });
-
   // Donut
-  const donut=g('dash-donut');
+  const donut=document.getElementById('dash-donut');
   if(donut&&total>0){
     const R=40,cx=55,cy=55,sw=14,circ=2*Math.PI*R;
-    // Donut solo sobre lo que ADRES ya respondió
-  const anulAdr=recsAcum.filter(r=>getRespuestaAdres(r)==='anulada_adres');
-  const tramite=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite');
-  const segs=[
-      {n:pagadas.length,color:'#A3D55D',label:'Pagadas'},
-      {n:glosadas.length,color:'#9DB455',label:'Glosadas'},
-      {n:anulAdr.length,color:'#999899',label:'Anuladas'},
-      {n:tramite.length,color:'#e0e0e0',label:'En trámite'},
-    ].filter(s=>s.n>0);
+    const segs=[{n:pagadas.length,color:'#A3D55D'},{n:glosadas.length,color:'#9DB455'},{n:enTramite.length,color:'#00B2E2'},{n:sinRad.length,color:'#999899'}].filter(s=>s.n>0);
     let off=0,paths='';
     segs.forEach(s=>{const len=s.n/total*circ;paths+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(circ-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;off+=len;});
-    const ef=pct(pagV,conRespuestaV); // efectividad real sobre lo respondido por ADRES
-    donut.innerHTML=paths+`<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace">${ef}%</text><text x="${cy}" y="${cy+12}" text-anchor="middle" font-size="9" fill="var(--tx3)">de lo resuelto</text>`;
-    const ley=g('dash-barra-leyenda');
-    if(ley) ley.innerHTML=[
-      {l:'✔ Pagadas',n:pagadas.length,c:'#A3D55D'},
-      {l:'✕ Glosadas',n:glosadas.length,c:'#9DB455'},
-      {l:'∅ Anuladas',n:anulAdr.length,c:'#999899'},
-      {l:'⏳ En trámite',n:tramite.length,c:'#c0c0c0'},
-    ].filter(e=>e.n>0).map(e=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2);"><span style="width:7px;height:7px;border-radius:1px;background:${e.c};display:inline-block;"></span>${e.l}</span><span style="font-family:var(--mono);font-size:10px;color:${e.c};font-weight:600;">${e.n}</span></div>`).join('');
+    const ef=pct(pagV,auditadasV);
+    donut.innerHTML=paths+`<text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="18" font-weight="700" fill="var(--tx)" font-family="monospace">${ef}%</text><text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="9" fill="var(--tx3)">de cobro</text>`;
+    const ley=document.getElementById('dash-barra-leyenda');
+    if(ley)ley.innerHTML=[{l:'Pagadas',n:pagadas.length,c:'#A3D55D'},{l:'En cobro',n:radTotal.length,c:'#00B2E2'},{l:'Glosadas',n:glosadas.length,c:'#9DB455'},{l:'Sin rad.',n:sinRad.length,c:'#999899'}].filter(e=>e.n>0).map(e=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2);"><span style="width:7px;height:7px;border-radius:1px;background:${e.c};display:inline-block;"></span>${e.l}</span><span style="font-family:var(--mono);font-size:10px;color:${e.c};font-weight:600;">${e.n}</span></div>`).join('');
   }
 };
 
-// ══ loadTxt / loadXL ══
 window.loadTxt=function(){
-  poblarSelectTxt();
-  const usar=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
-  const noEl=g('txt-no'),fmEl=g('txt-fm');
-  if(usar.length===0){if(noEl)noEl.classList.remove('hidden');if(fmEl)fmEl.classList.add('hidden');return;}
-  if(noEl)noEl.classList.add('hidden'); if(fmEl)fmEl.classList.remove('hidden');
-  const fec=g('tx-fec'); if(fec&&!fec.value) fec.value=new Date().toISOString().split('T')[0];
-  const cons=usar.map(r=>parseInt(r.consec||0)).filter(n=>n>0);
-  if(cons.length){const ini=g('tx-cons-ini'),fin=g('tx-cons-fin');if(ini&&!ini.value)ini.value=Math.min(...cons);if(fin&&!fin.value)fin.value=Math.max(...cons);}
+  if(typeof poblarSelectTxt==='function')poblarSelectTxt();
+  const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0?RECS_ALL:[]);
+  const noEl=document.getElementById('txt-no'),fmEl=document.getElementById('txt-fm');
+  if(!usar.length){if(noEl)noEl.classList.remove('hidden');if(fmEl)fmEl.classList.add('hidden');return;}
+  if(noEl)noEl.classList.add('hidden');if(fmEl)fmEl.classList.remove('hidden');
+  const fec=document.getElementById('tx-fec');if(fec&&!fec.value)fec.value=new Date().toISOString().split('T')[0];
 };
 window.loadXL=function(){
-  const usar=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
-  const noEl=g('xl-no'),fmEl=g('xl-fm');
-  if(usar.length===0){if(noEl)noEl.classList.remove('hidden');if(fmEl)fmEl.classList.add('hidden');return;}
-  if(noEl)noEl.classList.add('hidden'); if(fmEl)fmEl.classList.remove('hidden');
+  const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0?RECS_ALL:[]);
+  const noEl=document.getElementById('xl-no'),fmEl=document.getElementById('xl-fm');
+  if(!usar.length){if(noEl)noEl.classList.remove('hidden');if(fmEl)fmEl.classList.add('hidden');return;}
+  if(noEl)noEl.classList.add('hidden');if(fmEl)fmEl.classList.remove('hidden');
 };
 
-// ══ poblarSelectTxt / selIPSTxt ══
-window.poblarSelectTxt=function(){
-  const sel=g('tx-cod-sel'); if(!sel) return;
-  let lista=CLIENTES_IPS||[];
-  if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*') lista=lista.filter(x=>x.nit===CLIENTE_ACTIVO.nit);
-  const opts=lista.map(x=>`<option value="${x.nit}">${x.codHab||x.nit} — ${x.razon}</option>`).join('');
-  sel.innerHTML=`<option value="">Seleccione IPS...</option>${opts}<option value="otro">Otra IPS (código manual)</option>`;
-  if(lista.length===1){sel.value=lista[0].nit;selIPSTxt(lista[0].nit);}
-  else if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'){sel.value=CLIENTE_ACTIVO.nit;selIPSTxt(CLIENTE_ACTIVO.nit);}
-};
-window.selIPSTxt=function(val){
-  const el=g('tx-cod'); if(!el) return;
-  if(val==='otro'){el.value='';el.style.display='block';el.focus();}
-  else{el.value=val||'';el.style.display=val?'none':'block';}
-};
-
-// ══ poblarSelectIPS ══
-window.poblarSelectIPS=function(){
-  const sel=g('n-cod-sel'); if(!sel) return;
-  let lista=CLIENTES_IPS||[];
-  if(CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*') lista=lista.filter(x=>x.nit===CLIENTE_ACTIVO.nit);
-  const opts=lista.map(x=>`<option value="${x.nit}" data-codhab="${x.codHab||''}">${x.codHab||x.nit} — ${x.razon}</option>`).join('');
-  sel.innerHTML=`<option value="">Seleccione IPS...</option>${opts}<option value="otro">Otra IPS (código manual)</option>`;
-  if(lista.length===1){sel.value=lista[0].nit;if(typeof selIPSp1==='function')selIPSp1(lista[0].nit);}
-};
-
-// ══ expTxt / prevTxt ══
-function getRecsTxt(){
-  const selVal=g('tx-cod-sel')?.value||'',manCod=g('tx-cod')?.value?.trim()||'';
-  const cod=selVal==='otro'?manCod:(selVal||manCod);
-  const ini=parseInt(g('tx-cons-ini')?.value||'0')||0,fin=parseInt(g('tx-cons-fin')?.value||'0')||0;
-  let recs=(RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
-  if(cod) recs=recs.filter(r=>r.nitIPS===cod||r.codHab===cod||(r.codHab||'').startsWith(cod)||r.furips1?.c4===cod);
-  if(ini>0) recs=recs.filter(r=>parseInt(r.consec||0)>=ini);
-  if(fin>0) recs=recs.filter(r=>parseInt(r.consec||0)<=fin);
-  return recs;
-}
-window.expTxt=function(tipo){
-  const recs=getRecsTxt();
-  if(!recs.length){toast('No hay reclamaciones con ese filtro.','w');return;}
-  const fec=g('tx-fec')?.value||new Date().toISOString().split('T')[0];
-  const[y,m,d]=fec.split('-');const fd=`${d||'00'}${m||'00'}${y||'0000'}`;
-  const cod=recs[0]?.codHab||recs[0]?.nitIPS||'IPS';
-  if(tipo==='FURIPS1'){dl(recs.map(r=>generarTXT_F1(r)||'').join('\n'),`FURIPS1${cod}${fd}.txt`,'text/plain');toast(`✔ FURIPS 1 · ${recs.length} reclamaciones`,'ok');}
-  else{const f2=[];recs.forEach(r=>{const t=generarTXT_F2(r);if(t)f2.push(t);});dl(f2.join('\n'),`FURIPS2${cod}${fd}.txt`,'text/plain');toast(`✔ FURIPS 2 · ${f2.length} ítems`,'ok');}
-};
-window.prevTxt=function(){
-  const recs=getRecsTxt();
-  if(!recs.length){toast('No hay reclamaciones con ese filtro.','w');return;}
-  const ms=recs.slice(0,3);
-  const f2=[];ms.forEach(r=>{const t=generarTXT_F2(r);if(t)f2.push(t);});
-  const pf1=g('pv-f1'),pf2=g('pv-f2'),pw=g('prev-w');
-  if(pf1)pf1.textContent=ms.map(r=>generarTXT_F1(r)||'').join('\n')||'(sin datos)';
-  if(pf2)pf2.textContent=f2.join('\n')||'(sin datos)';
-  if(pw)pw.classList.remove('hidden');
-  toast(`👁 Previsualización: ${ms.length} de ${recs.length}`,'ok');
-};
-
-// ══ cargarUsers ══
 window.cargarUsers=async function(){
-  const el=document.getElementById('users-list'); if(!el) return;
+  const el=document.getElementById('users-list');if(!el)return;
   el.innerHTML='<div style="color:var(--tx3);font-size:12px;padding:8px;">Cargando usuarios...</div>';
   if(!db){el.innerHTML='<div class="alert ae">Firebase no inicializado.</div>';return;}
   try{
     const snap=await getDocs(collection(db,'usuarios'));
-    const users=[]; snap.forEach(d=>{const data=d.data();if(!data.eliminado)users.push({id:d.id,...data});});
+    const users=[];snap.forEach(d=>{const data=d.data();if(!data.eliminado)users.push({id:d.id,...data});});
     users.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
     const selDig=document.getElementById('asig-digitador');
-    if(selDig){
-      const digs=users.filter(u=>['digitador','admin','superadmin'].includes(u.rol));
-      selDig.innerHTML='<option value="">— Seleccione digitador —</option>'+digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');
-    }
+    if(selDig){const digs=users.filter(u=>['digitador','admin','superadmin'].includes(u.rol));selDig.innerHTML='<option value="">— Seleccione digitador —</option>'+digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');}
     if(!users.length){el.innerHTML='<div style="color:var(--tx3);font-size:12px;padding:8px;">No hay usuarios registrados.</div>';return;}
     const rolColor={superadmin:'#f97316',admin:'#3b82f6',digitador:'#A3D55D'};
     const rolLbl={superadmin:'⭐ Super Admin',admin:'👤 Admin',digitador:'✏ Digitador'};
-    el.innerHTML=users.map(u=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);gap:8px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:180px;">
-        <div style="width:32px;height:32px;border-radius:50%;background:${rolColor[u.rol]||'#999'}22;border:2px solid ${rolColor[u.rol]||'#999'};display:flex;align-items:center;justify-content:center;">👤</div>
-        <div><div style="font-weight:600;font-size:12px;">${u.nombre||'—'}</div><div style="font-size:11px;color:var(--tx3);">${u.email||u.id}</div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="background:${rolColor[u.rol]||'#999'}22;color:${rolColor[u.rol]||'#999'};font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">${rolLbl[u.rol]||u.rol}</span>
-        <select onchange="cambiarRolUser('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--brd);" ${u.id===USER?.uid?'disabled':''}>
-          <option value="digitador" ${u.rol==='digitador'?'selected':''}>Digitador</option>
-          <option value="admin" ${u.rol==='admin'?'selected':''}>Admin</option>
-          <option value="superadmin" ${u.rol==='superadmin'?'selected':''}>Super Admin</option>
-        </select>
-        ${u.id!==USER?.uid?`<button onclick="eliminarUser('${u.id}','${(u.nombre||u.email||'').replace(/'/g,'')}','${(u.email||'').replace(/'/g,'')}')" style="background:none;border:1px solid var(--red);color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">✕</button>`:''}
-      </div>
-    </div>`).join('');
-  }catch(e){
-    if(document.getElementById('users-list'))
-      document.getElementById('users-list').innerHTML=`<div class="alert ae" style="font-size:11px;">❌ Error: ${e.message}<br><small>Verifica reglas de Firestore: allow read, write: if request.auth != null;</small><br><button class="btn bs" style="margin-top:6px;font-size:11px;" onclick="cargarUsers()">🔄 Reintentar</button></div>`;
-    console.error('cargarUsers:',e);
-  }
+    el.innerHTML=users.map(u=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);gap:8px;flex-wrap:wrap;"><div style="display:flex;align-items:center;gap:10px;flex:1;min-width:180px;"><div style="width:32px;height:32px;border-radius:50%;background:${rolColor[u.rol]||'#999'}22;border:2px solid ${rolColor[u.rol]||'#999'};display:flex;align-items:center;justify-content:center;">👤</div><div><div style="font-weight:600;font-size:12px;">${u.nombre||'—'}</div><div style="font-size:11px;color:var(--tx3);">${u.email||u.id}</div></div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="background:${rolColor[u.rol]||'#999'}22;color:${rolColor[u.rol]||'#999'};font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">${rolLbl[u.rol]||u.rol}</span><select onchange="cambiarRolUser('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--brd);" ${u.id===USER?.uid?'disabled':''}><option value="digitador" ${u.rol==='digitador'?'selected':''}>Digitador</option><option value="admin" ${u.rol==='admin'?'selected':''}>Admin</option><option value="superadmin" ${u.rol==='superadmin'?'selected':''}>Super Admin</option></select>${u.id!==USER?.uid?`<button onclick="eliminarUser('${u.id}','${(u.nombre||u.email||'').replace(/'/g,'')}','${(u.email||'').replace(/'/g,'')}')" style="background:none;border:1px solid var(--red);color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">✕</button>`:''}</div></div>`).join('');
+  }catch(e){if(document.getElementById('users-list'))document.getElementById('users-list').innerHTML=`<div class="alert ae" style="font-size:11px;">❌ Error: ${e.message}<br><button class="btn bs" style="margin-top:6px;font-size:11px;" onclick="cargarUsers()">🔄 Reintentar</button></div>`;console.error('cargarUsers:',e);}
 };
 window.crearUser=async function(){
-  const nombre=(document.getElementById('u-nom')?.value||'').trim();
-  const email=(document.getElementById('u-eml')?.value||'').trim();
-  const pass=(document.getElementById('u-pas')?.value||'').trim();
-  const rol=document.getElementById('u-rol')?.value||'digitador';
-  const alr=document.getElementById('u-alr');
+  const nombre=(document.getElementById('u-nom')?.value||'').trim(),email=(document.getElementById('u-eml')?.value||'').trim(),pass=(document.getElementById('u-pas')?.value||'').trim(),rol=document.getElementById('u-rol')?.value||'digitador',alr=document.getElementById('u-alr');
   if(!nombre||!email||!pass){if(alr){alr.className='alert aw';alr.textContent='⚠ Nombre, correo y contraseña son obligatorios.';}return;}
   if(pass.length<6){if(alr){alr.className='alert aw';alr.textContent='⚠ Contraseña mínimo 6 caracteres.';}return;}
   if(alr){alr.className='alert ai';alr.textContent='⏳ Creando usuario...';}
   try{
     const apiKey='AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g';
     const resp=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass,returnSecureToken:true})});
-    const data=await resp.json();
-    if(data.error) throw new Error(data.error.message);
+    const data=await resp.json();if(data.error)throw new Error(data.error.message);
     await setDoc(doc(db,'usuarios',data.localId),{nombre,email,rol,creadoPor:USER.uid,creadoPorNombre:USER.nombre||USER.email||'',creado:serverTimestamp()});
-    if(alr){alr.className='alert as';alr.textContent=`✔ Usuario "${nombre}" creado. Credenciales: ${email} / ${pass}`;}
+    if(alr){alr.className='alert as';alr.textContent=`✔ "${nombre}" creado. Credenciales: ${email} / ${pass}`;}
     ['u-nom','u-eml','u-pas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    cargarUsers();
-    toast(`✔ Usuario ${nombre} creado`,'ok');
+    cargarUsers();toast(`✔ Usuario ${nombre} creado`,'ok');
   }catch(e){if(alr){alr.className='alert ae';alr.textContent=`❌ Error: ${e.message}`;}console.error('crearUser:',e);}
 };
-window.cambiarRolUser=async function(uid,nuevoRol){
-  try{await updateDoc(doc(db,'usuarios',uid),{rol:nuevoRol,actualizado:serverTimestamp()});toast(`✔ Rol actualizado`,'ok');cargarUsers();}catch(e){toast('Error: '+e.message,'e');}
-};
-window.eliminarUser=async function(uid,nombre,email){
-  if(!confirm(`¿Bloquear usuario "${nombre}" (${email})?`)) return;
-  try{await updateDoc(doc(db,'usuarios',uid),{eliminado:true,rol:'bloqueado',actualizado:serverTimestamp()});toast(`✔ Usuario ${nombre} bloqueado`,'ok');cargarUsers();}catch(e){toast('Error: '+e.message,'e');}
-};
+window.cambiarRolUser=async function(uid,nuevoRol){try{await updateDoc(doc(db,'usuarios',uid),{rol:nuevoRol,actualizado:serverTimestamp()});toast('✔ Rol actualizado','ok');cargarUsers();}catch(e){toast('Error: '+e.message,'e');}};
+window.eliminarUser=async function(uid,nombre,email){if(!confirm(`¿Bloquear usuario "${nombre}" (${email})?`))return;try{await updateDoc(doc(db,'usuarios',uid),{eliminado:true,rol:'bloqueado',actualizado:serverTimestamp()});toast(`✔ ${nombre} bloqueado`,'ok');cargarUsers();}catch(e){toast('Error: '+e.message,'e');}};
 
-// ══ Asignación de reclamaciones ══
 window.poblarSelectDigitadores=async function(){
-  const selDig=document.getElementById('asig-digitador'); if(!selDig) return;
-  if(selDig.options.length>1) return;
-  try{
-    const snap=await getDocs(collection(db,'usuarios'));
-    const digs=[];
-    snap.forEach(d=>{const u=d.data();if(!u.eliminado&&['digitador','admin','superadmin'].includes(u.rol))digs.push({id:d.id,...u});});
-    digs.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
-    selDig.innerHTML='<option value="">— Seleccione digitador —</option>'+digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');
-  }catch(e){console.warn('poblarSelectDigitadores:',e.message);}
+  const selDig=document.getElementById('asig-digitador');if(!selDig||selDig.options.length>1)return;
+  try{const snap=await getDocs(collection(db,'usuarios'));const digs=[];snap.forEach(d=>{const u=d.data();if(!u.eliminado&&['digitador','admin','superadmin'].includes(u.rol))digs.push({id:d.id,...u});});digs.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));selDig.innerHTML='<option value="">— Seleccione digitador —</option>'+digs.map(u=>`<option value="${u.id}">${u.nombre||u.email} (${u.rol})</option>`).join('');}catch(e){console.warn('poblarSelectDigitadores:',e.message);}
 };
 window.cargarAsignaciones=function(){
-  const sel=document.getElementById('asig-digitador'),lista=document.getElementById('asig-lista');
-  const uid=sel?.value; if(!lista) return;
+  const sel=document.getElementById('asig-digitador'),lista=document.getElementById('asig-lista'),uid=sel?.value;if(!lista)return;
   if(!uid){lista.innerHTML='<div style="color:var(--tx3);font-size:11px;">Seleccione un digitador para ver sus reclamaciones asignadas.</div>';return;}
   const digNom=sel.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
   const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
   const asignadas=src.filter(r=>r.asignadoA===uid);
   if(!asignadas.length){lista.innerHTML=`<div style="color:var(--tx3);font-size:11px;">${digNom} no tiene reclamaciones asignadas.</div>`;return;}
-  lista.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px;">${digNom} — ${asignadas.length} asignadas</div><div style="max-height:280px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">`+
-    asignadas.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid var(--brd);font-size:11px;"><div style="display:flex;gap:12px;"><span style="color:var(--tx3);font-family:var(--mono);">${r.consec}</span><strong>${r.factura}</strong><span style="color:var(--tx2);">${r.fechaEvento||r.furips1?.c22||'—'}</span></div><button id="des-${r.id}" style="background:none;border:1px solid var(--brd);color:var(--tx3);border-radius:4px;padding:1px 8px;cursor:pointer;font-size:10px;">✕</button></div>`).join('')+
-    '</div>';
+  lista.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px;">${digNom} — ${asignadas.length} asignadas</div><div style="max-height:280px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">`+asignadas.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid var(--brd);font-size:11px;"><div style="display:flex;gap:12px;"><span style="color:var(--tx3);font-family:var(--mono);">${r.consec}</span><strong>${r.factura}</strong><span style="color:var(--tx2);">${r.fechaEvento||r.furips1?.c22||'—'}</span></div><button id="des-${r.id}" style="background:none;border:1px solid var(--brd);color:var(--tx3);border-radius:4px;padding:1px 8px;cursor:pointer;font-size:10px;">✕</button></div>`).join('')+'</div>';
   asignadas.forEach(r=>{const btn=document.getElementById('des-'+r.id);if(btn)btn.addEventListener('click',()=>desasignar(r.id));});
 };
 window.buscarParaAsignar=function(q){
-  const res=document.getElementById('asig-resultados'); if(!res) return;
-  q=(q||'').trim().toLowerCase();
-  if(q.length<1){res.style.display='none';return;}
+  const res=document.getElementById('asig-resultados');if(!res)return;
+  q=(q||'').trim().toLowerCase();if(q.length<1){res.style.display='none';return;}
   const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
   if(!src.length){res.style.display='block';res.innerHTML='<div style="padding:8px 12px;font-size:11px;color:var(--tx3);">No hay reclamaciones cargadas.</div>';return;}
   const found=src.filter(r=>(r.factura||'').toLowerCase().includes(q)||(r.consec||'').toString().includes(q)).slice(0,15);
@@ -7898,25 +7577,20 @@ window.buscarParaAsignar=function(q){
 window.asignarFactura=async function(recId){
   const sel=document.getElementById('asig-digitador'),digUid=sel?.value,digNom=sel?.options[sel.selectedIndex]?.text?.split(' (')[0]||'';
   if(!digUid){toast('Selecciona un digitador primero.','w');return;}
-  try{
-    await updateDoc(doc(db,'reclamaciones',recId),{asignadoA:digUid,asignadoANombre:digNom,asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});
+  try{await updateDoc(doc(db,'reclamaciones',recId),{asignadoA:digUid,asignadoANombre:digNom,asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});
     const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
-    const idx2=src.findIndex(r=>r.id===recId);
-    if(idx2>=0){src[idx2].asignadoA=digUid;src[idx2].asignadoANombre=digNom;}
-    const rec=src.find(r=>r.id===recId);
-    toast(`✔ ${rec?.factura||''} asignada a ${digNom}`,'ok');
+    const idx2=src.findIndex(r=>r.id===recId);if(idx2>=0){src[idx2].asignadoA=digUid;src[idx2].asignadoANombre=digNom;}
+    const rec=src.find(r=>r.id===recId);toast(`✔ ${rec?.factura||''} asignada a ${digNom}`,'ok');
     const buscar=document.getElementById('asig-buscar');if(buscar)buscar.value='';
     const res=document.getElementById('asig-resultados');if(res)res.style.display='none';
     cargarAsignaciones();
   }catch(e){toast('Error: '+e.message,'e');}
 };
 window.desasignar=async function(recId){
-  if(!confirm('¿Quitar la asignación?')) return;
-  try{
-    await updateDoc(doc(db,'reclamaciones',recId),{asignadoA:null,asignadoANombre:null,actualizado:serverTimestamp()});
+  if(!confirm('¿Quitar la asignación?'))return;
+  try{await updateDoc(doc(db,'reclamaciones',recId),{asignadoA:null,asignadoANombre:null,actualizado:serverTimestamp()});
     const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
-    const idx2=src.findIndex(r=>r.id===recId);
-    if(idx2>=0){src[idx2].asignadoA=null;src[idx2].asignadoANombre=null;}
+    const idx2=src.findIndex(r=>r.id===recId);if(idx2>=0){src[idx2].asignadoA=null;src[idx2].asignadoANombre=null;}
     toast('✔ Asignación eliminada','ok');cargarAsignaciones();
   }catch(e){toast('Error: '+e.message,'e');}
 };
@@ -7926,35 +7600,28 @@ window.asignarTodasSinAsignar=async function(){
   const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
   const sinAsignar=src.filter(r=>!r.asignadoA);
   if(!sinAsignar.length){toast('No hay reclamaciones sin asignar.','w');return;}
-  if(!confirm(`¿Asignar ${sinAsignar.length} reclamaciones a "${digNom}"?`)) return;
+  if(!confirm(`¿Asignar ${sinAsignar.length} reclamaciones a "${digNom}"?`))return;
   const status=document.getElementById('asig-masivo-status');
   let ok=0,err=0;
   for(let i=0;i<sinAsignar.length;i++){
-    const rec=sinAsignar[i];
-    if(status)status.textContent=`⏳ ${i+1}/${sinAsignar.length}...`;
-    try{await updateDoc(doc(db,'reclamaciones',rec.id),{asignadoA:digUid,asignadoANombre:digNom,asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});rec.asignadoA=digUid;rec.asignadoANombre=digNom;ok++;}
-    catch(e){err++;}
+    const rec=sinAsignar[i];if(status)status.textContent=`⏳ ${i+1}/${sinAsignar.length}...`;
+    try{await updateDoc(doc(db,'reclamaciones',rec.id),{asignadoA:digUid,asignadoANombre:digNom,asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});rec.asignadoA=digUid;rec.asignadoANombre=digNom;ok++;}catch(e){err++;}
   }
   aplicarFiltroCliente();renderLista();updStats();
-  const msg=`✔ ${ok} asignadas${err?' · ⚠ '+err+' errores':''}`;
-  if(status)status.textContent=msg;toast(msg,err?'w':'ok');
+  const msg=`✔ ${ok} asignadas${err?' · ⚠ '+err+' errores':''}`;if(status)status.textContent=msg;toast(msg,err?'w':'ok');
 };
 window.descargarPlantillaAsignacion=function(){
   const selDig=document.getElementById('asig-digitador');
-  const digitadores=[];
-  if(selDig)Array.from(selDig.options).forEach(opt=>{if(opt.value)digitadores.push({uid:opt.value,nombre:opt.text.split(' (')[0]});});
+  const digitadores=[];if(selDig)Array.from(selDig.options).forEach(opt=>{if(opt.value)digitadores.push({uid:opt.value,nombre:opt.text.split(' (')[0]});});
   const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
-  const S='\t',N='\n';
-  let csv='PLANTILLA ASIGNACION DIGITADORES'+N+'factura'+S+'consecutivo'+S+'digitadorNombre'+S+'observacion'+N;
-  src.forEach(r=>{csv+=[r.factura||'',r.consec||'','',''].join(S)+N;});
-  csv+=N+'=== DIGITADORES DISPONIBLES ==='+N+'nombre'+S+'uid'+N;
-  digitadores.forEach(d=>{csv+=d.nombre+S+d.uid+N;});
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Plantilla_Asignacion_Digitadores.csv';a.click();URL.revokeObjectURL(a.href);
+  let csv='\uFEFFfactura\tconsecutivo\tdigitadorNombre\tobservacion\n';
+  src.forEach(r=>{csv+=`${r.factura||''}\t${r.consec||''}\t\t\n`;});
+  csv+='\n=== DIGITADORES ===\nnombre\tuid\n';
+  digitadores.forEach(d=>{csv+=`${d.nombre}\t${d.uid}\n`;});
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Plantilla_Asignacion.csv';a.click();URL.revokeObjectURL(a.href);
   toast('⬇ Plantilla descargada','ok');
 };
-
-// ══ Event listeners asignación ══
 window.asignarMasivoExcel=async function(file){
   if(!file){toast('No se recibió archivo.','w');return;}
   toast('📂 Leyendo archivo...','ok');
@@ -7962,395 +7629,141 @@ window.asignarMasivoExcel=async function(file){
   if(status){status.textContent='⏳ Leyendo archivo...';status.style.color='var(--acc)';}
   let rows=[];
   try{
-    if(typeof XLSX!=='undefined'){
-      const buf=await file.arrayBuffer();
-      const wb=XLSX.read(buf,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-    }else{
-      const txt=await file.text();
-      const lines=txt.split('\n').filter(l=>l.trim()&&!l.startsWith('PLANTILLA')&&!l.startsWith('==='));
-      if(!lines.length){toast('Archivo vacío.','w');return;}
-      const headers=lines[0].split('\t').map(h=>h.trim().toLowerCase());
-      rows=lines.slice(1).map(l=>{const vals=l.split('\t');const obj={};headers.forEach((h,i)=>obj[h]=(vals[i]||'').trim());return obj;}).filter(r=>r.factura);
-    }
-  }catch(e){toast('Error leyendo archivo: '+e.message,'e');return;}
-  if(!rows.length){toast('No se encontraron filas válidas.','w');return;}
-  const selEl=document.getElementById('asig-digitador');
-  const digUidSel=selEl?.value||'',digNomSel=selEl?.options[selEl?.selectedIndex]?.text?.split(' (')[0]||'';
+    if(typeof XLSX!=='undefined'){const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(ws,{defval:''});}
+    else{const txt=await file.text();const lines=txt.split('\n').filter(l=>l.trim()&&!l.startsWith('==='));if(!lines.length){toast('Archivo vacío.','w');return;}const headers=lines[0].split('\t').map(h=>h.trim().toLowerCase());rows=lines.slice(1).map(l=>{const vals=l.split('\t');const obj={};headers.forEach((h,i)=>obj[h]=(vals[i]||'').trim());return obj;}).filter(r=>r.factura);}
+  }catch(e){toast('Error: '+e.message,'e');return;}
+  if(!rows.length){toast('Sin filas válidas.','w');return;}
+  const selEl=document.getElementById('asig-digitador'),digUidSel=selEl?.value||'',digNomSel=selEl?.options[selEl?.selectedIndex]?.text?.split(' (')[0]||'';
   const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
   const asignaciones=[],errores=[];
   rows.forEach((r,i)=>{
-    const factura=String(r.factura||r.FACTURA||'').trim();
-    if(!factura||factura.startsWith('===')) return;
-    const nomDig=String(r.digitadornombre||r.digitadorNombre||'').trim();
-    const obs=String(r.observacion||r.obs||'').trim();
+    const factura=String(r.factura||'').trim();if(!factura||factura.startsWith('==='))return;
+    const nomDig=String(r.digitadornombre||r.digitadorNombre||'').trim();const obs=String(r.observacion||'').trim();
     let digUid=digUidSel,digNom=digNomSel;
-    if(nomDig&&selEl){
-      const opt=Array.from(selEl.options).find(o=>o.text.toLowerCase().startsWith(nomDig.toLowerCase()));
-      if(opt){digUid=opt.value;digNom=opt.text.split(' (')[0];}
-    }
-    if(!digUid){errores.push(`Fila ${i+2}: "${factura}" — sin digitador`);return;}
-    const rec=src.find(r2=>r2.factura===factura);
-    if(!rec){errores.push(`Fila ${i+2}: "${factura}" — no encontrada`);return;}
+    if(nomDig&&selEl){const opt=Array.from(selEl.options).find(o=>o.text.toLowerCase().startsWith(nomDig.toLowerCase()));if(opt){digUid=opt.value;digNom=opt.text.split(' (')[0];}}
+    if(!digUid){errores.push(`Fila ${i+2}: "${factura}" sin digitador`);return;}
+    const rec=src.find(r2=>r2.factura===factura);if(!rec){errores.push(`Fila ${i+2}: "${factura}" no encontrada`);return;}
     asignaciones.push({rec,digUid,digNom,obs});
   });
-  if(!asignaciones.length){
-    const msg=errores.length?`Sin válidas. ${errores[0]}`:'Sin filas válidas.';
-    toast(msg,'w');if(status)status.textContent='⚠ '+msg;return;
-  }
-  if(!confirm(`¿Asignar ${asignaciones.length} reclamaciones?${errores.length?' ('+errores.length+' omitidas)':''}`)) return;
+  if(!asignaciones.length){toast(errores.length?`Sin válidas. ${errores[0]}`:'Sin filas.','w');if(status)status.textContent='⚠';return;}
+  if(!confirm(`¿Asignar ${asignaciones.length} reclamaciones?${errores.length?' ('+errores.length+' omitidas)':''}`))return;
   let ok=0,err=0;
   for(let i=0;i<asignaciones.length;i++){
-    const{rec,digUid,digNom,obs}=asignaciones[i];
-    if(status)status.textContent=`⏳ ${i+1}/${asignaciones.length}...`;
-    try{
-      await updateDoc(doc(db,'reclamaciones',rec.id),{asignadoA:digUid,asignadoANombre:digNom,asignadoObs:obs||'',asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});
-      rec.asignadoA=digUid;rec.asignadoANombre=digNom;ok++;
-    }catch(e){err++;}
+    const{rec,digUid,digNom,obs}=asignaciones[i];if(status)status.textContent=`⏳ ${i+1}/${asignaciones.length}...`;
+    try{await updateDoc(doc(db,'reclamaciones',rec.id),{asignadoA:digUid,asignadoANombre:digNom,asignadoObs:obs||'',asignadoEn:serverTimestamp(),actualizado:serverTimestamp()});rec.asignadoA=digUid;rec.asignadoANombre=digNom;ok++;}catch(e){err++;}
   }
   aplicarFiltroCliente();renderLista();updStats();
-  const msg2=`✔ ${ok} asignadas${err?' · ⚠ '+err+' errores':''}`;
-  if(status)status.textContent=msg2;toast(msg2,err?'w':'ok');
+  const msg=`✔ ${ok} asignadas${err?' · ⚠ '+err+' errores':''}`;if(status)status.textContent=msg;toast(msg,err?'w':'ok');
   const inp=document.getElementById('asig-excel-input');if(inp)inp.value='';
 };
 
-(function setupAsig(){
-  const setup=()=>{
-    const inp=document.getElementById('asig-excel-input');
-    if(inp)inp.addEventListener('change',function(){if(this.files[0])asignarMasivoExcel(this.files[0]);});
-    const digSel=document.getElementById('asig-digitador');
-    if(digSel)digSel.addEventListener('change',function(){cargarAsignaciones();});
-    const buscar=document.getElementById('asig-buscar');
-    if(buscar){const nb=buscar.cloneNode(true);buscar.parentNode.replaceChild(nb,buscar);nb.addEventListener('input',function(){buscarParaAsignar(this.value);});}
-  };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);
-  else setup();
-})();
-
-
-// ══ Descargar dashboard como PDF ══
-window.descargarPDF = async function(){
-  if(typeof html2pdf === 'undefined'){
-    toast('Cargando librería PDF...','w');
-    setTimeout(descargarPDF, 1500);
-    return;
-  }
-  toast('📄 Generando PDF...','ok');
-  const el = document.getElementById('dash-cli');
-  if(!el){ toast('No hay contenido para exportar','w'); return; }
-
-  // Temporalmente mostrar todo para el PDF
-  const opt = {
-    margin: [8,8,8,8],
-    filename: `FURIPS_Portafolio_${new Date().toISOString().split('T')[0]}.pdf`,
-    image: { type:'jpeg', quality:0.95 },
-    html2canvas: { scale:2, useCORS:true, logging:false },
-    jsPDF: { unit:'mm', format:'a4', orientation:'landscape' }
-  };
-  try{
-    await html2pdf().set(opt).from(el).save();
-    toast('✔ PDF descargado','ok');
-  }catch(e){
-    console.error('PDF error:',e);
-    toast('Error generando PDF: '+e.message,'e');
-  }
-};
-
-
-// ══ Conclusiones con IA ══
-window.generarConclusiones = async function(){
-  const btn = document.getElementById('btn-generar-conclusiones');
-  const out = document.getElementById('conclusiones-output');
-  if(!out) return;
-
-  // Recolectar datos del portafolio
-  const BASE = (RECS&&RECS.length>0)?RECS:(RECS_ALL&&RECS_ALL.length>0?RECS_ALL:[]);
-  if(!BASE.length){ toast('No hay datos para analizar.','w'); return; }
-
-  const fm2 = v => '$'+(v||0).toLocaleString('es-CO');
-  const pct2 = (a,b) => b>0?Math.round(a/b*100):0;
-  const val = r => parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
-
-  const total = BASE.length;
-  const totalV = BASE.reduce((a,r)=>a+val(r),0);
-  const pagadas = BASE.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
-  const glosadas = BASE.filter(r=>getRespuestaAdres(r)==='glosada');
-  const enTramite = BASE.filter(r=>getRespuestaAdres(r)==='en_tramite');
-  const sinRad2 = BASE.filter(r=>!r.radicado?.numero && getEstadoGestion(r)!=='devuelta_ips');
-  const devueltas = BASE.filter(r=>getEstadoGestion(r)==='devuelta_ips');
-  const anuladas = BASE.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
-  const radTotal = BASE.filter(r=>r.radicado?.numero);
-  const auditadas = BASE.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
-
-  const pagV = pagadas.reduce((a,r)=>a+val(r),0);
-  const gloV = glosadas.reduce((a,r)=>a+val(r),0);
-  const tramV = enTramite.reduce((a,r)=>a+val(r),0);
-  const sinV2 = sinRad2.reduce((a,r)=>a+val(r),0);
-
-  const efectividad = pct2(pagV, auditadas.reduce((a,r)=>a+val(r),0));
-  const coberturaRad = pct2(radTotal.length, total);
-  const tasaGlosa = pct2(glosadas.length, Math.max(auditadas.length,1));
-
-  const ips = (CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'la IPS';
-  const periodo = document.getElementById('port-mes-sel')?.value||'';
-  const periodoLabel = periodo ? (() => {
-    const [y,mo]=periodo.split('-');
-    return new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
-  })() : 'todo el historial';
-
-  const contexto = `
-Eres un analista experto en gestión de cartera SOAT en Colombia.
-Genera un análisis ejecutivo conciso (5-7 puntos) del siguiente portafolio de reclamaciones SOAT gestionado por CONEXA ante ADRES.
-El informe es para presentar a gerentes de ${ips}.
-Usa lenguaje positivo que resalte la gestión de CONEXA. Sé específico con los números.
-Formato: lista de viñetas con bullet •. Sin títulos ni encabezados. Máximo 250 palabras.
-Idioma: español colombiano profesional.
-
-DATOS DEL PORTAFOLIO (${periodoLabel}):
-• IPS: ${ips}
-• Total reclamaciones: ${total} por ${fm2(totalV)}
-• Radicadas ante ADRES: ${radTotal.length} (${coberturaRad}% cobertura) por ${fm2(radTotal.reduce((a,r)=>a+val(r),0))}
-• Auditadas por ADRES: ${auditadas.length} reclamaciones
-• Pagadas/Aprobadas: ${pagadas.length} por ${fm2(pagV)}
-• En trámite ADRES: ${enTramite.length} por ${fm2(tramV)}
-• Glosadas: ${glosadas.length} por ${fm2(gloV)}
-• Sin radicar: ${sinRad2.length} por ${fm2(sinV2)}
-• Devueltas a IPS para corrección: ${devueltas.length}
-• Anuladas: ${anuladas.length}
-• Efectividad de cobro: ${efectividad}% (sobre lo auditado por ADRES)
-• Tasa de glosa: ${tasaGlosa}%
-• Valor potencial en trámite: ${fm2(tramV)}
-`;
-
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Analizando...'; }
-  out.innerHTML = '<div style="color:var(--tx3);font-style:italic;">Generando análisis con IA...</div>';
-
-  // Generar conclusiones localmente con lógica inteligente
-  try{
-    const conclusiones = [];
-    const fecha = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
-
-    // 1. Cobertura de radicación
-    if(coberturaRad >= 80)
-      conclusiones.push(`CONEXA ha mantenido una <strong>cobertura de radicación del ${coberturaRad}%</strong>, enviando ${radTotal.length} de ${total} reclamaciones ante ADRES, lo que refleja una gestión de cobro oportuna y consistente.`);
-    else if(coberturaRad >= 60)
-      conclusiones.push(`Se ha logrado radiar el <strong>${coberturaRad}% del portafolio</strong> (${radTotal.length} reclamaciones) ante ADRES. El proceso de radicación continúa activo para las ${sinRad2.length} cuentas pendientes de soportes completos.`);
-    else
-      conclusiones.push(`El proceso de radicación avanza progresivamente con <strong>${radTotal.length} reclamaciones enviadas</strong> a ADRES (${coberturaRad}% del portafolio). Las ${sinRad2.length} cuentas restantes están en proceso de completar documentación.`);
-
-    // 2. Valor en trámite (potencial de caja)
-    if(tramV > 0)
-      conclusiones.push(`Existe un <strong>potencial de cobro de ${fm2(tramV)}</strong> correspondiente a ${enTramite.length} reclamaciones actualmente en auditoría ADRES, representando ingresos proyectados para los próximos meses.`);
-
-    // 3. Efectividad
-    if(efectividad >= 70)
-      conclusiones.push(`La <strong>efectividad de cobro del ${efectividad}%</strong> sobre las cuentas auditadas por ADRES supera la meta del 80%, evidenciando la calidad en la preparación y presentación de las reclamaciones por parte de CONEXA.`);
-    else if(efectividad >= 40)
-      conclusiones.push(`La efectividad de cobro se sitúa en <strong>${efectividad}%</strong> sobre las ${auditadas.length} reclamaciones auditadas por ADRES. Con ${enTramite.length} cuentas aún en proceso de auditoría, se proyecta un incremento significativo en este indicador.`);
-    else
-      conclusiones.push(`De las <strong>${auditadas.length} reclamaciones auditadas por ADRES</strong>, se han reconocido ${pagadas.length} por ${fm2(pagV)}. El ${enTramite.length} restante en trámite representa el mayor potencial de recuperación del portafolio.`);
-
-    // 4. Glosas
-    const glosasJustificadas = glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
-    const tasaGlosaReal = pct2(glosadas.length - glosasJustificadas.length, Math.max(auditadasAdres.length,1));
-    if(tasaGlosa <= 10)
-      conclusiones.push(`La <strong>tasa de glosa del ${tasaGlosa}%</strong> se mantiene dentro de los parámetros óptimos, reflejando la calidad técnica y documental con que CONEXA prepara y presenta cada reclamación.`);
-    else if(tasaGlosa <= 25)
-      conclusiones.push(`La tasa de glosa del <strong>${tasaGlosa}%</strong> (${glosadas.length} reclamaciones por ${fm2(gloV)}) está siendo gestionada activamente. CONEXA realiza seguimiento caso a caso para su resolución ante ADRES.`);
-    else
-      conclusiones.push(`Se registran <strong>${glosadas.length} reclamaciones glosadas</strong> por ${fm2(gloV)}, correspondientes al ${tasaGlosa}% de las auditadas. CONEXA gestiona la subsanación de observaciones para lograr su reconocimiento.`);
-
-    // 4b. Glosas justificadas
-    if(glosasJustificadas.length > 0)
-      conclusiones.push(`De las ${glosadas.length} reclamaciones glosadas, <strong>${glosasJustificadas.length} fueron radicadas con faltantes previamente autorizados por ${ips}</strong>, lo que las clasifica como glosas esperadas y justificadas. La tasa de glosa no atribuible a CONEXA es del ${tasaGlosaReal}%.`);
-
-    // 5. Pagos logrados
-    conclusiones.push(`A la fecha se han <strong>reconocido ${fm2(pagV)}</strong> en ${pagadas.length} reclamaciones aprobadas por ADRES, representando el resultado tangible de la gestión de cobro realizada por CONEXA en nombre de ${ips}.`);
-
-    // 6. Devueltas a IPS
-    if(devueltas.length > 0)
-      conclusiones.push(`<strong>${devueltas.length} reclamaciones</strong> fueron devueltas a ${ips} para ajuste de soportes. Una vez subsanadas, serán reradicadas ante ADRES para continuar el proceso de cobro.`);
-
-    // 7. Total portafolio
-    conclusiones.push(`El portafolio total gestionado asciende a <strong>${fm2(totalV)}</strong> en ${total} reclamaciones, de las cuales el ${coberturaRad}% ya se encuentra en proceso ante ADRES, demostrando el compromiso de CONEXA en la recuperación de cartera de ${ips}.`);
-
-    const renderConclusiones = conclusiones.map(t =>
-      `<div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;padding:8px 10px;background:var(--sur2);border-radius:6px;border-left:3px solid #00B2E2;">
-        <span style="color:#00B2E2;font-size:16px;flex-shrink:0;">•</span>
-        <span style="font-size:12px;line-height:1.6;">${t}</span>
-      </div>`
-    ).join('');
-
-    out.innerHTML = renderConclusiones +
-      `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--brd);font-size:9px;color:var(--tx3);text-align:right;">
-        Análisis generado automáticamente · ${fecha} · CONEXA Sistema FURIPS
-      </div>`;
-
-    toast('✔ Conclusiones generadas','ok');
-  }catch(e){
-    out.innerHTML=`<span style="color:var(--red);">Error: ${e.message}</span>`;
-    console.error('generarConclusiones:',e);
-  }finally{
-    if(btn){ btn.disabled=false; btn.textContent='✨ Generar conclusiones'; }
-  }
-};
-
-
-// ══ MASIVO SOPORTES ══════════════════════════════════════════
-window.descargarPlantillaSoportes = function(){
-  if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(descargarPlantillaSoportes,1500); return; }
-  const src = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
-  if(!src.length){ toast('No hay reclamaciones cargadas.','w'); return; }
-
-  const wb = XLSX.utils.book_new();
-
-  // Hoja 1: Datos
-  const header = [['factura','consecutivo','ips','estadoGestion','soporteEstado','soporteJustificacion','soporteActual']];
-  const rows = src.map(r => {
-    const chq = r.chequeo_soportes || {};
-    return [
-      r.factura||'',
-      r.consec||'',
-      r.codHab||r.nitIPS||'',
-      r.estadoGestion||'',
-      chq.soporteRadicacion||'completo',
-      chq.soporteJustificacion||'',
-      chq.soporteRadicacion||'(sin registro)',
-    ];
-  });
-  const ws = XLSX.utils.aoa_to_sheet([...header, ...rows]);
-  ws['!cols'] = [{wch:18},{wch:12},{wch:16},{wch:18},{wch:24},{wch:50},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, ws, 'Soportes');
-
-  // Hoja 2: Instrucciones
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    ['INSTRUCCIONES'],[''],
-    ['Edita SOLO las columnas: soporteEstado y soporteJustificacion'],
-    ['NO modifiques: factura, consecutivo, ips, estadoGestion, soporteActual'],
-    [''],['VALORES VÁLIDOS PARA soporteEstado:'],
-    ['completo','Soportes completos sin observaciones'],
-    ['faltantes_autorizados','Radicada con faltantes - autorización IPS'],
-    ['observacion_interna','Observación interna CONEXA'],
-  ]);
-  ws2['!cols'] = [{wch:30},{wch:55}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Instrucciones');
-
-  XLSX.writeFile(wb, `Plantilla_Soportes_${new Date().toISOString().split('T')[0]}.xlsx`);
+window.descargarPlantillaSoportes=function(){
+  if(typeof XLSX==='undefined'){toast('Cargando librería Excel...','w');setTimeout(descargarPlantillaSoportes,1500);return;}
+  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  if(!src.length){toast('No hay reclamaciones cargadas.','w');return;}
+  const wb=XLSX.utils.book_new();
+  const header=[['factura','consecutivo','ips','estadoGestion','soporteEstado','soporteJustificacion','soporteActual']];
+  const rows=src.map(r=>{const chq=r.chequeo_soportes||{};return[r.factura||'',r.consec||'',r.codHab||r.nitIPS||'',r.estadoGestion||'',chq.soporteRadicacion||'completo',chq.soporteJustificacion||'',chq.soporteRadicacion||'(sin registro)'];});
+  const ws=XLSX.utils.aoa_to_sheet([...header,...rows]);
+  ws['!cols']=[{wch:18},{wch:12},{wch:16},{wch:18},{wch:24},{wch:50},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'Soportes');
+  const ws2=XLSX.utils.aoa_to_sheet([['INSTRUCCIONES'],[''],['Edita SOLO: soporteEstado y soporteJustificacion'],[''],['VALORES VÁLIDOS:'],['completo','Soportes completos'],['faltantes_autorizados','Radicada con faltantes - autorización IPS'],['observacion_interna','Observación interna CONEXA']]);
+  ws2['!cols']=[{wch:30},{wch:55}];XLSX.utils.book_append_sheet(wb,ws2,'Instrucciones');
+  XLSX.writeFile(wb,`Plantilla_Soportes_${new Date().toISOString().split('T')[0]}.xlsx`);
   toast(`⬇ Plantilla Excel · ${src.length} reclamaciones`,'ok');
-}
-// Procesar Excel/CSV de soportes masivo
-(function setupChqMasivo(){
-  const setup = () => {
-    const inp = document.getElementById('chq-masivo-input');
-    if(inp) inp.addEventListener('change', async function(){
-      if(!this.files[0]) return;
-      await procesarSoportesMasivo(this.files[0]);
-      this.value = '';
-    });
-  };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup);
-  else setup();
-})();
+};
 
 async function procesarSoportesMasivo(file){
-  const statusDiv = document.getElementById('chq-masivo-status');
-  const txt = document.getElementById('chq-masivo-txt');
-  const barra = document.getElementById('chq-masivo-barra');
-  if(statusDiv) statusDiv.style.display = 'block';
-
-  // Leer archivo
-  let rows = [];
+  const statusDiv=document.getElementById('chq-masivo-status'),txt=document.getElementById('chq-masivo-txt'),barra=document.getElementById('chq-masivo-barra');
+  if(statusDiv)statusDiv.style.display='block';
+  let rows=[];
   try{
-    if(typeof XLSX !== 'undefined'){
-      const buf = await file.arrayBuffer();
-      const wb  = XLSX.read(buf, {type:'array'});
-      const ws  = wb.Sheets[wb.SheetNames[0]];
-      rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-    } else {
-      const text = await file.text();
-      const lines = text.split('\n').filter(l=>l.trim()&&!l.startsWith('===')&&!l.startsWith('==='));
-      if(!lines.length){ toast('Archivo vacío.','w'); return; }
-      const headers = lines[0].replace('﻿','').split('	').map(h=>h.trim().toLowerCase());
-      rows = lines.slice(1).map(l=>{
-        const vals = l.split('\t');
-        const obj = {};
-        headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
-        return obj;
-      }).filter(r => r.factura);
-    }
-  }catch(e){ toast('Error leyendo archivo: '+e.message,'e'); return; }
-
-  // Filtrar filas válidas
-  const validos = ['completo','faltantes_autorizados','observacion_interna'];
-  const src = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
-  const actualizaciones = [];
-  const errores = [];
-
-  rows.forEach((r,i) => {
-    const factura = String(r.factura||'').trim();
-    const estado  = String(r.soporteestado||r.soporteEstado||r['soporteestado']||'').trim().toLowerCase();
-    const justif  = String(r.soportejustificacion||r.soporteJustificacion||'').trim();
-
-    if(!factura || factura.startsWith('=')) return;
-    if(!validos.includes(estado)){
-      errores.push(`Fila ${i+2}: "${factura}" — estado inválido "${estado}"`);
-      return;
-    }
-
-    const rec = src.find(r2 => r2.factura === factura);
-    if(!rec){ errores.push(`Fila ${i+2}: "${factura}" — no encontrada`); return; }
-
-    actualizaciones.push({ rec, estado, justif });
+    if(typeof XLSX!=='undefined'){const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(ws,{defval:''});}
+    else{const text=await file.text();const lines=text.split('\n').filter(l=>l.trim()&&!l.startsWith('==='));if(!lines.length){toast('Archivo vacío.','w');return;}const headers=lines[0].replace('\uFEFF','').split('\t').map(h=>h.trim().toLowerCase());rows=lines.slice(1).map(l=>{const vals=l.split('\t');const obj={};headers.forEach((h,i)=>obj[h]=(vals[i]||'').trim());return obj;}).filter(r=>r.factura);}
+  }catch(e){toast('Error: '+e.message,'e');return;}
+  const validos=['completo','faltantes_autorizados','observacion_interna'];
+  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const actualizaciones=[],errores=[];
+  rows.forEach((r,i)=>{
+    const factura=String(r.factura||'').trim(),estado=String(r.soporteestado||r.soporteEstado||'').trim().toLowerCase(),justif=String(r.soportejustificacion||r.soporteJustificacion||'').trim();
+    if(!factura||factura.startsWith('='))return;
+    if(!validos.includes(estado)){errores.push(`Fila ${i+2}: "${factura}" estado inválido "${estado}"`);return;}
+    const rec=src.find(r2=>r2.factura===factura);if(!rec){errores.push(`Fila ${i+2}: "${factura}" no encontrada`);return;}
+    actualizaciones.push({rec,estado,justif});
   });
-
-  if(!actualizaciones.length){
-    toast(errores.length?`Sin válidas. ${errores[0]}`:'Sin filas para actualizar.','w');
-    if(statusDiv) statusDiv.style.display = 'none';
-    return;
+  if(!actualizaciones.length){toast(errores.length?`Sin válidas. ${errores[0]}`:'Sin filas.','w');if(statusDiv)statusDiv.style.display='none';return;}
+  if(!confirm(`¿Actualizar ${actualizaciones.length} reclamaciones?${errores.length?' ('+errores.length+' omitidas)':''}`)){if(statusDiv)statusDiv.style.display='none';return;}
+  let ok=0,err=0;
+  for(let i=0;i<actualizaciones.length;i++){
+    const{rec,estado,justif}=actualizaciones[i];
+    const p=Math.round((i+1)/actualizaciones.length*100);
+    if(txt)txt.textContent=`⏳ ${i+1} de ${actualizaciones.length} (${p}%)`;if(barra)barra.style.width=p+'%';
+    try{await updateDoc(doc(db,'reclamaciones',rec.id),{'chequeo_soportes.soporteRadicacion':estado,'chequeo_soportes.soporteJustificacion':justif,'chequeo_soportes.actualizadoPor':USER.nombre||USER.email||'',actualizado:serverTimestamp()});if(!rec.chequeo_soportes)rec.chequeo_soportes={};rec.chequeo_soportes.soporteRadicacion=estado;rec.chequeo_soportes.soporteJustificacion=justif;ok++;}
+    catch(e){err++;}
   }
-
-  if(!confirm(`¿Actualizar estado de soportes en ${actualizaciones.length} reclamaciones?${errores.length?' ('+errores.length+' omitidas)':''}`)){
-    if(statusDiv) statusDiv.style.display = 'none';
-    return;
-  }
-
-  let ok=0, err=0;
-  for(let i=0; i<actualizaciones.length; i++){
-    const {rec, estado, justif} = actualizaciones[i];
-    const pct = Math.round((i+1)/actualizaciones.length*100);
-    if(txt) txt.textContent = `⏳ Procesando ${i+1} de ${actualizaciones.length}... (${pct}%)`;
-    if(barra) barra.style.width = pct+'%';
-    try{
-      // Merge con chequeo_soportes existente
-      const chqActual = rec.chequeo_soportes || {};
-      await updateDoc(doc(db,'reclamaciones',rec.id), {
-        'chequeo_soportes.soporteRadicacion':   estado,
-        'chequeo_soportes.soporteJustificacion': justif,
-        'chequeo_soportes.actualizadoMasivo':    new Date().toISOString(),
-        'chequeo_soportes.actualizadoPor':       USER.nombre||USER.email||'',
-        actualizado: serverTimestamp()
-      });
-      // Actualizar en memoria
-      if(!rec.chequeo_soportes) rec.chequeo_soportes = {};
-      rec.chequeo_soportes.soporteRadicacion    = estado;
-      rec.chequeo_soportes.soporteJustificacion = justif;
-      ok++;
-    }catch(e){ console.error(rec.factura, e.message); err++; }
-  }
-
-  const msg = `✔ ${ok} reclamaciones actualizadas${err?' · ⚠ '+err+' errores':''}${errores.length?' · '+errores.length+' omitidas':''}`;
-  if(txt){ txt.textContent = msg; txt.style.color = err?'var(--warn)':'#A3D55D'; }
-  if(barra){ barra.style.width='100%'; barra.style.background= err?'var(--warn)':'#A3D55D'; }
-  toast(msg, err?'w':'ok');
-
-  // Mostrar errores si los hay
-  if(errores.length){
-    console.warn('Errores en carga masiva soportes:', errores);
-    toast(`⚠ ${errores.length} filas omitidas — ver consola`,'w');
-  }
+  const msg=`✔ ${ok} actualizadas${err?' · ⚠ '+err+' errores':''}`;
+  if(txt){txt.textContent=msg;txt.style.color=err?'var(--warn)':'#A3D55D';}if(barra){barra.style.width='100%';barra.style.background=err?'var(--warn)':'#A3D55D';}
+  toast(msg,err?'w':'ok');
 }
-// ══ FIN MASIVO SOPORTES ══════════════════════════════════════
+
+window.generarConclusiones=function(){
+  const btn=document.getElementById('btn-generar-conclusiones'),out=document.getElementById('conclusiones-output');if(!out)return;
+  const BASE=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0?RECS_ALL:[]);
+  if(!BASE.length){toast('No hay datos para analizar.','w');return;}
+  const fm2=v=>'$'+(v||0).toLocaleString('es-CO'),pct2=(a,b)=>b>0?Math.round(a/b*100):0,val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+  const total=BASE.length,totalV=BASE.reduce((a,r)=>a+val(r),0);
+  const pagadas=BASE.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+  const glosadas=BASE.filter(r=>getRespuestaAdres(r)==='glosada');
+  const enTramite=BASE.filter(r=>getRespuestaAdres(r)==='en_tramite');
+  const sinRad2=BASE.filter(r=>!r.radicado?.numero&&getEstadoGestion(r)!=='devuelta_ips');
+  const devueltas=BASE.filter(r=>getEstadoGestion(r)==='devuelta_ips');
+  const anuladas=BASE.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
+  const radTotal=BASE.filter(r=>r.radicado?.numero);
+  const auditadas=BASE.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
+  const pagV=pagadas.reduce((a,r)=>a+val(r),0),gloV=glosadas.reduce((a,r)=>a+val(r),0),tramV=enTramite.reduce((a,r)=>a+val(r),0),sinV2=sinRad2.reduce((a,r)=>a+val(r),0);
+  const efectividad=pct2(pagV,auditadas.reduce((a,r)=>a+val(r),0)),coberturaRad=pct2(radTotal.length,total),tasaGlosa=pct2(glosadas.length,Math.max(auditadas.length,1));
+  const ips=(typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'la IPS';
+  const glosasJust=glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
+  const tasaGlosaReal=pct2(glosadas.length-glosasJust.length,Math.max(auditadas.length,1));
+  const conclusiones=[];
+  if(coberturaRad>=80)conclusiones.push(`CONEXA ha mantenido una <strong>cobertura de radicación del ${coberturaRad}%</strong>, enviando ${radTotal.length} de ${total} reclamaciones ante ADRES, lo que refleja una gestión de cobro oportuna y consistente.`);
+  else conclusiones.push(`Se ha logrado radicar el <strong>${coberturaRad}% del portafolio</strong> (${radTotal.length} reclamaciones) ante ADRES. El proceso de radicación continúa activo para las ${sinRad2.length} cuentas pendientes de soportes completos.`);
+  if(tramV>0)conclusiones.push(`Existe un <strong>potencial de cobro de ${fm2(tramV)}</strong> correspondiente a ${enTramite.length} reclamaciones actualmente en auditoría ADRES, representando ingresos proyectados próximos.`);
+  if(efectividad>=70)conclusiones.push(`La <strong>efectividad de cobro del ${efectividad}%</strong> sobre las cuentas auditadas supera la meta, evidenciando la calidad en la preparación y presentación de reclamaciones por parte de CONEXA.`);
+  else conclusiones.push(`De las <strong>${auditadas.length} reclamaciones auditadas por ADRES</strong>, se han reconocido ${pagadas.length} por ${fm2(pagV)}. Con ${enTramite.length} cuentas en trámite, se proyecta incremento significativo en este indicador.`);
+  if(tasaGlosa<=10)conclusiones.push(`La <strong>tasa de glosa del ${tasaGlosa}%</strong> se mantiene dentro de parámetros óptimos, reflejando la calidad técnica y documental con que CONEXA prepara cada reclamación.`);
+  else conclusiones.push(`La tasa de glosa del <strong>${tasaGlosa}%</strong> (${glosadas.length} reclamaciones) está siendo gestionada. CONEXA realiza seguimiento caso a caso para su resolución ante ADRES.`);
+  if(glosasJust.length>0)conclusiones.push(`De las ${glosadas.length} reclamaciones glosadas, <strong>${glosasJust.length} fueron radicadas con faltantes previamente autorizados por ${ips}</strong>. La tasa de glosa no atribuible a CONEXA es del ${tasaGlosaReal}%.`);
+  conclusiones.push(`A la fecha se han <strong>reconocido ${fm2(pagV)}</strong> en ${pagadas.length} reclamaciones aprobadas por ADRES, representando el resultado tangible de la gestión de cobro en nombre de ${ips}.`);
+  if(devueltas.length>0)conclusiones.push(`<strong>${devueltas.length} reclamaciones</strong> fueron devueltas a ${ips} para ajuste de soportes y serán reradicadas una vez subsanadas.`);
+  conclusiones.push(`El portafolio total gestionado asciende a <strong>${fm2(totalV)}</strong> en ${total} reclamaciones, con el ${coberturaRad}% ya en proceso ante ADRES, demostrando el compromiso de CONEXA en la recuperación de cartera.`);
+  const fecha=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  out.innerHTML=conclusiones.map(t=>`<div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;padding:8px 10px;background:var(--sur2);border-radius:6px;border-left:3px solid #00B2E2;"><span style="color:#00B2E2;font-size:16px;flex-shrink:0;">•</span><span style="font-size:12px;line-height:1.6;">${t}</span></div>`).join('')+`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--brd);font-size:9px;color:var(--tx3);text-align:right;">Análisis generado automáticamente · ${fecha} · CONEXA Sistema FURIPS</div>`;
+  toast('✔ Conclusiones generadas','ok');
+};
+
+window.descargarPDF=async function(){
+  if(typeof html2pdf==='undefined'){toast('Cargando librería PDF...','w');setTimeout(descargarPDF,1500);return;}
+  toast('📄 Generando PDF...','ok');
+  const el=document.getElementById('dash-cli');if(!el){toast('No hay contenido.','w');return;}
+  const opt={margin:[8,8,8,8],filename:`FURIPS_Portafolio_${new Date().toISOString().split('T')[0]}.pdf`,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}};
+  try{await html2pdf().set(opt).from(el).save();toast('✔ PDF descargado','ok');}catch(e){toast('Error PDF: '+e.message,'e');}
+};
+
+// Event listeners
+document.addEventListener('DOMContentLoaded',function(){
+  const inpAsig=document.getElementById('asig-excel-input');
+  if(inpAsig)inpAsig.addEventListener('change',function(){if(this.files[0])asignarMasivoExcel(this.files[0]);});
+  const digSel=document.getElementById('asig-digitador');
+  if(digSel)digSel.addEventListener('change',function(){cargarAsignaciones();});
+  const buscar=document.getElementById('asig-buscar');
+  if(buscar)buscar.addEventListener('input',function(){buscarParaAsignar(this.value);});
+  const inpChq=document.getElementById('chq-masivo-input');
+  if(inpChq)inpChq.addEventListener('change',async function(){if(this.files[0])await procesarSoportesMasivo(this.files[0]);this.value='';});
+  document.querySelectorAll('input[name="chq-rad-estado"]').forEach(radio=>{
+    radio.addEventListener('change',function(){const wrap=document.getElementById('chq-rad-justificacion-wrap');if(wrap)wrap.style.display=(this.value!=='completo')?'block':'none';});
+  });
+});
 
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
@@ -9801,18 +9214,10 @@ document.addEventListener('keypress',ev=>{
 /* ════════════════════════════════════════════════════════
    PANEL DE CLIENTES (IPS) — FURIPS
    ════════════════════════════════════════════════════════ */
-let CLIENTES_IPS = [
-  { nit:'760011259501', razon:'OCCIDENTAL DE SALUD SAS',  corto:'OCC', ciudad:'Cali, Valle',        tipo:'IPS', codHab:'' },
-  { nit:'157590080301', razon:'CLÍNICA EL LAGUITO S.A',   corto:'LAG', ciudad:'Cartagena, Bolívar', tipo:'IPS', codHab:'' }
+const CLIENTES_IPS = [
+  { nit:'760011259501', razon:'OCCIDENTAL DE SALUD SAS',  corto:'OCC', ciudad:'Cali, Valle',        tipo:'IPS' },
+  { nit:'157590080301', razon:'CLÍNICA EL LAGUITO S.A',   corto:'LAG', ciudad:'Cartagena, Bolívar', tipo:'IPS' }
 ];
-async function cargarIPSdeFirestore(){
-  try{
-    const snap=await getDocs(collection(db,'ips')); if(snap.empty) return;
-    const nits=CLIENTES_IPS.map(x=>x.nit);
-    snap.forEach(d=>{ const data=d.data(); if(!nits.includes(data.nit)){ CLIENTES_IPS.push({id:d.id,...data}); nits.push(data.nit); } });
-    renderClientes();
-  }catch(e){ console.warn('cargarIPSdeFirestore:',e.message); }
-}
 
 let CLIENTE_ACTIVO = null;
 let FAV_CLIENTES = JSON.parse(localStorage.getItem('furips_fav_cli') || '[]');
@@ -9828,7 +9233,6 @@ window.showPanelClientes = function(){
     if(r){ r.textContent = rolLbl[USER.rol] || USER.rol || '—'; }
   }
   renderClientes();
-  if(typeof cargarIPSdeFirestore==='function') cargarIPSdeFirestore();
 };
 
 function renderClientes(){
