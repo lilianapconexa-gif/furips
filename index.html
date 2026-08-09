@@ -357,6 +357,7 @@ select option{background:var(--sur2);}
       <!-- ETAPA 4: REVISAR -->
       <div class="ng">3 · Revisar</div>
       <div class="ni" id="n-chequeo" onclick="go('chequeo')"><span class="ndot"></span>Chequeo de Soportes</div>
+          <div class="ni" id="n-traz" onclick="go('traz')"><span class="ndot"></span>🔍 Trazabilidad</div>
       <div id="nav-no-digitador" style="display:none;">
       <div class="ni" id="n-txt"     onclick="go('txt')">   <span class="ndot"></span>Archivos Planos .txt</div>
 
@@ -386,6 +387,7 @@ select option{background:var(--sur2);}
       <div id="nav-adm" style="display:none;">
         <div class="ng">Administración</div>
         <div class="ni" id="n-adm"   onclick="go('adm')">  <span class="ndot"></span>Gestión Usuarios</div>
+        <div class="ni" id="n-adres-sync" onclick="go('adres-sync')" style="display:none;"><span class="ndot"></span>🏛 Sinc. ADRES</div>
         <div class="ni" id="n-fchevt" onclick="go('fchevt')"><span class="ndot"></span>📅 Fechas de Evento (masivo)</div>
       </div>
 
@@ -668,6 +670,124 @@ select option{background:var(--sur2);}
 
 
 
+
+      <!-- SINCRONIZACIÓN ADRES -->
+      <div class="page hidden" id="p-adres-sync">
+        <div class="ptitle">🏛 Sincronización ADRES</div>
+        <div class="psub">Solo Super Admin · Sube el reporte ADRES para actualizar estados, valores y respuestas en el sistema.</div>
+
+        <!-- Alerta de pendiente -->
+        <div id="adres-alerta-semana" style="display:none;margin-bottom:14px;"></div>
+
+        <!-- Estado última sincronización -->
+        <div id="adres-ultimo" style="background:var(--sur2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--tx3);">
+          <span id="adres-ultimo-txt">Sin sincronizaciones registradas.</span>
+        </div>
+
+        <!-- Upload -->
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:18px;margin-bottom:14px;">
+          <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:14px;">📤 CARGAR REPORTE ADRES</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">Archivo reporte ADRES</div>
+              <div style="font-size:10px;color:var(--tx3);margin-bottom:8px;">Excel descargado de la plataforma ADRES · Reporte Reclamaciones Personas Jurídicas</div>
+              <input type="file" id="adres-file-input" accept=".xlsx,.xls" style="display:none;">
+              <button onclick="document.getElementById('adres-file-input').click()" class="btn bp" style="font-size:11px;width:100%;">📂 Seleccionar archivo ADRES</button>
+              <div id="adres-file-name" style="font-size:10px;color:var(--tx3);margin-top:6px;font-style:italic;"></div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">Modo de sincronización</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                  <input type="radio" name="adres-modo" value="nueva" checked style="margin-top:3px;accent-color:#00B2E2;">
+                  <div><div style="font-size:11px;font-weight:600;color:var(--tx);">Solo actualizar cambios</div><div style="font-size:10px;color:var(--tx3);">Actualiza solo lo que ADRES reporta diferente. Recomendado semanal.</div></div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                  <input type="radio" name="adres-modo" value="completa" style="margin-top:3px;accent-color:#9DB455;">
+                  <div><div style="font-size:11px;font-weight:600;color:var(--tx);">Verificación completa</div><div style="font-size:10px;color:var(--tx3);">Compara todo el archivo vs Firestore. Recomendado mensual.</div></div>
+                </label>
+              </div>
+            </div>
+          </div>
+          <button id="adres-btn-procesar" onclick="procesarReporteADRES()" class="btn bp" style="font-size:12px;font-weight:700;padding:8px 20px;" disabled>
+            🔄 Procesar y sincronizar
+          </button>
+        </div>
+
+        <!-- Progress -->
+        <div id="adres-progress" style="display:none;background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:8px;" id="adres-progress-txt">Procesando...</div>
+          <div style="height:8px;background:var(--sur2);border-radius:4px;overflow:hidden;margin-bottom:8px;">
+            <div id="adres-progress-barra" style="height:100%;background:#00B2E2;width:0%;transition:width .3s;border-radius:4px;"></div>
+          </div>
+          <div style="font-size:10px;color:var(--tx3);" id="adres-progress-sub"></div>
+        </div>
+
+        <!-- Resultados -->
+        <div id="adres-resultados" style="display:none;background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
+          <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">📋 RESULTADO DE SINCRONIZACIÓN</div>
+          <div id="adres-resumen" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
+          <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px;">Detalle de actualizaciones:</div>
+          <div id="adres-log" style="max-height:300px;overflow-y:auto;font-size:11px;font-family:var(--mono);background:var(--sur2);border-radius:6px;padding:10px;line-height:1.8;"></div>
+          <div style="margin-top:10px;font-size:10px;color:var(--tx3);" id="adres-log-footer"></div>
+        </div>
+
+      </div>
+
+      <!-- TRAZABILIDAD -->
+      <div class="page hidden" id="p-traz">
+        <div class="ptitle">🔍 Trazabilidad de Facturas</div>
+        <div class="psub">Historial completo de radicaciones y respuestas ADRES por factura</div>
+
+        <!-- Buscador -->
+        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:14px;">
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:260px;">
+              <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px;">Buscar por número de factura o consecutivo</label>
+              <input id="traz-buscar" placeholder="Ej: FE60001 · 3488 · FER50280..."
+                style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;"
+                autocomplete="off">
+            </div>
+            <button onclick="trazBuscar()" class="btn bp" style="font-size:12px;padding:8px 18px;">🔍 Buscar</button>
+            <button onclick="trazLimpiar()" class="btn bs" style="font-size:12px;padding:8px 14px;">✕ Limpiar</button>
+          </div>
+          <!-- Resultados búsqueda -->
+          <div id="traz-lista" style="margin-top:10px;display:none;max-height:180px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;"></div>
+        </div>
+
+        <!-- Timeline de la factura seleccionada -->
+        <div id="traz-detalle" style="display:none;">
+
+          <!-- Header factura -->
+          <div id="traz-header" style="background:linear-gradient(135deg,#00B2E2,#0090c0);border-radius:12px;padding:18px 22px;color:#fff;margin-bottom:14px;"></div>
+
+          <!-- Timeline -->
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:18px;margin-bottom:14px;">
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:16px;">📅 LÍNEA DE TIEMPO</div>
+            <div id="traz-timeline"></div>
+          </div>
+
+          <!-- Radicaciones -->
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:18px;margin-bottom:14px;">
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:14px;">📬 RADICACIONES ANTE ADRES</div>
+            <div id="traz-radicaciones"></div>
+          </div>
+
+          <!-- Respuestas ADRES -->
+          <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:18px;">
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:14px;">🏛 RESPUESTAS ADRES</div>
+            <div id="traz-respuestas"></div>
+          </div>
+
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="traz-empty" style="text-align:center;padding:48px 0;color:var(--tx3);">
+          <div style="font-size:32px;margin-bottom:8px;">🔍</div>
+          <div style="font-size:13px;">Busca una factura para ver su trazabilidad completa</div>
+        </div>
+
+      </div>
 
       <!-- NUEVA -->
       <div class="page hidden" id="p-nueva">
@@ -5665,6 +5785,13 @@ window.go=(id)=>{
   if(id==='respadres') loadRespuestaAdres();
   if(id==='adm'){
     setTimeout(()=>{ if(typeof cargarUsers==='function') cargarUsers(); if(typeof poblarSelectDigitadores==='function') poblarSelectDigitadores(); },200);
+  }
+  if(id==='traz'){
+    trazLimpiar();
+  }
+  if(id==='adres-sync'){
+    if(USER?.rol!=='superadmin'){toast('Solo el Super Admin puede acceder.','w');return;}
+    verificarAlertaADRES();
     const mn=g('mi-nombre'); if(mn) mn.value=USER.nombre||'';
     cargarUsers();
   }
@@ -7777,6 +7904,8 @@ window.descargarPDF=async function(){
 
 // Event listeners
 document.addEventListener('DOMContentLoaded',function(){
+  const trazInp = document.getElementById('traz-buscar');
+  if(trazInp) trazInp.addEventListener('keydown', function(e){ if(e.key==='Enter') trazBuscar(); });
   const inpAsig=document.getElementById('asig-excel-input');
   if(inpAsig)inpAsig.addEventListener('change',function(){if(this.files[0])asignarMasivoExcel(this.files[0]);});
   const digSel=document.getElementById('asig-digitador');
@@ -7789,6 +7918,855 @@ document.addEventListener('DOMContentLoaded',function(){
     radio.addEventListener('change',function(){const wrap=document.getElementById('chq-rad-justificacion-wrap');if(wrap)wrap.style.display=(this.value!=='completo')?'block':'none';});
   });
 });
+
+
+// ══════════════════════════════════════════════════════════════
+// ██ SINCRONIZACIÓN ADRES — Solo Super Admin
+// ══════════════════════════════════════════════════════════════
+
+// Mostrar/ocultar nav según rol
+function initAdresSync(){
+  const nav = document.getElementById('n-adres-sync');
+  if(nav && USER?.rol === 'superadmin') nav.style.display = '';
+
+  // Verificar alerta semanal
+  verificarAlertaADRES();
+
+  // Setup file input
+  const inp = document.getElementById('adres-file-input');
+  if(inp) inp.addEventListener('change', function(){
+    const btn = document.getElementById('adres-btn-procesar');
+    const lbl = document.getElementById('adres-file-name');
+    if(this.files[0]){
+      if(lbl) lbl.textContent = '📄 ' + this.files[0].name;
+      if(btn) btn.disabled = false;
+    }
+  });
+}
+
+function verificarAlertaADRES(){
+  const alerta = document.getElementById('adres-alerta-semana');
+  if(!alerta || USER?.rol !== 'superadmin') return;
+
+  // Leer última sincronización de localStorage
+  const ultima = localStorage.getItem('furips_adres_ultima_sync');
+  const ultimaTxt = document.getElementById('adres-ultimo-txt');
+
+  if(!ultima){
+    if(ultimaTxt) ultimaTxt.textContent = '⚠ Sin sincronizaciones registradas. Se recomienda sincronizar semanalmente los martes.';
+    alerta.style.display = 'block';
+    alerta.innerHTML = `<div class="alert aw" style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">⏰</span>
+      <div><strong>Sin sincronización ADRES registrada.</strong><br>
+      <span style="font-size:11px;">Sube el reporte ADRES para mantener la información actualizada. Se recomienda cada martes.</span></div>
+    </div>`;
+    return;
+  }
+
+  const fechaUlt = new Date(ultima);
+  const hoy = new Date();
+  const diasDesde = Math.floor((hoy - fechaUlt) / 86400000);
+  const semana = diasDesde >= 7;
+  const martes = hoy.getDay() === 2; // 0=dom, 2=mar
+
+  if(ultimaTxt) ultimaTxt.textContent = `✔ Última sincronización: ${fechaUlt.toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})} · hace ${diasDesde} día${diasDesde!==1?'s':''}`;
+
+  if(semana || (martes && diasDesde > 0)){
+    alerta.style.display = 'block';
+    alerta.innerHTML = `<div class="alert aw" style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">⏰</span>
+      <div><strong>Han pasado ${diasDesde} días desde la última sincronización ADRES.</strong><br>
+      <span style="font-size:11px;">${martes?'Hoy es martes — ':''}Recuerda subir el reporte ADRES para mantener los estados actualizados.</span></div>
+    </div>`;
+  } else {
+    alerta.style.display = 'none';
+  }
+}
+
+// Normalizar número de factura para comparación flexible
+function normalizarFactura(f){
+  if(!f) return '';
+  return String(f).trim().toUpperCase().replace(/[\s\-_\.]/g,'');
+}
+
+// Mapear descripción ADRES → estado interno FURIPS
+function mapearEstadoADRES(desc, estadoRec){
+  if(!desc) return null;
+  const d = desc.toLowerCase().trim();
+  if(d.includes('aprobada') && !d.includes('parcial')) return 'aprobada';
+  if(d.includes('parcial')) return 'aprobada_parcial';
+  if(d.includes('glosada') || d.includes('glosa')) return 'glosada';
+  if(d.includes('anulada') || d.includes('rechazada')) return 'anulada_adres';
+  if(d.includes('devuelta')) return 'devuelta';
+  if(d.includes('en trámite') || d.includes('tramite') || d.includes('radicada')) return 'en_tramite';
+  return null;
+}
+
+function mapearEstadoGestion(estadoAdres){
+  if(['aprobada','aprobada_parcial'].includes(estadoAdres)) return 'radicada';
+  if(estadoAdres === 'glosada') return 'radicada';
+  if(estadoAdres === 'en_tramite') return 'radicada';
+  return null;
+}
+
+// Leer Excel ADRES
+async function leerExcelADRES(file){
+  if(typeof XLSX === 'undefined') throw new Error('Librería Excel no disponible');
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array', cellDates:true});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const allRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+  // Buscar fila de encabezados (tiene "Número de Factura")
+  let headerRow = -1;
+  for(let i=0; i<allRows.length; i++){
+    if(allRows[i].some(v=>String(v).includes('Número de Factura') || String(v).includes('Numero de Factura'))){
+      headerRow = i; break;
+    }
+  }
+  if(headerRow < 0) throw new Error('No se encontró la fila de encabezados en el archivo ADRES');
+
+  const headers = allRows[headerRow].map(h => String(h||'').trim());
+  const data = [];
+
+  for(let i = headerRow+1; i < allRows.length; i++){
+    const row = allRows[i];
+    if(!row.some(v => v !== '')) continue; // fila vacía
+    const obj = {};
+    headers.forEach((h,j) => { if(h) obj[h] = row[j]; });
+    if(obj['Número de Factura'] || obj['Numero de Factura']) data.push(obj);
+  }
+
+  return data;
+}
+
+window.procesarReporteADRES = async function(){
+  if(USER?.rol !== 'superadmin'){ toast('Solo el Super Admin puede sincronizar.','w'); return; }
+
+  const fileInp = document.getElementById('adres-file-input');
+  const file = fileInp?.files[0];
+  if(!file){ toast('Selecciona el archivo ADRES primero.','w'); return; }
+
+  const modo = document.querySelector('input[name="adres-modo"]:checked')?.value || 'nueva';
+  const prog = document.getElementById('adres-progress');
+  const progTxt = document.getElementById('adres-progress-txt');
+  const progBarra = document.getElementById('adres-progress-barra');
+  const progSub = document.getElementById('adres-progress-sub');
+  const resDiv = document.getElementById('adres-resultados');
+  const btn = document.getElementById('adres-btn-procesar');
+
+  if(prog) prog.style.display = 'block';
+  if(resDiv) resDiv.style.display = 'none';
+  if(btn) btn.disabled = true;
+
+  const setProgress = (pct, txt, sub='') => {
+    if(progTxt) progTxt.textContent = txt;
+    if(progBarra) progBarra.style.width = pct + '%';
+    if(progSub) progSub.textContent = sub;
+  };
+
+  try{
+    setProgress(5, '📖 Leyendo archivo ADRES...');
+    const adresRows = await leerExcelADRES(file);
+    setProgress(15, `📖 ${adresRows.length} registros encontrados en ADRES`, 'Construyendo índice...');
+
+    // Construir índice por factura normalizada
+    const adresIdx = {};
+    adresRows.forEach(row => {
+      const fac = normalizarFactura(row['Número de Factura'] || row['Numero de Factura'] || '');
+      if(fac) adresIdx[fac] = row;
+    });
+
+    setProgress(20, 'Obteniendo reclamaciones del sistema...', `${adresRows.length} registros ADRES indexados`);
+
+    // Obtener todas las reclamaciones
+    const src = window.FURIPS_STATE?.getRecs() || (typeof RECS !== 'undefined' ? RECS : []);
+    if(!src.length) throw new Error('No hay reclamaciones cargadas en el sistema');
+
+    setProgress(25, `Comparando ${src.length} reclamaciones vs ADRES...`);
+
+    // Estadísticas
+    let actualizadas = 0, sinCambios = 0, noEncontradas = 0, errores = 0;
+    const logLines = [];
+    const actualizacionesPendientes = [];
+
+    for(let i=0; i<src.length; i++){
+      const rec = src[i];
+      const facNorm = normalizarFactura(rec.factura);
+      const adresRow = adresIdx[facNorm];
+
+      const pct = 25 + Math.round((i/src.length)*60);
+      if(i % 50 === 0) setProgress(pct, `Comparando reclamación ${i+1} de ${src.length}...`, rec.factura||'');
+
+      if(!adresRow){
+        // Solo reportar si tiene radicado (esperaríamos respuesta ADRES)
+        if(rec.radicado?.numero){
+          noEncontradas++;
+          if(modo === 'completa') logLines.push(`⚪ ${rec.factura} (consec: ${rec.consec}) — Radicada en FURIPS pero no aparece en reporte ADRES`);
+        }
+        continue;
+      }
+
+      // Mapear datos ADRES
+      const descAprobacion = String(adresRow['Descripción tipo Aprobación']||'').trim();
+      const estadoAdres = mapearEstadoADRES(descAprobacion);
+      const estadoRecRaw = String(adresRow['Estado reclamación']||'').trim();
+      const valorAprobado = parseFloat(String(adresRow['Valor Aprobado']||'0').replace(/[^0-9.]/g,'')) || 0;
+      const valorGlosado = parseFloat(String(adresRow['Valor Glosado']||'0').replace(/[^0-9.]/g,'')) || 0;
+      const numRadicacion = String(adresRow['Número de Radicación']||'').trim();
+      const fechaRad = adresRow['Fecha Radicación'] ? String(adresRow['Fecha Radicación']).trim() : '';
+      const numConsolidado = String(adresRow['Número Consolidado']||'').trim();
+
+      // Calcular cambios necesarios
+      const cambios = {};
+      const cambiosDesc = [];
+
+      // 1. Número de radicación
+      if(numRadicacion && rec.radicado?.numero !== numRadicacion){
+        cambios['radicado.numero'] = numRadicacion;
+        cambiosDesc.push(`radicado: ${rec.radicado?.numero||'vacío'} → ${numRadicacion}`);
+      }
+
+      // 2. Respuesta ADRES
+      if(estadoAdres){
+        const estadoActual = rec.respuestaAdres?.estado || '';
+        if(estadoActual !== estadoAdres){
+          cambios['respuestaAdres.estado'] = estadoAdres;
+          cambiosDesc.push(`estado ADRES: ${estadoActual||'vacío'} → ${estadoAdres}`);
+        }
+        // Valor aprobado
+        if(valorAprobado > 0 && rec.respuestaAdres?.valorAprobado !== valorAprobado){
+          cambios['respuestaAdres.valorAprobado'] = valorAprobado;
+          cambiosDesc.push(`valor aprobado: ${rec.respuestaAdres?.valorAprobado||0} → ${valorAprobado}`);
+        }
+        // Valor glosado
+        if(valorGlosado > 0 && rec.respuestaAdres?.valorGlosado !== valorGlosado){
+          cambios['respuestaAdres.valorGlosado'] = valorGlosado;
+          cambiosDesc.push(`valor glosado: ${rec.respuestaAdres?.valorGlosado||0} → ${valorGlosado}`);
+        }
+        // Descripción
+        if(descAprobacion && rec.respuestaAdres?.descripcion !== descAprobacion){
+          cambios['respuestaAdres.descripcion'] = descAprobacion;
+        }
+      }
+
+      // 3. Estado reclamación = "Girado" → marcar como pagada/aprobada
+      if(estadoRecRaw.toLowerCase().includes('girado') && estadoAdres !== 'aprobada'){
+        cambios['respuestaAdres.estado'] = 'aprobada';
+        cambiosDesc.push(`girado por ADRES → aprobada`);
+      }
+
+      if(Object.keys(cambios).length === 0){
+        sinCambios++;
+        continue;
+      }
+
+      // Agregar metadatos del cambio
+      cambios['respuestaAdres.fuenteADRES'] = true;
+      cambios['respuestaAdres.actualizadoPor'] = 'sync-adres';
+      cambios['respuestaAdres.fechaSync'] = new Date().toISOString();
+      cambios['actualizado'] = serverTimestamp();
+
+      actualizacionesPendientes.push({ rec, cambios, cambiosDesc });
+    }
+
+    setProgress(85, `Aplicando ${actualizacionesPendientes.length} actualizaciones en Firestore...`);
+
+    // Aplicar actualizaciones en lotes
+    for(let i=0; i<actualizacionesPendientes.length; i++){
+      const {rec, cambios, cambiosDesc} = actualizacionesPendientes[i];
+      const pct = 85 + Math.round((i/Math.max(actualizacionesPendientes.length,1))*12);
+      if(i % 20 === 0) setProgress(pct, `Guardando ${i+1} de ${actualizacionesPendientes.length}...`, rec.factura);
+      try{
+        await updateDoc(doc(db,'reclamaciones',rec.id), cambios);
+        // Actualizar en memoria
+        Object.keys(cambios).forEach(k => {
+          const parts = k.split('.');
+          if(parts.length === 1) rec[k] = cambios[k];
+          else if(parts.length === 2){
+            if(!rec[parts[0]]) rec[parts[0]] = {};
+            rec[parts[0]][parts[1]] = cambios[k];
+          }
+        });
+        actualizadas++;
+        logLines.push(`✅ ${rec.factura} (consec: ${rec.consec}) — ${cambiosDesc.join(' · ')}`);
+      }catch(e){
+        errores++;
+        logLines.push(`❌ ${rec.factura} — Error: ${e.message}`);
+      }
+    }
+
+    setProgress(98, 'Guardando registro de sincronización...');
+
+    // Guardar en Firestore el log de sincronización
+    const syncData = {
+      fecha: serverTimestamp(),
+      fechaISO: new Date().toISOString(),
+      modo,
+      archivo: file.name,
+      registrosADRES: adresRows.length,
+      actualizadas,
+      sinCambios,
+      noEncontradas,
+      errores,
+      realizadoPor: USER.uid,
+      realizadoPorNombre: USER.nombre||USER.email||'',
+    };
+    try{
+      await addDoc(collection(db,'adres_sync_log'), syncData);
+    }catch(e){ console.warn('No se pudo guardar log:', e.message); }
+
+    // Guardar fecha en localStorage
+    localStorage.setItem('furips_adres_ultima_sync', new Date().toISOString());
+
+    setProgress(100, '✔ Sincronización completada');
+
+    // Mostrar resultados
+    const resumen = document.getElementById('adres-resumen');
+    if(resumen) resumen.innerHTML = [
+      {label:'✅ Actualizadas', n:actualizadas, color:'#A3D55D'},
+      {label:'⚪ Sin cambios', n:sinCambios, color:'#999899'},
+      {label:'🔍 No en reporte', n:noEncontradas, color:'#e3b341'},
+      {label:'❌ Errores', n:errores, color:'#f85149'},
+    ].map(s=>`<div style="background:var(--sur2);border-radius:8px;padding:12px;text-align:center;border-left:3px solid ${s.color};">
+      <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${s.color};">${s.n}</div>
+      <div style="font-size:10px;color:var(--tx2);margin-top:4px;">${s.label}</div>
+    </div>`).join('');
+
+    const logEl = document.getElementById('adres-log');
+    if(logEl){
+      if(!logLines.length) logLines.push('✅ Todo está actualizado. No hubo cambios necesarios.');
+      logEl.innerHTML = logLines.slice(0,200).map(l =>
+        `<div style="color:${l.startsWith('✅')?'#A3D55D':l.startsWith('❌')?'#f85149':l.startsWith('⚪')?'#999899':'var(--tx2)'};">${l}</div>`
+      ).join('');
+    }
+    const footer = document.getElementById('adres-log-footer');
+    if(footer) footer.textContent = `${logLines.length} registros · ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}${logLines.length>200?' · Mostrando primeros 200':''}`;
+
+    if(resDiv) resDiv.style.display = 'block';
+
+    // Actualizar stats
+    aplicarFiltroCliente(); renderLista(); updStats();
+    verificarAlertaADRES();
+
+    toast(`✔ Sincronización ADRES: ${actualizadas} actualizadas, ${sinCambios} sin cambios${errores?' · ⚠ '+errores+' errores':''}`, errores?'w':'ok');
+
+  }catch(e){
+    if(progTxt) progTxt.textContent = `❌ Error: ${e.message}`;
+    if(progBarra){ progBarra.style.background='#f85149'; }
+    toast('Error en sincronización: '+e.message,'e');
+    console.error('procesarReporteADRES:',e);
+  }finally{
+    if(btn) btn.disabled = false;
+  }
+};
+
+// ══ FIN SINCRONIZACIÓN ADRES ══════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════════
+// ██ TRAZABILIDAD DE FACTURAS
+// ══════════════════════════════════════════════════════════════
+
+window.trazBuscar = function(){
+  const q = (document.getElementById('traz-buscar')?.value||'').trim().toLowerCase();
+  if(q.length < 2){ toast('Escribe al menos 2 caracteres.','w'); return; }
+  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const found = src.filter(r=>
+    (r.factura||'').toLowerCase().includes(q) ||
+    (r.consec||'').toString().includes(q) ||
+    (r.radicado?.numero||'').toString().includes(q) ||
+    (r.radicadoAnterior||'').toString().includes(q)
+  ).slice(0,20);
+
+  const lista = document.getElementById('traz-lista');
+  const empty = document.getElementById('traz-empty');
+  const detalle = document.getElementById('traz-detalle');
+
+  if(!found.length){
+    if(lista){ lista.style.display='block'; lista.innerHTML='<div style="padding:12px;font-size:11px;color:var(--tx3);">No se encontraron facturas con ese criterio.</div>'; }
+    if(detalle) detalle.style.display='none';
+    if(empty) empty.style.display='none';
+    return;
+  }
+
+  if(found.length === 1){
+    // Mostrar directamente
+    if(lista) lista.style.display='none';
+    trazMostrar(found[0]);
+    return;
+  }
+
+  // Mostrar lista para seleccionar
+  if(lista){
+    lista.style.display='block';
+    lista.innerHTML = found.map(r=>`
+      <div onclick="trazMostrarById('${r.id}')"
+        style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);cursor:pointer;"
+        onmouseover="this.style.background='var(--sur2)'" onmouseout="this.style.background=''">
+        <div style="font-size:12px;">
+          <strong>${r.factura}</strong>
+          <span style="color:var(--tx3);font-family:var(--mono);margin-left:8px;">${r.consec}</span>
+          <span style="color:var(--tx2);font-size:11px;margin-left:8px;">${r.fechaEvento||r.furips1?.c22||'—'}</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${r.respuestasAdres?.length>0?`<span style="font-size:10px;background:rgba(0,178,226,.1);color:#00B2E2;padding:1px 8px;border-radius:4px;">${r.respuestasAdres.length} radicaciones</span>`:''}
+          <span style="font-size:10px;color:var(--tx3);">→</span>
+        </div>
+      </div>`).join('');
+  }
+  if(detalle) detalle.style.display='none';
+  if(empty) empty.style.display='none';
+};
+
+window.trazMostrarById = function(id){
+  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const rec = src.find(r=>r.id===id);
+  if(rec){ document.getElementById('traz-lista').style.display='none'; trazMostrar(rec); }
+};
+
+window.trazMostrar = function(rec){
+  const detalle = document.getElementById('traz-detalle');
+  const empty = document.getElementById('traz-empty');
+  if(!detalle) return;
+
+  const fm = v => '$'+(v||0).toLocaleString('es-CO');
+  const val = parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
+
+  // Colores por estado
+  const colEstado = {
+    'aprobada':'#A3D55D','aprobada_parcial':'#9DB455',
+    'glosada':'#f85149','en_tramite':'#00B2E2',
+    'anulada_adres':'#999899','devuelta':'#e3b341'
+  };
+  const lblEstado = {
+    'aprobada':'✔ Aprobada','aprobada_parcial':'◐ Aprobada Parcial',
+    'glosada':'✕ Glosada','en_tramite':'⏳ En Trámite',
+    'anulada_adres':'∅ Anulada ADRES','devuelta':'↩ Devuelta'
+  };
+
+  // ── HEADER ──
+  const estadoActual = rec.respuestaAdres?.estado || rec.respuestasAdres?.[rec.respuestasAdres.length-1]?.estado || 'sin_respuesta';
+  const colorAct = colEstado[estadoActual]||'#999899';
+  document.getElementById('traz-header').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:1px;">Trazabilidad de factura</div>
+        <div style="font-size:24px;font-weight:700;font-family:monospace;margin:4px 0;">${rec.factura}</div>
+        <div style="font-size:12px;opacity:.85;">Consecutivo ${rec.consec} · ${rec.codHab||rec.nitIPS||''} · Evento: ${rec.fechaEvento||rec.furips1?.c22||'—'}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;opacity:.8;">Valor reclamado</div>
+        <div style="font-size:22px;font-weight:700;font-family:monospace;">${fm(val)}</div>
+        <div style="background:rgba(255,255,255,.2);border-radius:6px;padding:3px 12px;display:inline-block;font-size:11px;margin-top:4px;">
+          ${lblEstado[estadoActual]||estadoActual}
+        </div>
+      </div>
+    </div>`;
+
+  // ── TIMELINE ──
+  // Construir eventos cronológicos
+  const eventos = [];
+
+  // Creación
+  if(rec.creado?.toDate){
+    const d = rec.creado.toDate();
+    eventos.push({fecha:d, tipo:'created', label:'📋 Ingresada al sistema', sub:`Por ${rec.creadoPorNombre||'CONEXA'}`, color:'#999899'});
+  }
+
+  // Historial interno
+  if(rec.historial?.length){
+    rec.historial.forEach(h=>{
+      const d = h.fecha?.toDate?h.fecha.toDate():(h.fecha?new Date(h.fecha):null);
+      if(!d) return;
+      eventos.push({fecha:d, tipo:'historial', label:`⚙ ${h.accion||h.estado||'Actualización'}`, sub:h.obs||h.nota||'', color:'#00B2E2'});
+    });
+  }
+
+  // Radicaciones (del array respuestasAdres y radicado actual)
+  const todasRads = [];
+  if(rec.respuestasAdres?.length){
+    rec.respuestasAdres.forEach(r=>todasRads.push(r));
+  }
+  // Si no hay array pero hay radicado actual, construir uno
+  if(!todasRads.length && rec.radicado?.numero){
+    todasRads.push({
+      numero: rec.radicado.numero,
+      lote: rec.radicado.lote,
+      fecha: rec.radicado.fecha,
+      estado: rec.respuestaAdres?.estado,
+      valorAprobado: rec.respuestaAdres?.valorAprobado,
+      valorGlosado: rec.respuestaAdres?.valorGlosado,
+      descripcion: rec.respuestaAdres?.descripcion,
+      fuente: 'radicado_actual'
+    });
+  }
+
+  todasRads.forEach((r,i)=>{
+    // Radicación
+    if(r.fecha){
+      const d = new Date(r.fecha.includes?.('/')?r.fecha.split('/').reverse().join('-'):r.fecha);
+      if(!isNaN(d)) eventos.push({fecha:d, tipo:'radicacion', label:`📬 Radicación ${i+1} ante ADRES`, sub:`N° ${r.numero||'—'} · Lote ${r.lote||'—'}`, color:'#00B2E2'});
+    }
+    // Respuesta
+    if(r.estado){
+      const col = colEstado[r.estado]||'#999899';
+      const lbl = lblEstado[r.estado]||r.estado;
+      const fRad = r.fechaRespuesta||r.fechaDevolucion;
+      const d = fRad ? new Date(fRad.includes?.('/')?fRad.split('/').reverse().join('-'):fRad) : null;
+      if(d&&!isNaN(d)) eventos.push({fecha:d, tipo:'respuesta', label:`🏛 ADRES: ${lbl}`, sub:`${r.descripcion||''} · Aprobado: ${fm(r.valorAprobado||0)} · Glosado: ${fm(r.valorGlosado||0)}`, color:col});
+    }
+  });
+
+  // Ordenar por fecha
+  eventos.sort((a,b)=>a.fecha-b.fecha);
+
+  const tl = document.getElementById('traz-timeline');
+  if(tl){
+    if(!eventos.length){
+      tl.innerHTML='<div style="color:var(--tx3);font-size:11px;">Sin eventos registrados.</div>';
+    } else {
+      tl.innerHTML = eventos.map((ev,i)=>`
+        <div style="display:flex;gap:12px;margin-bottom:${i<eventos.length-1?'0':'0'};">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+            <div style="width:12px;height:12px;border-radius:50%;background:${ev.color};flex-shrink:0;margin-top:3px;border:2px solid var(--sur);box-shadow:0 0 0 2px ${ev.color}33;"></div>
+            ${i<eventos.length-1?`<div style="width:2px;flex:1;background:var(--brd);margin:4px 0;min-height:20px;"></div>`:''}
+          </div>
+          <div style="padding-bottom:${i<eventos.length-1?'16':'0'}px;flex:1;">
+            <div style="font-size:11px;font-weight:600;color:var(--tx);">${ev.label}</div>
+            ${ev.sub?`<div style="font-size:10px;color:var(--tx3);margin-top:2px;">${ev.sub}</div>`:''}
+            <div style="font-size:10px;color:var(--tx3);margin-top:2px;">${ev.fecha.toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})}</div>
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  // ── RADICACIONES ──
+  const radEl = document.getElementById('traz-radicaciones');
+  if(radEl){
+    if(!todasRads.length){
+      radEl.innerHTML='<div style="color:var(--tx3);font-size:11px;">Sin radicaciones registradas.</div>';
+    } else {
+      radEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+          ${todasRads.map((r,i)=>{
+            const col = colEstado[r.estado]||'#999899';
+            const lbl = lblEstado[r.estado]||r.estado||'Sin respuesta';
+            return `<div style="background:var(--sur2);border-radius:8px;padding:14px;border-left:3px solid ${col};">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:11px;font-weight:700;color:var(--tx);">Radicación ${i+1}</span>
+                <span style="font-size:10px;background:${col}22;color:${col};padding:2px 8px;border-radius:4px;font-weight:600;">${lbl}</span>
+              </div>
+              <div style="font-size:11px;color:var(--tx2);display:flex;flex-direction:column;gap:4px;">
+                <div><span style="color:var(--tx3);">N° Radicación:</span> <strong style="font-family:var(--mono);">${r.numero||'—'}</strong></div>
+                ${r.lote?`<div><span style="color:var(--tx3);">Lote/Consolidado:</span> <strong style="font-family:var(--mono);">${r.lote}</strong></div>`:''}
+                ${r.fecha?`<div><span style="color:var(--tx3);">Fecha radicación:</span> ${r.fecha}</div>`:''}
+                ${r.valorAprobado>0?`<div><span style="color:var(--tx3);">Valor aprobado:</span> <strong style="color:#A3D55D;">${fm(r.valorAprobado)}</strong></div>`:''}
+                ${r.valorGlosado>0?`<div><span style="color:var(--tx3);">Valor glosado:</span> <strong style="color:#f85149;">${fm(r.valorGlosado)}</strong></div>`:''}
+                ${r.descripcion?`<div style="margin-top:4px;font-size:10px;color:var(--tx3);font-style:italic;">${r.descripcion}</div>`:''}
+                ${r.fuente==='sync-adres'?`<div style="margin-top:4px;font-size:9px;color:#00B2E2;">🔄 Sincronizado desde ADRES · ${r.fechaSync?new Date(r.fechaSync).toLocaleDateString('es-CO'):''}</div>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        ${rec.radicadoAnterior?`<div style="margin-top:10px;padding:8px 12px;background:rgba(227,179,65,.08);border-radius:6px;font-size:10px;color:var(--tx2);border:1px solid rgba(227,179,65,.2);">⚠ Radicado anterior (para planos FURIPS): <strong style="font-family:var(--mono);">${rec.radicadoAnterior}</strong></div>`:''}`;
+    }
+  }
+
+  // ── RESPUESTAS ADRES (tabla) ──
+  const respEl = document.getElementById('traz-respuestas');
+  if(respEl){
+    if(!todasRads.filter(r=>r.estado).length){
+      respEl.innerHTML='<div style="color:var(--tx3);font-size:11px;">Sin respuestas ADRES registradas.</div>';
+    } else {
+      respEl.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead>
+            <tr style="background:var(--sur2);">
+              <th style="padding:8px 10px;text-align:left;color:var(--tx2);font-weight:600;border-bottom:1px solid var(--brd);">#</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--tx2);font-weight:600;border-bottom:1px solid var(--brd);">N° Radicación</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--tx2);font-weight:600;border-bottom:1px solid var(--brd);">Fecha Rad.</th>
+              <th style="padding:8px 10px;text-align:left;color:var(--tx2);font-weight:600;border-bottom:1px solid var(--brd);">Estado ADRES</th>
+              <th style="padding:8px 10px;text-align:right;color:var(--tx2);font-weight:600;border-bottom:1px solid var(--brd);">Aprobado</th>
+              <th style="padding:8px 10px;text-align:right;color:var(--tx2);font-weight:600;border-bottom:1px solid var(--brd);">Glosado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${todasRads.map((r,i)=>{
+              const col = colEstado[r.estado]||'#999899';
+              const lbl = lblEstado[r.estado]||r.estado||'—';
+              return `<tr style="border-bottom:1px solid var(--brd);">
+                <td style="padding:8px 10px;color:var(--tx3);">${i+1}</td>
+                <td style="padding:8px 10px;font-family:var(--mono);font-weight:600;">${r.numero||'—'}</td>
+                <td style="padding:8px 10px;color:var(--tx2);">${r.fecha||'—'}</td>
+                <td style="padding:8px 10px;"><span style="background:${col}22;color:${col};padding:2px 8px;border-radius:4px;font-weight:600;font-size:10px;">${lbl}</span></td>
+                <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:#A3D55D;">${r.valorAprobado>0?fm(r.valorAprobado):'—'}</td>
+                <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:#f85149;">${r.valorGlosado>0?fm(r.valorGlosado):'—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--sur2);">
+              <td colspan="4" style="padding:8px 10px;font-weight:700;color:var(--tx);">TOTAL</td>
+              <td style="padding:8px 10px;text-align:right;font-family:var(--mono);font-weight:700;color:#A3D55D;">${fm(todasRads.reduce((a,r)=>a+(r.valorAprobado||0),0))}</td>
+              <td style="padding:8px 10px;text-align:right;font-family:var(--mono);font-weight:700;color:#f85149;">${fm(todasRads.reduce((a,r)=>a+(r.valorGlosado||0),0))}</td>
+            </tr>
+          </tfoot>
+        </table>`;
+    }
+  }
+
+  if(detalle) detalle.style.display='block';
+  if(empty) empty.style.display='none';
+};
+
+window.trazLimpiar = function(){
+  const inp = document.getElementById('traz-buscar');
+  if(inp) inp.value='';
+  const lista = document.getElementById('traz-lista');
+  if(lista){ lista.style.display='none'; lista.innerHTML=''; }
+  const detalle = document.getElementById('traz-detalle');
+  if(detalle) detalle.style.display='none';
+  const empty = document.getElementById('traz-empty');
+  if(empty) empty.style.display='block';
+};
+
+// ── Actualizar sincronización ADRES con trazabilidad ──
+// Override de procesarReporteADRES para manejar múltiples radicaciones
+window.procesarReporteADRES = async function(){
+  if(USER?.rol !== 'superadmin'){ toast('Solo el Super Admin puede sincronizar.','w'); return; }
+
+  const fileInp = document.getElementById('adres-file-input');
+  const file = fileInp?.files[0];
+  if(!file){ toast('Selecciona el archivo ADRES primero.','w'); return; }
+
+  const modo = document.querySelector('input[name="adres-modo"]:checked')?.value || 'nueva';
+  const prog = document.getElementById('adres-progress');
+  const progTxt = document.getElementById('adres-progress-txt');
+  const progBarra = document.getElementById('adres-progress-barra');
+  const progSub = document.getElementById('adres-progress-sub');
+  const resDiv = document.getElementById('adres-resultados');
+  const btn = document.getElementById('adres-btn-procesar');
+
+  if(prog) prog.style.display = 'block';
+  if(resDiv) resDiv.style.display = 'none';
+  if(btn) btn.disabled = true;
+
+  const setP = (pct,txt,sub='')=>{
+    if(progTxt) progTxt.textContent=txt;
+    if(progBarra) progBarra.style.width=pct+'%';
+    if(progSub) progSub.textContent=sub;
+  };
+
+  try{
+    setP(5,'📖 Leyendo archivo ADRES...');
+    const adresRows = await leerExcelADRES(file);
+    setP(15,`${adresRows.length} registros ADRES encontrados`,'Indexando por factura y radicación...');
+
+    // Agrupar por factura (puede haber varias filas)
+    const adrexIdx = {}; // factura_norm → array de rows ADRES
+    adresRows.forEach(row=>{
+      const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
+      const numRad = String(row['Número de Radicación']||row['Numero de Radicacion']||'').trim();
+      if(!fac) return;
+      if(!adrexIdx[fac]) adrexIdx[fac] = [];
+      // Solo agregar si el numRad no está ya en el array
+      if(!adrexIdx[fac].find(r=>String(r['Número de Radicación']||r['Numero de Radicacion']||'').trim()===numRad)){
+        adrexIdx[fac].push(row);
+      }
+    });
+
+    setP(20,'Cargando reclamaciones del sistema...');
+    const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+    if(!src.length) throw new Error('No hay reclamaciones cargadas');
+
+    setP(25,`Comparando ${src.length} reclamaciones...`);
+
+    let actualizadas=0, sinCambios=0, noEncontradas=0, errores=0, nuevasRads=0;
+    const logLines=[], pendientes=[];
+
+    for(let i=0; i<src.length; i++){
+      const rec = src[i];
+      const facNorm = normalizarFactura(rec.factura);
+      const adresFilas = adrexIdx[facNorm];
+      const pct = 25 + Math.round((i/src.length)*55);
+      if(i%50===0) setP(pct,`Procesando ${i+1}/${src.length}...`,rec.factura||'');
+
+      if(!adresFilas){
+        if(rec.radicado?.numero) noEncontradas++;
+        continue;
+      }
+
+      // Procesar cada radicación ADRES para esta factura
+      const cambios = {};
+      let hayCambios = false;
+
+      // Obtener o inicializar array de respuestasAdres
+      const respActuales = rec.respuestasAdres ? [...rec.respuestasAdres] : [];
+      // Si no hay array pero hay respuestaAdres singular, migrarla
+      if(!respActuales.length && rec.radicado?.numero){
+        respActuales.push({
+          numero: rec.radicado.numero,
+          lote: rec.radicado.lote||'',
+          fecha: rec.radicado.fecha||'',
+          estado: rec.respuestaAdres?.estado||'',
+          valorAprobado: rec.respuestaAdres?.valorAprobado||0,
+          valorGlosado: rec.respuestaAdres?.valorGlosado||0,
+          descripcion: rec.respuestaAdres?.descripcion||'',
+          fuente: 'migrado',
+        });
+      }
+
+      // Ordenar filas ADRES por fecha de radicación
+      adresFilas.sort((a,b)=>{
+        const fa = String(a['Fecha Radicación']||'').trim();
+        const fb = String(b['Fecha Radicación']||'').trim();
+        return fa.localeCompare(fb);
+      });
+
+      adresFilas.forEach((row,ri)=>{
+        const numRad = String(row['Número de Radicación']||row['Numero de Radicacion']||'').trim();
+        const numConsolidado = String(row['Número Consolidado']||'').trim();
+        const fechaRad = String(row['Fecha Radicación']||row['Fecha Radicacion']||'').trim();
+        const descAprobacion = String(row['Descripción tipo Aprobación']||row['Descripcion tipo Aprobacion']||'').trim();
+        const estadoRec = String(row['Estado reclamación']||row['Estado reclamacion']||'').trim();
+        const valorAprobado = parseFloat(String(row['Valor Aprobado']||'0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+        const valorGlosado = parseFloat(String(row['Valor Glosado']||'0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+        const fechaDev = String(row['Fecha Devolución']||row['Fecha Devolucion']||'').trim();
+
+        const estadoAdres = mapearEstadoADRES(descAprobacion, estadoRec) ||
+          (estadoRec.toLowerCase().includes('girado') ? 'aprobada' : 'en_tramite');
+
+        // Buscar si ya existe esta radicación en el historial
+        const idx = respActuales.findIndex(r=>String(r.numero||'').trim()===numRad);
+
+        const entradaNueva = {
+          numero: numRad,
+          lote: numConsolidado,
+          fecha: fechaRad,
+          estado: estadoAdres,
+          valorAprobado,
+          valorGlosado,
+          descripcion: descAprobacion,
+          estadoReclamacion: estadoRec,
+          fechaRespuesta: fechaDev||'',
+          fuente: 'sync-adres',
+          fechaSync: new Date().toISOString(),
+        };
+
+        if(idx === -1){
+          // Nueva radicación — agregar
+          respActuales.push(entradaNueva);
+          hayCambios = true;
+          nuevasRads++;
+          logLines.push(`🆕 ${rec.factura} — Nueva radicación N°${numRad} → ${estadoAdres}`);
+        } else {
+          // Ya existe — actualizar si hay cambios
+          const actual = respActuales[idx];
+          if(actual.estado !== estadoAdres || actual.valorAprobado !== valorAprobado || actual.valorGlosado !== valorGlosado){
+            respActuales[idx] = {...actual, ...entradaNueva};
+            hayCambios = true;
+            logLines.push(`🔄 ${rec.factura} — Actualiza rad. N°${numRad}: ${actual.estado||'?'} → ${estadoAdres}`);
+          }
+        }
+      });
+
+      if(!hayCambios){ sinCambios++; continue; }
+
+      // Determinar estado actual = última radicación
+      const ultima = respActuales[respActuales.length-1];
+      const penultima = respActuales.length>1 ? respActuales[respActuales.length-2] : null;
+
+      cambios['respuestasAdres'] = respActuales;
+      cambios['respuestaAdres'] = {
+        estado: ultima.estado,
+        valorAprobado: ultima.valorAprobado||0,
+        valorGlosado: ultima.valorGlosado||0,
+        descripcion: ultima.descripcion||'',
+        fecha: ultima.fechaRespuesta||ultima.fecha||'',
+        fuenteADRES: true,
+        fechaSync: new Date().toISOString(),
+      };
+
+      // Radicado actual = último número de radicación
+      if(ultima.numero && rec.radicado?.numero !== ultima.numero){
+        cambios['radicadoAnterior'] = penultima?.numero || rec.radicado?.numero || '';
+        cambios['radicado'] = {
+          ...rec.radicado,
+          numero: ultima.numero,
+          lote: ultima.lote||rec.radicado?.lote||'',
+          fecha: ultima.fecha||rec.radicado?.fecha||'',
+        };
+      }
+
+      cambios['actualizado'] = serverTimestamp();
+      pendientes.push({rec, cambios});
+      actualizadas++;
+    }
+
+    setP(85,`Guardando ${pendientes.length} actualizaciones...`);
+
+    for(let i=0; i<pendientes.length; i++){
+      const {rec, cambios} = pendientes[i];
+      const pct = 85+Math.round((i/Math.max(pendientes.length,1))*12);
+      if(i%20===0) setP(pct,`Guardando ${i+1}/${pendientes.length}...`,rec.factura);
+      try{
+        await updateDoc(doc(db,'reclamaciones',rec.id), cambios);
+        // Actualizar en memoria
+        Object.assign(rec, cambios);
+      }catch(e){ errores++; logLines.push(`❌ ${rec.factura} — ${e.message}`); actualizadas--; }
+    }
+
+    setP(98,'Guardando registro...');
+    try{
+      await addDoc(collection(db,'adres_sync_log'),{
+        fecha:serverTimestamp(), fechaISO:new Date().toISOString(),
+        modo, archivo:file.name,
+        registrosADRES:adresRows.length, actualizadas, nuevasRads,
+        sinCambios, noEncontradas, errores,
+        realizadoPor:USER.uid, realizadoPorNombre:USER.nombre||USER.email||'',
+      });
+    }catch(e){ console.warn('Log no guardado:',e.message); }
+
+    localStorage.setItem('furips_adres_ultima_sync', new Date().toISOString());
+    setP(100,'✔ Sincronización completada');
+
+    // Mostrar resultados
+    const resumen = document.getElementById('adres-resumen');
+    if(resumen) resumen.innerHTML=[
+      {label:'✅ Actualizadas', n:actualizadas, color:'#A3D55D'},
+      {label:'🆕 Nuevas radicaciones', n:nuevasRads, color:'#00B2E2'},
+      {label:'⚪ Sin cambios', n:sinCambios, color:'#999899'},
+      {label:'❌ Errores', n:errores, color:'#f85149'},
+    ].map(s=>`<div style="background:var(--sur2);border-radius:8px;padding:12px;text-align:center;border-left:3px solid ${s.color};">
+      <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${s.color};">${s.n}</div>
+      <div style="font-size:10px;color:var(--tx2);margin-top:4px;">${s.label}</div>
+    </div>`).join('');
+
+    const logEl = document.getElementById('adres-log');
+    if(logEl){
+      if(!logLines.length) logLines.push('✅ Todo actualizado. Sin cambios necesarios.');
+      logEl.innerHTML=logLines.slice(0,300).map(l=>`<div style="color:${l.startsWith('✅')||l.startsWith('🆕')?'#A3D55D':l.startsWith('❌')?'#f85149':l.startsWith('🔄')?'#00B2E2':'var(--tx2)'};">${l}</div>`).join('');
+    }
+    const footer = document.getElementById('adres-log-footer');
+    if(footer) footer.textContent=`${logLines.length} eventos · ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+
+    if(resDiv) resDiv.style.display='block';
+    aplicarFiltroCliente(); renderLista(); updStats();
+    verificarAlertaADRES();
+    toast(`✔ ADRES: ${actualizadas} actualizadas · ${nuevasRads} nuevas radicaciones`, errores?'w':'ok');
+
+  }catch(e){
+    if(progTxt) progTxt.textContent=`❌ Error: ${e.message}`;
+    if(progBarra) progBarra.style.background='#f85149';
+    toast('Error: '+e.message,'e');
+    console.error(e);
+  }finally{
+    if(btn) btn.disabled=false;
+  }
+};
+
+// ══ FIN TRAZABILIDAD ══════════════════════════════════════════
 
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
@@ -9258,6 +10236,7 @@ window.showPanelClientes = function(){
     if(r){ r.textContent = rolLbl[USER.rol] || USER.rol || '—'; }
   }
   renderClientes();
+      if(typeof initAdresSync==='function') setTimeout(initAdresSync, 500);
 };
 
 function renderClientes(){
