@@ -718,6 +718,9 @@ select option{background:var(--sur2);}
           <button onclick="resetValoresADRES()" class="btn bs" style="font-size:11px;margin-left:8px;border-color:#f85149;color:#f85149;" title="Resetear valores inflados y volver a sincronizar">
             🔴 Reset valores
           </button>
+          <button onclick="diagnosticoADRES()" class="btn bs" style="font-size:11px;margin-left:8px;" title="Ver diagnóstico de fuentes de datos">
+            🔎 Diagnóstico
+          </button>
         </div>
 
         <!-- Progress -->
@@ -9316,6 +9319,49 @@ window.resetValoresADRES = async function(){
 };
 // ══ FIN RESET ══
 
+
+window.diagnosticoADRES = async function(){
+  if(USER?.rol !== 'superadmin') return;
+  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  
+  // Contar por fuente de datos
+  let soloSingular=0, soloArray=0, ambos=0, ninguno=0;
+  let totalAproSing=0, totalGloSing=0, totalAproArr=0, totalGloArr=0;
+  
+  src.forEach(r=>{
+    const tieneSing = !!r.respuestaAdres?.estado;
+    const tieneArr  = (r.respuestasAdres?.length||0) > 0;
+    if(tieneSing && tieneArr) ambos++;
+    else if(tieneSing) soloSingular++;
+    else if(tieneArr) soloArray++;
+    else ninguno++;
+    
+    totalAproSing += r.respuestaAdres?.valorAprobado||0;
+    totalGloSing  += r.respuestaAdres?.valorGlosado||0;
+    totalAproArr  += (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorAprobado||0),0);
+    totalGloArr   += (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorGlosado||0),0);
+  });
+  
+  const fm = v=>'$'+Math.round(v).toLocaleString('es-CO');
+  const msg = `DIAGNÓSTICO ADRES (${src.length} reclamaciones):\n\n`+
+    `Fuentes:\n`+
+    `  Solo singular: ${soloSingular}\n`+
+    `  Solo array: ${soloArray}\n`+
+    `  Ambos: ${ambos}\n`+
+    `  Ninguno: ${ninguno}\n\n`+
+    `Valores desde singular:\n`+
+    `  Aprobado: ${fm(totalAproSing)}\n`+
+    `  Glosado:  ${fm(totalGloSing)}\n\n`+
+    `Valores desde array:\n`+
+    `  Aprobado: ${fm(totalAproArr)}\n`+
+    `  Glosado:  ${fm(totalGloArr)}\n\n`+
+    `Meta ADRES Excel:\n`+
+    `  Aprobado: $154.662.139\n`+
+    `  Glosado:  $787.074.008`;
+  
+  alert(msg);
+  console.log(msg);
+};
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
   const f1 = rec.furips1 || {};
