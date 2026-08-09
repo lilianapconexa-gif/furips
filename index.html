@@ -8199,18 +8199,14 @@ DATOS DEL PORTAFOLIO (${periodoLabel}):
 
 // ══ MASIVO SOPORTES ══════════════════════════════════════════
 window.descargarPlantillaSoportes = function(){
+  if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(descargarPlantillaSoportes,1500); return; }
   const src = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
   if(!src.length){ toast('No hay reclamaciones cargadas.','w'); return; }
 
-  const estados = {
-    'completo':              'completo',
-    'faltantes_autorizados': 'faltantes_autorizados',
-    'observacion_interna':   'observacion_interna',
-  };
+  const wb = XLSX.utils.book_new();
 
-  // Construir CSV con BOM para Excel
-  const S = '\t', N = '\n';
-  const header = ['factura','consecutivo','ips','estadoGestion','soporteEstado','soporteJustificacion','soporteActual'].join(S);
+  // Hoja 1: Datos
+  const header = [['factura','consecutivo','ips','estadoGestion','soporteEstado','soporteJustificacion','soporteActual']];
   const rows = src.map(r => {
     const chq = r.chequeo_soportes || {};
     return [
@@ -8218,30 +8214,31 @@ window.descargarPlantillaSoportes = function(){
       r.consec||'',
       r.codHab||r.nitIPS||'',
       r.estadoGestion||'',
-      chq.soporteRadicacion||'completo',          // valor actual (editar)
-      chq.soporteJustificacion||'',               // justificación actual (editar)
-      chq.soporteRadicacion||'(sin registro)',     // referencia solo lectura
-    ].join(S);
+      chq.soporteRadicacion||'completo',
+      chq.soporteJustificacion||'',
+      chq.soporteRadicacion||'(sin registro)',
+    ];
   });
+  const ws = XLSX.utils.aoa_to_sheet([...header, ...rows]);
+  ws['!cols'] = [{wch:18},{wch:12},{wch:16},{wch:18},{wch:24},{wch:50},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Soportes');
 
-  // Instrucciones al final
-  const instrucciones = [
-    '', '=== VALORES VÁLIDOS PARA soporteEstado ===',
-    'completo					Soportes completos sin observaciones',
-    'faltantes_autorizados			Radicada con faltantes, autorización IPS',
-    'observacion_interna			Observación interna CONEXA',
-  ].join('\n');
+  // Hoja 2: Instrucciones
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['INSTRUCCIONES'],[''],
+    ['Edita SOLO las columnas: soporteEstado y soporteJustificacion'],
+    ['NO modifiques: factura, consecutivo, ips, estadoGestion, soporteActual'],
+    [''],['VALORES VÁLIDOS PARA soporteEstado:'],
+    ['completo','Soportes completos sin observaciones'],
+    ['faltantes_autorizados','Radicada con faltantes - autorización IPS'],
+    ['observacion_interna','Observación interna CONEXA'],
+  ]);
+  ws2['!cols'] = [{wch:30},{wch:55}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Instrucciones');
 
-  const csv = '﻿' + [header, ...rows, instrucciones].join(N);
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `Plantilla_Soportes_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast(`⬇ Plantilla descargada · ${src.length} reclamaciones`,'ok');
-};
-
+  XLSX.writeFile(wb, `Plantilla_Soportes_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast(`⬇ Plantilla Excel · ${src.length} reclamaciones`,'ok');
+}
 // Procesar Excel/CSV de soportes masivo
 (function setupChqMasivo(){
   const setup = () => {
