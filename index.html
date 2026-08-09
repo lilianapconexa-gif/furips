@@ -7543,7 +7543,16 @@ window.updPortafolio = function(){
   const enTramiteRecs=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite'||(!getRespuestaAdres(r)&&r.radicado?.numero));
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
   const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
-  const pagV=pagadas.reduce((a,r)=>a+val(r),0),gloV=glosadas.reduce((a,r)=>a+val(r),0);
+  // Valor aprobado y glosado: leer desde respuestasAdres[] o respuestaAdres singular
+  const getValApro=r=>{
+    if(r.respuestasAdres?.length) return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorAprobado||0),0);
+    return r.respuestaAdres?.valorAprobado||0;
+  };
+  const getValGlo=r=>{
+    if(r.respuestasAdres?.length) return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorGlosado||0),0);
+    return r.respuestaAdres?.valorGlosado||0;
+  };
+  const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
   const anuladas=recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
@@ -7592,7 +7601,7 @@ window.updPortafolio = function(){
     const devV=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').reduce((a,r)=>a+val(r),0);
     const anN=anuladas.length,anV=anuladas.reduce((a,r)=>a+val(r),0);
     const row=(lbl,n,v,col,indent)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:${indent?'3px 4px 3px 16px':'6px 6px'};border-radius:5px;${indent?'':'background:var(--sur2);margin-bottom:3px;'}"><span style="font-size:${indent?'10':'11'}px;color:${indent?'var(--tx3)':'var(--tx)'};font-weight:${indent?400:600};">${lbl}</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);font-size:${indent?10:11}px;font-weight:600;color:${col};">${n}</span><span style="font-family:var(--mono);font-size:${indent?9:10}px;color:var(--tx3);min-width:85px;text-align:right;">${fm(v)}</span></span></div>`;
-    des.innerHTML=row('⏸ Sin radicar',sinRad.length,sinV,'#999899',false)+row('📬 Radicadas',radTotal.length,radTotalV,'#00B2E2',false)+row('⏳ · En trámite ADRES',tramN,tramV,'#00B2E2',true)+row('✔ · Reconocidas',pagadas.length,pagV,'#A3D55D',true)+row('↩ · En glosa',glosadas.length,gloV,'#9DB455',true)+row('↩ · Devuelta IPS',devN,devV,'#c0c0c0',true)+row('∅ · Anuladas ADRES',anN,anV,'#c0c0c0',true)+`<div style="border-top:1px solid var(--brd);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:700;">TOTAL PORTAFOLIO</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);color:#00B2E2;font-weight:700;">${total}</span><span style="font-family:var(--mono);color:#00B2E2;min-width:85px;text-align:right;">${fm(totalVal)}</span></span></div>`;
+    des.innerHTML=row('⏸ Sin radicar',sinRad.length,sinV,'#999899',false)+row('📬 Radicadas',radTotal.length,radTotalV,'#00B2E2',false)+row('⏳ · En trámite ADRES',tramN,tramV,'#00B2E2',true)+row('✔ · Reconocidas (aprobado)',pagadas.length,pagV,'#A3D55D',true)+row('↩ · En glosa (glosado)',glosadas.length,gloV,'#9DB455',true)+row('↩ · Devuelta IPS',devN,devV,'#c0c0c0',true)+row('∅ · Anuladas ADRES',anN,anV,'#c0c0c0',true)+`<div style="border-top:1px solid var(--brd);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:700;">TOTAL PORTAFOLIO</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);color:#00B2E2;font-weight:700;">${total}</span><span style="font-family:var(--mono);color:#00B2E2;min-width:85px;text-align:right;">${fm(totalVal)}</span></span></div>`;
   }
   const ind=document.getElementById('port-indicadores');if(!ind)return;
   const semEfect=efectividad>=80?'🟢':efectividad>=50?'🟡':'🔴';
