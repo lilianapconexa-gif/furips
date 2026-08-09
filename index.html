@@ -6555,7 +6555,14 @@ window.getRespuestaAdres = (r) => {
     if(v === 'en_revision') return null;
     return v;
   };
-  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado); // modelo nuevo
+  // Prioridad: array respuestasAdres[] (fuente ADRES) → singular → modelo viejo
+  if(r.respuestasAdres?.length){
+    // Tomar el estado de la última radicación por fecha
+    const sorted=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const ultima=sorted[sorted.length-1];
+    if(ultima?.estado) return norm(ultima.estado);
+  }
+  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado); // modelo singular
   // Modelo viejo: derivar desde radicado.estado
   const old = r.radicado?.estado;
   if(!old) return null;
