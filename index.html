@@ -1225,6 +1225,17 @@ select option{background:var(--sur2);}
       <!-- MÓDULO DE RADICACIÓN (unificado con tabs) -->
       <div class="page hidden" id="p-radmas">
         <div class="ptitle">📬 Radicación</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <button onclick="descargarPlantillaValores()" class="btn bs" style="font-size:11px;">
+            ⬇ Plantilla valores masiva
+          </button>
+          <div style="position:relative;">
+            <input type="file" id="rad-val-masivo-input" accept=".xlsx,.xls" style="display:none;">
+            <button onclick="document.getElementById('rad-val-masivo-input').click()" class="btn bs" style="font-size:11px;">
+              📂 Subir valores masivos
+            </button>
+          </div>
+        </div>
         <div class="psub">Carga masiva, radicación individual, historial y exportación</div>
 
         <!-- Tabs -->
@@ -3605,6 +3616,17 @@ window.abrirRadicadoGrupal=(idIndividual)=>{
         <input id="rad-ind-${r.id}" value="${r.radicado?.numero||''}" maxlength="40" placeholder="N° radicado individual (opcional)"
           style="width:100%;padding:4px 8px;font-size:11px;background:var(--sur);border:1px solid var(--brd);border-radius:4px;color:var(--tx);">
       </div>
+      <div style="min-width:160px;">
+        <div style="font-size:11px;margin-bottom:3px;color:var(--tx2);">Valor radicado ($):</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input id="rad-val-${r.id}" type="number" value="${r.furips1?.c97||r.furips1?.c96||''}"
+            placeholder="Confirmar valor"
+            style="width:100%;padding:4px 8px;font-size:11px;background:var(--sur);border:1px solid var(--brd);border-radius:4px;color:var(--tx);"
+            oninput="validarValorRad('${r.id}',this.value)">
+          <span id="rad-val-ico-${r.id}" style="font-size:14px;" title="Confirme el valor que aparece en el plano radicado">⚪</span>
+        </div>
+        <div id="rad-val-obs-${r.id}" style="font-size:9px;color:var(--tx3);margin-top:2px;">Valor FURIPS: $${(parseInt(r.furips1?.c97||r.furips1?.c96||0)||0).toLocaleString('es-CO')}</div>
+      </div>
       <span style="background:${inf.bg};color:${inf.col};font-size:9px;padding:2px 7px;border-radius:4px;font-family:var(--mono);white-space:nowrap;">${inf.lbl}</span>
     </div>`;
   }).join('');
@@ -3657,6 +3679,9 @@ window.guardarRadicadoGrupal=async()=>{
       });
     }
     try{
+      // Leer valor radicado confirmado/corregido
+      const valRadInput = document.getElementById('rad-val-'+id);
+      const valorRadicado = valRadInput ? (parseInt(String(valRadInput.value).replace(/[^0-9]/g,''))||parseInt(rec?.furips1?.c97||rec?.furips1?.c96||0)||0) : 0;
       const update = {
         radicado:{
           lote:loteNum,
@@ -6450,6 +6475,9 @@ window.guardarRadMasivo = async () => {
         });
       }
       const update = {
+        valorRadicadoConfirmado: valorRadicado||0,
+        valorRadicadoPor: USER.nombre||USER.email||'',
+        valorRadicadoEn: serverTimestamp(),
         radicado: {
           lote:          f.radLote,
           numero:        f.radInd || f.radLote,
@@ -7554,11 +7582,18 @@ window.updPortafolio = function(){
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
   const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
   // Valor aprobado y glosado: leer desde respuestasAdres[] o respuestaAdres singular
-  // respuestaAdres.valorAprobado/Glosado ya contiene los totales correctos de ADRES
-  const getValApro=r=>r.respuestaAdres?.valorAprobado||
-    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorAprobado||0),0);
-  const getValGlo=r=>r.respuestaAdres?.valorGlosado||
-    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorGlosado||0),0);
+  // FUENTE ÚNICA: array respuestasAdres[] si existe, sino singular
+  // El array es la fuente de verdad (viene de ADRES sync)
+  const getValApro=r=>{
+    if(r.respuestasAdres?.length>0)
+      return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorAprobado||0),0);
+    return r.respuestaAdres?.valorAprobado||0;
+  };
+  const getValGlo=r=>{
+    if(r.respuestasAdres?.length>0)
+      return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorGlosado||0),0);
+    return r.respuestaAdres?.valorGlosado||0;
+  };
   const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
@@ -7945,6 +7980,10 @@ window.descargarPDF=async function(){
 
 // Event listeners
 document.addEventListener('DOMContentLoaded',function(){
+  const radValMas = document.getElementById('rad-val-masivo-input');
+  if(radValMas) radValMas.addEventListener('change',async function(){
+    if(this.files[0]){ await procesarValoresMasivo(this.files[0]); this.value=''; }
+  });
   const trazInp = document.getElementById('traz-buscar');
   if(trazInp) trazInp.addEventListener('keydown', function(e){ if(e.key==='Enter') trazBuscar(); });
   const inpAsig=document.getElementById('asig-excel-input');
@@ -9358,7 +9397,27 @@ window.diagnosticoADRES = async function(){
   });
   
   const fm = v=>'$'+Math.round(v).toLocaleString('es-CO');
+  // Contar clasificaciones
+  const aprobDash = src.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+  const glosaDash = src.filter(r=>getRespuestaAdres(r)==='glosada');
+  const aprobConArr = aprobDash.filter(r=>r.respuestasAdres?.length>0);
+  const glosConArr  = glosaDash.filter(r=>r.respuestasAdres?.length>0);
+  const aprobVArr = aprobConArr.reduce((a,r)=>a+r.respuestasAdres.reduce((b,rad)=>b+(rad.valorAprobado||0),0),0);
+  const glosVArr  = glosConArr.reduce((a,r)=>a+r.respuestasAdres.reduce((b,rad)=>b+(rad.valorGlosado||0),0),0);
+  const aprobVSing = aprobDash.reduce((a,r)=>a+(r.respuestaAdres?.valorAprobado||0),0);
+  const glosVSing  = glosaDash.reduce((a,r)=>a+(r.respuestaAdres?.valorGlosado||0),0);
+  const fm4=v=>'$'+Math.round(v).toLocaleString('es-CO');
   const msg = `DIAGNÓSTICO ADRES (${src.length} reclamaciones):\n\n`+
+    `DASHBOARD muestra:\n`+
+    `  Aprobadas: ${aprobDash.length} (${aprobConArr.length} con array, ${aprobDash.length-aprobConArr.length} solo singular)\n`+
+    `  Glosadas:  ${glosaDash.length} (${glosConArr.length} con array, ${glosaDash.length-glosConArr.length} solo singular)\n\n`+
+    `VALORES desde array:\n`+
+    `  Aprobado: ${fm4(aprobVArr)} (meta: $154.662.139)\n`+
+    `  Glosado:  ${fm4(glosVArr)} (meta: $787.074.008)\n\n`+
+    `VALORES desde singular:\n`+
+    `  Aprobado: ${fm4(aprobVSing)}\n`+
+    `  Glosado:  ${fm4(glosVSing)}\n\n`+
+    `FUENTES (total):\n`+
     `Fuentes:\n`+
     `  Solo singular: ${soloSingular}\n`+
     `  Solo array: ${soloArray}\n`+
@@ -9377,6 +9436,121 @@ window.diagnosticoADRES = async function(){
   alert(msg);
   console.log(msg);
 };
+
+// ══ VALIDACIÓN VALOR RADICADO ══════════════════════════════
+window.validarValorRad = function(id, valorIngresado){
+  const ico = document.getElementById('rad-val-ico-'+id);
+  const obs = document.getElementById('rad-val-obs-'+id);
+  const rec = RECS.find(r=>r.id===id);
+  if(!ico||!rec) return;
+
+  const vIngresado = parseInt(String(valorIngresado).replace(/[^0-9]/g,''))||0;
+  const vFurips = parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
+
+  if(!vIngresado){ ico.textContent='⚪'; return; }
+
+  if(vIngresado === vFurips){
+    ico.textContent='✅';
+    if(obs){ obs.textContent=`✔ Valor confirmado: $${vIngresado.toLocaleString('es-CO')}`; obs.style.color='#A3D55D'; }
+  } else {
+    ico.textContent='⚠️';
+    const diff = vIngresado - vFurips;
+    if(obs){
+      obs.textContent=`⚠ Difiere del FURIPS (${diff>0?'+':''}$${Math.abs(diff).toLocaleString('es-CO')}). Se guardará el valor corregido.`;
+      obs.style.color='#e3b341';
+    }
+  }
+};
+
+// ══ CARGA MASIVA DE VALORES RADICADOS ══════════════════════
+window.descargarPlantillaValores = function(){
+  if(typeof XLSX==='undefined'){ toast('Cargando Excel...','w'); setTimeout(descargarPlantillaValores,1500); return; }
+  const ids = [...(window.SEL_IDS||new Set())];
+  const src = ids.length > 0 ? RECS.filter(r=>ids.includes(r.id)) : RECS;
+  if(!src.length){ toast('No hay reclamaciones.','w'); return; }
+
+  const sorted = [...src].sort((a,b)=>parseInt(a.consec||0)-parseInt(b.consec||0));
+  const wb = XLSX.utils.book_new();
+  const header = [['consecutivo','factura','valorFURIPS','valorRadicado','observacion']];
+  const rows = sorted.map(r=>([
+    r.consec||'',
+    r.factura||'',
+    parseInt(r.furips1?.c97||r.furips1?.c96||0)||0,
+    parseInt(r.furips1?.c97||r.furips1?.c96||0)||0, // valor a confirmar/corregir
+    '',
+  ]));
+  const ws = XLSX.utils.aoa_to_sheet([...header,...rows]);
+  ws['!cols']=[{wch:12},{wch:18},{wch:16},{wch:16},{wch:40}];
+  // Instrucciones
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['INSTRUCCIONES'],[''],
+    ['Columna valorRadicado: confirma o corrige el valor que quedó en el plano radicado ante ADRES'],
+    ['Si el valor es correcto, déjalo igual. Si difiere, escribe el valor correcto.'],
+    ['Columna observacion: nota opcional sobre la diferencia'],
+  ]);
+  ws2['!cols']=[{wch:60}];
+  XLSX.utils.book_append_sheet(wb,ws,'Valores');
+  XLSX.utils.book_append_sheet(wb,ws2,'Instrucciones');
+  XLSX.writeFile(wb,`Plantilla_Valores_Radicados_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast(`⬇ Plantilla descargada · ${sorted.length} reclamaciones`,'ok');
+};
+
+window.procesarValoresMasivo = async function(file){
+  if(!file){ toast('Selecciona archivo.','w'); return; }
+  let rows=[];
+  try{
+    if(typeof XLSX!=='undefined'){
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    }
+  }catch(e){ toast('Error: '+e.message,'e'); return; }
+
+  if(!rows.length){ toast('Sin filas válidas.','w'); return; }
+
+  const actualizaciones=[];
+  rows.forEach(r=>{
+    const fac=String(r.factura||'').trim();
+    const vRad=parseInt(String(r.valorRadicado||'').replace(/[^0-9]/g,''))||0;
+    const vFur=parseInt(String(r.valorFURIPS||'').replace(/[^0-9]/g,''))||0;
+    const obs=String(r.observacion||'').trim();
+    if(!fac||!vRad) return;
+    const rec=RECS.find(r2=>r2.factura===fac);
+    if(!rec) return;
+    // Solo actualizar si hay diferencia o si se quiere confirmar
+    actualizaciones.push({rec,vRad,vFur,obs,difiere:vRad!==vFur});
+  });
+
+  if(!actualizaciones.length){ toast('Sin reclamaciones para actualizar.','w'); return; }
+
+  const conDif = actualizaciones.filter(a=>a.difiere);
+  if(!confirm(`¿Actualizar valores en ${actualizaciones.length} reclamaciones?\n${conDif.length} con diferencia vs FURIPS`)) return;
+
+  let ok=0,err=0;
+  for(const {rec,vRad,obs} of actualizaciones){
+    try{
+      await updateDoc(doc(db,'reclamaciones',rec.id),{
+        'furips1.c97': vRad,
+        'furips1.c96': vRad,
+        valorRadicadoConfirmado: vRad,
+        valorRadicadoObs: obs||'',
+        valorRadicadoPor: USER.nombre||USER.email||'',
+        valorRadicadoEn: serverTimestamp(),
+        actualizado: serverTimestamp(),
+      });
+      rec.furips1 = rec.furips1||{};
+      rec.furips1.c97 = vRad;
+      rec.furips1.c96 = vRad;
+      rec.valorRadicadoConfirmado = vRad;
+      ok++;
+    }catch(e){ err++; console.error(rec.factura,e.message); }
+  }
+  aplicarFiltroCliente(); renderLista(); updStats();
+  toast(`✔ ${ok} valores actualizados${err?' · ⚠ '+err+' errores':''}`,err?'w':'ok');
+};
+// ══ FIN VALIDACIÓN VALOR RADICADO ══════════════════════════
+
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
   const f1 = rec.furips1 || {};
