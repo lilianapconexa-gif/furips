@@ -8730,16 +8730,95 @@ window.procesarReporteADRES = async function(){
     setP(100,'✔ Sincronización completada');
 
     // Mostrar resultados
+    // ── CUADRE: calcular totales del Excel ADRES ──
+    const fm2 = v => '$'+(Math.round(v)||0).toLocaleString('es-CO');
+
+    // Totales desde el Excel ADRES (por factura única — última radicación)
+    const adresUnicas = {}; // factura → última fila
+    adresRows.forEach(row => {
+      const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
+      if(!fac) return;
+      const numRad = String(row['Número de Radicación']||'').trim();
+      // Quedarse con la más reciente por fecha
+      if(!adresUnicas[fac] || String(row['Fecha Radicación']||'') > String(adresUnicas[fac]['Fecha Radicación']||'')){
+        adresUnicas[fac] = row;
+      }
+    });
+    const adresUnicasArr = Object.values(adresUnicas);
+    const adresTotRec = adresUnicasArr.length;
+    const adresTotVal = adresUnicasArr.reduce((a,r)=>a+(parseFloat(String(r['Valor Reclamado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0),0);
+    const adresTotApro = adresUnicasArr.filter(r=>String(r['Descripción tipo Aprobación']||'').toLowerCase().includes('aprobad')||String(r['Estado reclamación']||'').toLowerCase().includes('girado')).length;
+    const adresTotAproV = adresUnicasArr.reduce((a,r)=>a+(parseFloat(String(r['Valor Aprobado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0),0);
+    const adresTotGlo = adresUnicasArr.filter(r=>String(r['Descripción tipo Aprobación']||'').toLowerCase().includes('glosa')).length;
+    const adresTotGloV = adresUnicasArr.reduce((a,r)=>a+(parseFloat(String(r['Valor Glosado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0),0);
+
+    // Totales desde FURIPS (después de actualizar)
+    const srcFinal = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+    const val2 = r => parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+    const furipsTotRec = srcFinal.length;
+    const furipsTotVal = srcFinal.reduce((a,r)=>a+val2(r),0);
+    const furipsPag = srcFinal.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+    const furiPagN = furipsPag.length;
+    const furipsPagV = furipsPag.reduce((a,r)=>a+(r.respuestaAdres?.valorAprobado||0),0);
+    const furisGlo = srcFinal.filter(r=>getRespuestaAdres(r)==='glosada');
+    const furiGloN = furisGlo.length;
+    const furisGloV = furisGlo.reduce((a,r)=>a+(r.respuestaAdres?.valorGlosado||0),0);
+
+    // Diferencias
+    const diff = (a,b) => Math.abs(a-b) < 1 ? 0 : a-b;
+    const cuadreRows = [
+      {concepto:'Reclamaciones en reporte', adres:adresTotRec, furips:furipsTotRec, esN:true},
+      {concepto:'Valor total reclamado', adres:adresTotVal, furips:furipsTotVal},
+      {concepto:'Reclamaciones aprobadas', adres:adresTotApro, furips:furiPagN, esN:true},
+      {concepto:'Valor aprobado', adres:adresTotAproV, furips:furipsPagV},
+      {concepto:'Reclamaciones glosadas', adres:adresTotGlo, furips:furiGloN, esN:true},
+      {concepto:'Valor glosado', adres:adresTotGloV, furips:furisGloV},
+    ];
+    const todosCuadra = cuadreRows.every(r=>diff(r.adres,r.furips)===0);
+
+    // Mostrar resumen de sync
     const resumen = document.getElementById('adres-resumen');
-    if(resumen) resumen.innerHTML=[
-      {label:'✅ Actualizadas', n:actualizadas, color:'#A3D55D'},
-      {label:'🆕 Nuevas radicaciones', n:nuevasRads, color:'#00B2E2'},
-      {label:'⚪ Sin cambios', n:sinCambios, color:'#999899'},
-      {label:'❌ Errores', n:errores, color:'#f85149'},
-    ].map(s=>`<div style="background:var(--sur2);border-radius:8px;padding:12px;text-align:center;border-left:3px solid ${s.color};">
-      <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${s.color};">${s.n}</div>
-      <div style="font-size:10px;color:var(--tx2);margin-top:4px;">${s.label}</div>
-    </div>`).join('');
+    if(resumen) resumen.innerHTML=`
+      <div style="grid-column:span 4;background:${todosCuadra?'rgba(163,213,93,.08)':'rgba(248,81,73,.06)'};border:1px solid ${todosCuadra?'rgba(163,213,93,.3)':'rgba(248,81,73,.3)'};border-radius:10px;padding:16px;margin-bottom:4px;">
+        <div style="font-size:12px;font-weight:700;color:${todosCuadra?'#A3D55D':'#f85149'};margin-bottom:12px;">
+          ${todosCuadra?'✅ CUADRE PERFECTO — FURIPS coincide con el reporte ADRES':'⚠ DIFERENCIAS DETECTADAS — Revisar los valores marcados en rojo'}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead>
+            <tr style="background:var(--sur2);">
+              <th style="padding:7px 10px;text-align:left;color:var(--tx2);border-bottom:1px solid var(--brd);">Concepto</th>
+              <th style="padding:7px 10px;text-align:right;color:#00B2E2;border-bottom:1px solid var(--brd);">ADRES Excel</th>
+              <th style="padding:7px 10px;text-align:right;color:#9DB455;border-bottom:1px solid var(--brd);">FURIPS</th>
+              <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--brd);">¿Cuadra?</th>
+              <th style="padding:7px 10px;text-align:right;color:var(--tx2);border-bottom:1px solid var(--brd);">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cuadreRows.map(row=>{
+              const d = diff(row.adres, row.furips);
+              const ok = d===0;
+              const fmV = v => row.esN ? v.toLocaleString('es-CO') : fm2(v);
+              return `<tr style="border-bottom:1px solid var(--brd);${ok?'':'background:rgba(248,81,73,.04);'}">
+                <td style="padding:7px 10px;color:var(--tx);">${row.concepto}</td>
+                <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:#00B2E2;">${fmV(row.adres)}</td>
+                <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:#9DB455;">${fmV(row.furips)}</td>
+                <td style="padding:7px 10px;text-align:center;">${ok?'✅':'❌'}</td>
+                <td style="padding:7px 10px;text-align:right;font-family:var(--mono);color:${ok?'var(--tx3)':'#f85149'};font-weight:${ok?'400':'700'};">${ok?'—':(d>0?'+':'')+fmV(Math.abs(d))}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        ${!todosCuadra?`<div style="margin-top:10px;font-size:10px;color:var(--tx3);">⚠ Las diferencias pueden deberse a reclamaciones no encontradas (${noEncontradas} en FURIPS sin match en el reporte ADRES) o a registros históricos no incluidos en este reporte.</div>`:''}
+      </div>
+      ${[
+        {label:'✅ Actualizadas', n:actualizadas, color:'#A3D55D'},
+        {label:'🆕 Nuevas radicaciones', n:nuevasRads, color:'#00B2E2'},
+        {label:'⚪ Sin cambios', n:sinCambios, color:'#999899'},
+        {label:'❌ Errores', n:errores, color:'#f85149'},
+      ].map(s=>`<div style="background:var(--sur2);border-radius:8px;padding:12px;text-align:center;border-left:3px solid ${s.color};">
+        <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${s.color};">${s.n}</div>
+        <div style="font-size:10px;color:var(--tx2);margin-top:4px;">${s.label}</div>
+      </div>`).join('')}`;
 
     const logEl = document.getElementById('adres-log');
     if(logEl){
