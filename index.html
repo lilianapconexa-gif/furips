@@ -8050,34 +8050,90 @@ function mapearEstadoGestion(estadoAdres){
   return null;
 }
 
-// Leer Excel ADRES
+// Leer Excel ADRES — robusto para formato ADRES con filas vacías y columnas sin nombre
 async function leerExcelADRES(file){
   if(typeof XLSX === 'undefined') throw new Error('Librería Excel no disponible');
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, {type:'array', cellDates:true});
+  const wb = XLSX.read(buf, {type:'array'});
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const allRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  const allRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
 
-  // Buscar fila de encabezados (tiene "Número de Factura")
+  // Buscar fila de encabezados — tiene "Número de Factura" o "Numero de Factura"
   let headerRow = -1;
-  for(let i=0; i<allRows.length; i++){
-    if(allRows[i].some(v=>String(v).includes('Número de Factura') || String(v).includes('Numero de Factura'))){
+  for(let i=0; i<Math.min(allRows.length,15); i++){
+    const row = allRows[i];
+    if(row.some(v => v && (String(v).includes('Factura') || String(v).includes('Radicaci')))){
       headerRow = i; break;
     }
   }
-  if(headerRow < 0) throw new Error('No se encontró la fila de encabezados en el archivo ADRES');
+  if(headerRow < 0) throw new Error('No se encontró la fila de encabezados. Verifica que el archivo es el Reporte ADRES correcto.');
 
-  const headers = allRows[headerRow].map(h => String(h||'').trim());
+  const headers = allRows[headerRow].map(h => h ? String(h).trim() : '');
+
+  // Normalizar nombres de columnas para búsqueda flexible
+  const norm = s => String(s||'').toLowerCase()
+    .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
+    .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/[^a-z0-9 ]/g,'').trim();
+
+  const findCol = (headers, keywords) => {
+    const kws = keywords.map(norm);
+    return headers.findIndex(h => kws.some(k => norm(h).includes(k)));
+  };
+
+  // Mapear índices de columnas clave
+  const cols = {
+    factura:     findCol(headers, ['numero de factura','num factura','factura']),
+    numRad:      findCol(headers, ['numero de radicacion','numero radicacion','radicacion']),
+    numConsol:   findCol(headers, ['numero consolidado','consolidado']),
+    fechaConsol: findCol(headers, ['fecha radicacion consolidado']),
+    fechaRad:    findCol(headers, ['fecha radicacion']),
+    descApro:    findCol(headers, ['descripcion tipo aprobacion','tipo aprobacion','aprobacion']),
+    estadoRec:   findCol(headers, ['estado reclamacion','estado recl']),
+    valorRec:    findCol(headers, ['valor reclamado']),
+    valorApro:   findCol(headers, ['valor aprobado']),
+    valorGlo:    findCol(headers, ['valor glosado']),
+    fechaDev:    findCol(headers, ['fecha devolucion','devolucion']),
+    paquete:     findCol(headers, ['paquete']),
+    codHab:      findCol(headers, ['codigo habilitacion','habilitacion']),
+    nit:         findCol(headers, ['nit']),
+  };
+
+  console.log('[ADRES] Columnas detectadas:', cols);
+
+  // Verificar columna mínima
+  if(cols.factura < 0) throw new Error('No se encontró la columna "Número de Factura" en el archivo.');
+
   const data = [];
-
   for(let i = headerRow+1; i < allRows.length; i++){
     const row = allRows[i];
-    if(!row.some(v => v !== '')) continue; // fila vacía
-    const obj = {};
-    headers.forEach((h,j) => { if(h) obj[h] = row[j]; });
-    if(obj['Número de Factura'] || obj['Numero de Factura']) data.push(obj);
+    // Fila vacía = skip
+    if(!row || !row.some(v => v !== null && v !== '')) continue;
+    const fac = row[cols.factura];
+    if(!fac) continue; // sin factura = skip
+
+    const get = idx => idx >= 0 && idx < row.length ? row[idx] : null;
+    const getN = idx => { const v = get(idx); return v!==null ? (parseFloat(String(v).replace(/[^0-9.,]/g,'').replace(',','.')) || 0) : 0; };
+    const getS = idx => { const v = get(idx); return v!==null ? String(v).trim() : ''; };
+
+    data.push({
+      'Número de Factura':              getS(cols.factura),
+      'Número de Radicación':           getS(cols.numRad),
+      'Número Consolidado':             getS(cols.numConsol),
+      'Fecha Radicación Consolidado':   getS(cols.fechaConsol),
+      'Fecha Radicación':               getS(cols.fechaRad),
+      'Descripción tipo Aprobación':    getS(cols.descApro),
+      'Estado reclamación':             getS(cols.estadoRec),
+      'Valor Reclamado':                getN(cols.valorRec),
+      'Valor Aprobado':                 getN(cols.valorApro),
+      'Valor Glosado':                  getN(cols.valorGlo),
+      'Fecha Devolución':               getS(cols.fechaDev),
+      'Paquete':                        getS(cols.paquete),
+      'Código Habilitación':            getS(cols.codHab),
+      'Nit':                            getS(cols.nit),
+    });
   }
 
+  console.log(`[ADRES] ${data.length} registros leídos`);
   return data;
 }
 
@@ -8845,7 +8901,11 @@ window.procesarReporteADRES = async function(){
             }).join('')}
           </tbody>
         </table>
-        ${!todosCuadra?`<div style="margin-top:10px;font-size:10px;color:var(--tx3);">⚠ Las diferencias pueden deberse a reclamaciones no encontradas (${noEncontradas} en FURIPS sin match en el reporte ADRES) o a registros históricos no incluidos en este reporte.</div>`:''}
+        ${!todosCuadra?`<div style="margin-top:10px;font-size:10px;color:var(--tx3);">
+          ℹ️ <strong>Nota sobre diferencias:</strong><br>
+          • El reporte ADRES contiene ${adresTotRec} facturas de las ${furipsTotRec} en FURIPS — la diferencia (${furipsTotRec-adresTotRec}) son reclamaciones sin radicar o de otros períodos no incluidos en este reporte.<br>
+          • Las diferencias en valores aprobados/glosados se corrigen automáticamente con la sincronización. Si persisten, vuelve a sincronizar.
+        </div>`:''}
       </div>
       ${[
         {label:'✅ Actualizadas', n:actualizadas, color:'#A3D55D'},
