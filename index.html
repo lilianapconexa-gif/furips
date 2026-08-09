@@ -8853,33 +8853,47 @@ window.limpiarDuplicadosADRES = async function(){
 
   const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
   const afectadas = src.filter(r => r.respuestasAdres?.length > 0);
-  
-  let corregidas = 0, errores = 0;
-  toast(`⏳ Revisando ${afectadas.length} reclamaciones...`,'ok');
+
+  // Mostrar progress en el módulo ADRES
+  const prog = document.getElementById('adres-progress');
+  const progTxt = document.getElementById('adres-progress-txt');
+  const progBarra = document.getElementById('adres-progress-barra');
+  const progSub = document.getElementById('adres-progress-sub');
+  if(prog) prog.style.display = 'block';
+  const setP = (pct,txt,sub='') => {
+    if(progTxt) progTxt.textContent = txt;
+    if(progBarra) progBarra.style.width = pct+'%';
+    if(progSub) progSub.textContent = sub;
+  };
+
+  setP(0, `⏳ Revisando ${afectadas.length} reclamaciones con historial ADRES...`);
+
+  let corregidas = 0, errores = 0, revisadas = 0;
 
   for(const rec of afectadas){
+    revisadas++;
+    const pct = Math.round(revisadas/afectadas.length*90);
+    if(revisadas % 20 === 0)
+      setP(pct, `⏳ Revisando ${revisadas} de ${afectadas.length}...`, rec.factura||'');
+
     const rads = rec.respuestasAdres;
-    
-    // Deduplicar por número de radicación — mantener la entrada más reciente
+
+    // Deduplicar por número de radicación
     const seen = {};
     rads.forEach(r => {
       const num = String(r.numero||'').trim();
       if(!num) return;
-      // Mantener la más reciente (mayor fechaSync o última en aparecer)
       if(!seen[num] || (r.fechaSync && (!seen[num].fechaSync || r.fechaSync > seen[num].fechaSync))){
         seen[num] = r;
       }
     });
-    
+
     const dedup = Object.values(seen);
-    
-    // Solo actualizar si hay cambio real
-    if(dedup.length === rads.length) continue;
-    
-    // Recalcular estado actual desde la entrada más reciente
-    const ordenadas = [...dedup].sort((a,b) => String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    if(dedup.length === rads.length) continue; // sin duplicados
+
+    const ordenadas = [...dedup].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const ultima = ordenadas[ordenadas.length-1];
-    
+
     try{
       await updateDoc(doc(db,'reclamaciones',rec.id), {
         respuestasAdres: dedup,
@@ -8888,7 +8902,6 @@ window.limpiarDuplicadosADRES = async function(){
         'respuestaAdres.valorGlosado': ultima?.valorGlosado || 0,
         actualizado: serverTimestamp()
       });
-      // Actualizar en memoria
       rec.respuestasAdres = dedup;
       if(rec.respuestaAdres){
         rec.respuestaAdres.estado = ultima?.estado || '';
@@ -8899,8 +8912,34 @@ window.limpiarDuplicadosADRES = async function(){
     }catch(e){ errores++; console.error(rec.factura, e.message); }
   }
 
+  setP(100, `✔ Limpieza completada — ${corregidas} reclamaciones corregidas${errores?' · ⚠ '+errores+' errores':''}`,
+    `Revisadas: ${revisadas} · Sin duplicados: ${revisadas-corregidas} · Corregidas: ${corregidas}`);
+
+  // Actualizar dashboard
   aplicarFiltroCliente(); renderLista(); updStats();
-  toast(`✔ Limpieza completada: ${corregidas} corregidas${errores?' · ⚠ '+errores+' errores':''}`, errores?'w':'ok');
+
+  // Mostrar resultado en el panel de resultados
+  const resDiv = document.getElementById('adres-resultados');
+  const resumen = document.getElementById('adres-resumen');
+  if(resumen) resumen.innerHTML = [
+    {label:'🔍 Revisadas', n:revisadas, color:'#00B2E2'},
+    {label:'✅ Corregidas', n:corregidas, color:'#A3D55D'},
+    {label:'⚪ Sin duplicados', n:revisadas-corregidas, color:'#999899'},
+    {label:'❌ Errores', n:errores, color:'#f85149'},
+  ].map(s=>`<div style="background:var(--sur2);border-radius:8px;padding:12px;text-align:center;border-left:3px solid ${s.color};">
+    <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:${s.color};">${s.n}</div>
+    <div style="font-size:10px;color:var(--tx2);margin-top:4px;">${s.label}</div>
+  </div>`).join('');
+  if(resDiv) resDiv.style.display = 'block';
+
+  const logEl = document.getElementById('adres-log');
+  if(logEl) logEl.innerHTML = `<div style="color:#A3D55D;">✅ Limpieza de duplicados completada exitosamente.</div>
+    <div style="color:var(--tx2);margin-top:4px;">• ${corregidas} reclamaciones tenían entradas duplicadas y fueron corregidas.</div>
+    <div style="color:var(--tx2);">• ${revisadas-corregidas} reclamaciones no tenían duplicados.</div>
+    ${errores?`<div style="color:#f85149;">• ${errores} errores — ver consola.</div>`:''}
+    <div style="color:var(--tx3);margin-top:8px;font-size:10px;">El dashboard ha sido actualizado con los valores corregidos.</div>`;
+  const footer = document.getElementById('adres-log-footer');
+  if(footer) footer.textContent = new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
 };
 // ══ FIN LIMPIEZA ══
 
