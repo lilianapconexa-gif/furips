@@ -8698,9 +8698,10 @@ window.procesarReporteADRES = async function(){
       const cambios = {};
       let hayCambios = false;
 
-      // Obtener array existente — NO migrar el singular para evitar duplicados
-      // El singular (respuestaAdres) se actualiza por separado al final
-      const respActuales = rec.respuestasAdres ? [...rec.respuestasAdres] : [];
+      // RECONSTRUIR respuestasAdres[] desde cero con los datos del Excel ADRES
+      // Solo conservar entradas que NO vengan de sync-adres (ej: radicaciones manuales)
+      const respPrevias = (rec.respuestasAdres||[]).filter(r=>r.fuente && r.fuente!=='sync-adres');
+      const respActuales = [...respPrevias];
 
       // Ordenar filas ADRES por fecha de radicación
       adresFilas.sort((a,b)=>{
@@ -8966,14 +8967,13 @@ window.limpiarDuplicadosADRES = async function(){
   // Buscar reclamaciones con respuestaAdres que parezcan duplicados
   // (valorAprobado o valorGlosado anormalmente alto vs valor reclamado)
   const val3 = r => parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+  // Afectar TODAS las que tienen respuestasAdres[] o respuestaAdres inflado
   const afectadas = src.filter(r => {
-    // Tiene array respuestasAdres con duplicados
     if(r.respuestasAdres?.length > 0) return true;
-    // O tiene respuestaAdres singular con valor sospechoso (mayor al reclamado)
     const vRec = val3(r);
     const vApro = r.respuestaAdres?.valorAprobado||0;
-    const vGlo = r.respuestaAdres?.valorGlosado||0;
-    if(vRec > 0 && (vApro > vRec || vGlo > vRec)) return true;
+    const vGlo  = r.respuestaAdres?.valorGlosado||0;
+    if(vRec > 0 && (vApro > vRec * 1.5 || vGlo > vRec * 1.5)) return true;
     return false;
   });
 
@@ -9024,26 +9024,28 @@ window.limpiarDuplicadosADRES = async function(){
         updateData['respuestaAdres.estado'] = ultima?.estado || rec.respuestaAdres?.estado || '';
         updateData['respuestaAdres.valorAprobado'] = ultima?.valorAprobado || 0;
         updateData['respuestaAdres.valorGlosado'] = ultima?.valorGlosado || 0;
+        rec.respuestasAdres = dedup;
+        if(rec.respuestaAdres){
+          rec.respuestaAdres.estado = ultima?.estado || '';
+          rec.respuestaAdres.valorAprobado = ultima?.valorAprobado || 0;
+          rec.respuestaAdres.valorGlosado = ultima?.valorGlosado || 0;
+        }
       } else {
-        // Sin array pero con valores inflados en singular — verificar
+        // Sin array — limpiar valores inflados en singular
         const vRec = val3(rec);
         const vApro = rec.respuestaAdres?.valorAprobado||0;
-        const vGlo = rec.respuestaAdres?.valorGlosado||0;
-        if(vRec > 0 && (vApro > vRec || vGlo > vRec)){
-          // Valores mayores al reclamado = fueron duplicados — necesita re-sincronización con ADRES
-          // Por ahora marcar para revisión sin borrar
-          updateData['respuestaAdres.requiereVerificacion'] = true;
-          updateData['respuestaAdres.valorAproOriginal'] = vApro;
-          updateData['respuestaAdres.valorGloOriginal'] = vGlo;
-        } else { corregidas--; } // no había nada que corregir
+        const vGlo  = rec.respuestaAdres?.valorGlosado||0;
+        if(vRec > 0 && (vApro > vRec * 1.5 || vGlo > vRec * 1.5)){
+          updateData['respuestaAdres.valorAprobado'] = 0;
+          updateData['respuestaAdres.valorGlosado']  = 0;
+          updateData['respuestaAdres.requiereSync']  = true;
+          if(rec.respuestaAdres){
+            rec.respuestaAdres.valorAprobado = 0;
+            rec.respuestaAdres.valorGlosado  = 0;
+          }
+        } else { corregidas--; }
       }
       await updateDoc(doc(db,'reclamaciones',rec.id), updateData);
-      rec.respuestasAdres = dedup.length>0 ? dedup : rec.respuestasAdres;
-      if(rec.respuestaAdres && dedup.length>0){
-        rec.respuestaAdres.estado = ultima?.estado || '';
-        rec.respuestaAdres.valorAprobado = ultima?.valorAprobado || 0;
-        rec.respuestaAdres.valorGlosado = ultima?.valorGlosado || 0;
-      }
       corregidas++;
     }catch(e){ errores++; console.error(rec.factura, e.message); }
   }
