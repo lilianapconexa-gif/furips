@@ -6558,14 +6558,14 @@ window.getRespuestaAdres = (r) => {
     if(v === 'en_revision') return null;
     return v;
   };
-  // Prioridad: array respuestasAdres[] (fuente ADRES) → singular → modelo viejo
+  // FUENTE ÚNICA: array respuestasAdres[] viene de ADRES — es la verdad
   if(r.respuestasAdres?.length){
-    // Tomar el estado de la última radicación por fecha
     const sorted=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const ultima=sorted[sorted.length-1];
     if(ultima?.estado) return norm(ultima.estado);
   }
-  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado); // modelo singular
+  // Fallback: singular (para reclamaciones sin sync ADRES aún)
+  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado);
   // Modelo viejo: derivar desde radicado.estado
   const old = r.radicado?.estado;
   if(!old) return null;
@@ -7554,14 +7554,11 @@ window.updPortafolio = function(){
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
   const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
   // Valor aprobado y glosado: leer desde respuestasAdres[] o respuestaAdres singular
-  const getValApro=r=>{
-    if(r.respuestasAdres?.length) return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorAprobado||0),0);
-    return r.respuestaAdres?.valorAprobado||0;
-  };
-  const getValGlo=r=>{
-    if(r.respuestasAdres?.length) return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorGlosado||0),0);
-    return r.respuestaAdres?.valorGlosado||0;
-  };
+  // respuestaAdres.valorAprobado/Glosado ya contiene los totales correctos de ADRES
+  const getValApro=r=>r.respuestaAdres?.valorAprobado||
+    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorAprobado||0),0);
+  const getValGlo=r=>r.respuestaAdres?.valorGlosado||
+    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorGlosado||0),0);
   const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
@@ -8753,11 +8750,13 @@ window.procesarReporteADRES = async function(){
         const normRad = s => String(s||'').trim().replace(/\.0$/,'');
         const idx = respActuales.findIndex(r=>normRad(r.numero)===normRad(numRad));
 
+        const valorReclamado = parseFloat(String(row['Valor Reclamado']||'0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
         const entradaNueva = {
           numero: numRad,
           lote: numConsolidado,
           fecha: fechaRad,
           estado: estadoAdres,
+          valorReclamado,
           valorAprobado,
           valorGlosado,
           descripcion: descAprobacion,
@@ -8798,16 +8797,28 @@ window.procesarReporteADRES = async function(){
       // Calcular totales reales sumando TODAS las radicaciones del historial
       const totalAprobado = respActuales.reduce((a,r)=>a+(r.valorAprobado||0),0);
       const totalGlosado  = respActuales.reduce((a,r)=>a+(r.valorGlosado||0),0);
+      // Calcular totales reales desde el array completo
+      const totalVApro = respActuales.reduce((a,r)=>a+(r.valorAprobado||0),0);
+      const totalVGlo  = respActuales.reduce((a,r)=>a+(r.valorGlosado||0),0);
+      const totalVRec  = respActuales.reduce((a,r)=>a+(r.valorReclamado||0),0);
       cambios['respuestasAdres'] = respActuales;
+      // Sobrescribir COMPLETAMENTE respuestaAdres singular — única fuente de verdad: ADRES
       cambios['respuestaAdres'] = {
         estado: ultima.estado,
-        valorAprobado: ultima.valorAprobado||0,
-        valorGlosado: ultima.valorGlosado||0,
+        valorAprobado: totalVApro,
+        valorGlosado: totalVGlo,
+        valorReclamadoAdres: totalVRec || ultima.valorReclamado || 0,
         descripcion: ultima.descripcion||'',
         fecha: ultima.fechaRespuesta||ultima.fecha||'',
         fuenteADRES: true,
         fechaSync: new Date().toISOString(),
       };
+      // Actualizar valor reclamado en FURIPS 1 con el valor que ADRES tiene registrado
+      // Esto garantiza que los planos cuadren con el Excel ADRES
+      if(totalVRec > 0){
+        cambios['furips1.c97'] = totalVRec;
+        cambios['furips1.c96'] = totalVRec;
+      }
 
       // Radicado actual = último número de radicación
       if(ultima.numero && rec.radicado?.numero !== ultima.numero){
@@ -9280,19 +9291,23 @@ window.resetValoresADRES = async function(){
     // Resetear si: valores mayores al reclamado O tiene múltiples entradas en array
     if(vRec>0&&(vApro>vRec*1.2||vGlo>vRec*1.2||tieneRadsInfladas)){
       try{
+        const estadoReset = rec.radicado?.numero?'en_tramite':'';
         await updateDoc(doc(db,'reclamaciones',rec.id),{
-          'respuestaAdres.valorAprobado':0,
-          'respuestaAdres.valorGlosado':0,
-          'respuestaAdres.estado': rec.radicado?.numero?'en_tramite':'',
-          'respuestasAdres': [],
+          respuestaAdres: {
+            estado: estadoReset,
+            valorAprobado: 0,
+            valorGlosado: 0,
+            valorReclamadoAdres: 0,
+            fuenteADRES: false,
+          },
+          respuestasAdres: [],
           actualizado: serverTimestamp()
         });
         rec.respuestasAdres=[];
-        if(rec.respuestaAdres){
-          rec.respuestaAdres.valorAprobado=0;
-          rec.respuestaAdres.valorGlosado=0;
-          rec.respuestaAdres.estado=rec.radicado?.numero?'en_tramite':'';
-        }
+        if(!rec.respuestaAdres) rec.respuestaAdres={};
+        rec.respuestaAdres.valorAprobado=0;
+        rec.respuestaAdres.valorGlosado=0;
+        rec.respuestaAdres.estado=estadoReset;
         reseteadas++;
       }catch(e){errores++;console.error(rec.factura,e.message);}
     }
