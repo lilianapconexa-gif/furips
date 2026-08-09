@@ -619,6 +619,40 @@ select option{background:var(--sur2);}
           <!-- TAB: Resumen -->
           <div id="chq-pane-resumen" style="display:none;">
             <div id="chq-resumen-html"></div>
+            <!-- Estado de radicación con soportes -->
+            <div style="margin-top:14px;background:var(--sur2);border-radius:8px;padding:14px;border:1px solid var(--brd);">
+              <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:10px;font-family:var(--mono);letter-spacing:.5px;">📋 ESTADO DE RADICACIÓN CON SOPORTES</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
+                  <input type="radio" name="chq-rad-estado" id="chq-rad-completo" value="completo" style="margin-top:3px;accent-color:#A3D55D;">
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:#A3D55D;">✅ Soportes completos</div>
+                    <div style="font-size:10px;color:var(--tx3);">Radicada con documentación completa, sin observaciones</div>
+                  </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
+                  <input type="radio" name="chq-rad-estado" id="chq-rad-faltantes" value="faltantes_autorizados" style="margin-top:3px;accent-color:#e3b341;">
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:#e3b341;">⚠️ Radicada con faltantes — autorización IPS</div>
+                    <div style="font-size:10px;color:var(--tx3);">La IPS autorizó radiar con soportes incompletos. Glosa esperada y justificada.</div>
+                  </div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
+                  <input type="radio" name="chq-rad-estado" id="chq-rad-obs" value="observacion_interna" style="margin-top:3px;accent-color:#999899;">
+                  <div>
+                    <div style="font-size:12px;font-weight:600;color:#999899;">📋 Observación interna CONEXA</div>
+                    <div style="font-size:10px;color:var(--tx3);">Nota interna sobre condiciones especiales de esta radicación</div>
+                  </div>
+                </label>
+              </div>
+              <div id="chq-rad-justificacion-wrap" style="margin-top:10px;display:none;">
+                <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:4px;">Justificación / Nota de autorización</label>
+                <textarea id="chq-rad-justificacion" rows="3"
+                  placeholder="Ej: La IPS autorizó por correo el 15/07/2026 radicar sin epicrisis por demora del médico tratante. Se espera glosa serie 3101."
+                  style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;resize:vertical;"></textarea>
+              </div>
+            </div>
+
             <div style="margin-top:14px;">
               <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px;">Observaciones generales del revisor</label>
               <textarea id="chq-obs" rows="4" placeholder="Ej: Falta epicrisis de UCI, soporte de radiología sin firma de especialista..."
@@ -635,6 +669,50 @@ select option{background:var(--sur2);}
         <!-- Estado vacío -->
         <div id="chq-empty" style="text-align:center;padding:40px 0;color:var(--tx3);font-size:13px;">
           Selecciona una reclamación para iniciar la revisión de soportes.
+        </div>
+
+      </div>
+
+      <!-- ── CARGA MASIVA DE SOPORTES ── -->
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:14px;">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">📊 ACTUALIZACIÓN MASIVA DE ESTADO DE SOPORTES</div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:14px;">
+          Descarga la plantilla, completa el estado de soportes para cada reclamación y sube el archivo para actualizar todas en Firestore.
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--sur2);border-radius:8px;padding:12px;border:1px solid var(--brd);">
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① Descargar plantilla</div>
+            <div style="font-size:10px;color:var(--tx3);margin-bottom:10px;">Excel con todas las reclamaciones listas para completar</div>
+            <button onclick="descargarPlantillaSoportes()" class="btn bp" style="font-size:11px;width:100%;">⬇ Descargar plantilla Excel</button>
+          </div>
+          <div style="background:var(--sur2);border-radius:8px;padding:12px;border:1px solid var(--brd);">
+            <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">② Subir archivo completado</div>
+            <div style="font-size:10px;color:var(--tx3);margin-bottom:10px;">Sube el Excel con los estados de soportes completados</div>
+            <input type="file" id="chq-masivo-input" accept=".xlsx,.xls,.csv" style="display:none;">
+            <button onclick="document.getElementById('chq-masivo-input').click()" class="btn bs" style="font-size:11px;width:100%;">📂 Seleccionar archivo</button>
+          </div>
+        </div>
+
+        <!-- Instrucciones columnas -->
+        <div style="background:rgba(0,178,226,.06);border:1px solid rgba(0,178,226,.2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;">
+          <div style="font-weight:700;color:#00B2E2;margin-bottom:6px;">📋 Columnas de la plantilla:</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;color:var(--tx2);">
+            <div><strong>factura</strong> — N° factura (no editar)</div>
+            <div><strong>consecutivo</strong> — Consecutivo (no editar)</div>
+            <div><strong>estadoActual</strong> — Estado actual (referencia)</div>
+            <div><strong style="color:#00B2E2;">soporteEstado</strong> — <em>completo</em> / <em>faltantes_autorizados</em> / <em>observacion_interna</em></div>
+            <div><strong style="color:#00B2E2;">soporteJustificacion</strong> — Nota de justificación (si aplica)</div>
+            <div><strong>soporteActual</strong> — Estado actual guardado (referencia)</div>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div id="chq-masivo-status" style="display:none;margin-bottom:10px;">
+          <div style="font-size:11px;color:var(--tx2);margin-bottom:6px;" id="chq-masivo-txt">Procesando...</div>
+          <div style="height:6px;background:var(--sur2);border-radius:3px;overflow:hidden;">
+            <div id="chq-masivo-barra" style="height:100%;background:#00B2E2;width:0%;transition:width .2s;border-radius:3px;"></div>
+          </div>
         </div>
 
       </div>
@@ -5378,6 +5456,14 @@ function chqCargarRec(id){
   // Cargar obs guardadas
   const obs=g('chq-obs');
   if(obs) obs.value = CHQ_REC.chequeo_soportes?.obs||'';
+  // Cargar estado de radicación con soportes
+  const radEst2 = CHQ_REC.chequeo_soportes?.soporteRadicacion || 'completo';
+  const radJus2 = CHQ_REC.chequeo_soportes?.soporteJustificacion || '';
+  document.querySelectorAll('input[name="chq-rad-estado"]').forEach(r=>{ r.checked = r.value===radEst2; });
+  const justWrap2 = document.getElementById('chq-rad-justificacion-wrap');
+  const justTA2   = document.getElementById('chq-rad-justificacion');
+  if(justWrap2) justWrap2.style.display = radEst2!=='completo'?'block':'none';
+  if(justTA2)   justTA2.value = radJus2;
 };
 
 function chqRenderHeader(){
@@ -5570,14 +5656,33 @@ function chqBuildResumen(){
     </table>`:''}`;
 }
 
+// ── Estado radicación: mostrar/ocultar justificación ──
+(function setupChqRadEstado(){
+  const setup = () => {
+    document.querySelectorAll('input[name="chq-rad-estado"]').forEach(radio => {
+      radio.addEventListener('change', function(){
+        const wrap = document.getElementById('chq-rad-justificacion-wrap');
+        if(wrap) wrap.style.display = (this.value !== 'completo') ? 'block' : 'none';
+      });
+    });
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup);
+  else setup();
+})();
+
 window.chqGuardar=async()=>{
   if(!CHQ_REC){ toast('No hay reclamación seleccionada.','w'); return; }
   const soportes=chqSoportesAplican(CHQ_REC);
   const obs=g('chq-obs')?.value||'';
+  // Leer estado de radicación con soportes
+  const radEstado = document.querySelector('input[name="chq-rad-estado"]:checked')?.value || 'completo';
+  const radJustif = g('chq-rad-justificacion')?.value?.trim() || '';
   const payload={
     chequeo_soportes:{
       items: CHQ_ESTADO,
       obs,
+      soporteRadicacion: radEstado,
+      soporteJustificacion: radJustif,
       revisadoPor: USER.nombre||USER.email||'',
       revisadoPorUid: USER.uid,
       fecha: new Date().toISOString(),
@@ -7473,7 +7578,7 @@ window.updPortafolio = function(){
     kpiR('Efectividad de cobro', efectividad+'%', semEfect, '>80%',
       `${pagadas.length} aprobadas de ${auditadasAdres.length} auditadas por ADRES`)+
     kpiR('Tasa de glosa', tasaGlosa+'%', semGlosa, '<10%',
-      `${glosadas.length} glosadas de ${auditadasAdres.length} auditadas`)+
+      `${glosadas.length} glosadas de ${auditadasAdres.length} auditadas${glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados').length>0?' · '+glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados').length+' justificadas (autorización IPS)':''}`)+
     kpiR('Tasa de rechazo', tasaRechazo+'%', semRech, '<5%',
       `${anuladas.length} anuladas / retiradas del portafolio`)+
     kpiR('Cobertura de radicación', coberturaRad+'%', semCob, '>80%',
@@ -8047,12 +8152,18 @@ DATOS DEL PORTAFOLIO (${periodoLabel}):
       conclusiones.push(`De las <strong>${auditadas.length} reclamaciones auditadas por ADRES</strong>, se han reconocido ${pagadas.length} por ${fm2(pagV)}. El ${enTramite.length} restante en trámite representa el mayor potencial de recuperación del portafolio.`);
 
     // 4. Glosas
+    const glosasJustificadas = glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
+    const tasaGlosaReal = pct2(glosadas.length - glosasJustificadas.length, Math.max(auditadasAdres.length,1));
     if(tasaGlosa <= 10)
       conclusiones.push(`La <strong>tasa de glosa del ${tasaGlosa}%</strong> se mantiene dentro de los parámetros óptimos, reflejando la calidad técnica y documental con que CONEXA prepara y presenta cada reclamación.`);
     else if(tasaGlosa <= 25)
       conclusiones.push(`La tasa de glosa del <strong>${tasaGlosa}%</strong> (${glosadas.length} reclamaciones por ${fm2(gloV)}) está siendo gestionada activamente. CONEXA realiza seguimiento caso a caso para su resolución ante ADRES.`);
     else
       conclusiones.push(`Se registran <strong>${glosadas.length} reclamaciones glosadas</strong> por ${fm2(gloV)}, correspondientes al ${tasaGlosa}% de las auditadas. CONEXA gestiona la subsanación de observaciones para lograr su reconocimiento.`);
+
+    // 4b. Glosas justificadas
+    if(glosasJustificadas.length > 0)
+      conclusiones.push(`De las ${glosadas.length} reclamaciones glosadas, <strong>${glosasJustificadas.length} fueron radicadas con faltantes previamente autorizados por ${ips}</strong>, lo que las clasifica como glosas esperadas y justificadas. La tasa de glosa no atribuible a CONEXA es del ${tasaGlosaReal}%.`);
 
     // 5. Pagos logrados
     conclusiones.push(`A la fecha se han <strong>reconocido ${fm2(pagV)}</strong> en ${pagadas.length} reclamaciones aprobadas por ADRES, representando el resultado tangible de la gestión de cobro realizada por CONEXA en nombre de ${ips}.`);
@@ -8084,6 +8195,165 @@ DATOS DEL PORTAFOLIO (${periodoLabel}):
     if(btn){ btn.disabled=false; btn.textContent='✨ Generar conclusiones'; }
   }
 };
+
+
+// ══ MASIVO SOPORTES ══════════════════════════════════════════
+window.descargarPlantillaSoportes = function(){
+  const src = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
+  if(!src.length){ toast('No hay reclamaciones cargadas.','w'); return; }
+
+  const estados = {
+    'completo':              'completo',
+    'faltantes_autorizados': 'faltantes_autorizados',
+    'observacion_interna':   'observacion_interna',
+  };
+
+  // Construir CSV con BOM para Excel
+  const S = '\t', N = '\n';
+  const header = ['factura','consecutivo','ips','estadoGestion','soporteEstado','soporteJustificacion','soporteActual'].join(S);
+  const rows = src.map(r => {
+    const chq = r.chequeo_soportes || {};
+    return [
+      r.factura||'',
+      r.consec||'',
+      r.codHab||r.nitIPS||'',
+      r.estadoGestion||'',
+      chq.soporteRadicacion||'completo',          // valor actual (editar)
+      chq.soporteJustificacion||'',               // justificación actual (editar)
+      chq.soporteRadicacion||'(sin registro)',     // referencia solo lectura
+    ].join(S);
+  });
+
+  // Instrucciones al final
+  const instrucciones = [
+    '', '=== VALORES VÁLIDOS PARA soporteEstado ===',
+    'completo					Soportes completos sin observaciones',
+    'faltantes_autorizados			Radicada con faltantes, autorización IPS',
+    'observacion_interna			Observación interna CONEXA',
+  ].join('\n');
+
+  const csv = '﻿' + [header, ...rows, instrucciones].join(N);
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Plantilla_Soportes_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast(`⬇ Plantilla descargada · ${src.length} reclamaciones`,'ok');
+};
+
+// Procesar Excel/CSV de soportes masivo
+(function setupChqMasivo(){
+  const setup = () => {
+    const inp = document.getElementById('chq-masivo-input');
+    if(inp) inp.addEventListener('change', async function(){
+      if(!this.files[0]) return;
+      await procesarSoportesMasivo(this.files[0]);
+      this.value = '';
+    });
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup);
+  else setup();
+})();
+
+async function procesarSoportesMasivo(file){
+  const statusDiv = document.getElementById('chq-masivo-status');
+  const txt = document.getElementById('chq-masivo-txt');
+  const barra = document.getElementById('chq-masivo-barra');
+  if(statusDiv) statusDiv.style.display = 'block';
+
+  // Leer archivo
+  let rows = [];
+  try{
+    if(typeof XLSX !== 'undefined'){
+      const buf = await file.arrayBuffer();
+      const wb  = XLSX.read(buf, {type:'array'});
+      const ws  = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+    } else {
+      const text = await file.text();
+      const lines = text.split('\n').filter(l=>l.trim()&&!l.startsWith('===')&&!l.startsWith('==='));
+      if(!lines.length){ toast('Archivo vacío.','w'); return; }
+      const headers = lines[0].replace('﻿','').split('	').map(h=>h.trim().toLowerCase());
+      rows = lines.slice(1).map(l=>{
+        const vals = l.split('\t');
+        const obj = {};
+        headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
+        return obj;
+      }).filter(r => r.factura);
+    }
+  }catch(e){ toast('Error leyendo archivo: '+e.message,'e'); return; }
+
+  // Filtrar filas válidas
+  const validos = ['completo','faltantes_autorizados','observacion_interna'];
+  const src = window.FURIPS_STATE?.getRecs() || (typeof RECS!=='undefined'?RECS:[]);
+  const actualizaciones = [];
+  const errores = [];
+
+  rows.forEach((r,i) => {
+    const factura = String(r.factura||'').trim();
+    const estado  = String(r.soporteestado||r.soporteEstado||r['soporteestado']||'').trim().toLowerCase();
+    const justif  = String(r.soportejustificacion||r.soporteJustificacion||'').trim();
+
+    if(!factura || factura.startsWith('=')) return;
+    if(!validos.includes(estado)){
+      errores.push(`Fila ${i+2}: "${factura}" — estado inválido "${estado}"`);
+      return;
+    }
+
+    const rec = src.find(r2 => r2.factura === factura);
+    if(!rec){ errores.push(`Fila ${i+2}: "${factura}" — no encontrada`); return; }
+
+    actualizaciones.push({ rec, estado, justif });
+  });
+
+  if(!actualizaciones.length){
+    toast(errores.length?`Sin válidas. ${errores[0]}`:'Sin filas para actualizar.','w');
+    if(statusDiv) statusDiv.style.display = 'none';
+    return;
+  }
+
+  if(!confirm(`¿Actualizar estado de soportes en ${actualizaciones.length} reclamaciones?${errores.length?' ('+errores.length+' omitidas)':''}`)){
+    if(statusDiv) statusDiv.style.display = 'none';
+    return;
+  }
+
+  let ok=0, err=0;
+  for(let i=0; i<actualizaciones.length; i++){
+    const {rec, estado, justif} = actualizaciones[i];
+    const pct = Math.round((i+1)/actualizaciones.length*100);
+    if(txt) txt.textContent = `⏳ Procesando ${i+1} de ${actualizaciones.length}... (${pct}%)`;
+    if(barra) barra.style.width = pct+'%';
+    try{
+      // Merge con chequeo_soportes existente
+      const chqActual = rec.chequeo_soportes || {};
+      await updateDoc(doc(db,'reclamaciones',rec.id), {
+        'chequeo_soportes.soporteRadicacion':   estado,
+        'chequeo_soportes.soporteJustificacion': justif,
+        'chequeo_soportes.actualizadoMasivo':    new Date().toISOString(),
+        'chequeo_soportes.actualizadoPor':       USER.nombre||USER.email||'',
+        actualizado: serverTimestamp()
+      });
+      // Actualizar en memoria
+      if(!rec.chequeo_soportes) rec.chequeo_soportes = {};
+      rec.chequeo_soportes.soporteRadicacion    = estado;
+      rec.chequeo_soportes.soporteJustificacion = justif;
+      ok++;
+    }catch(e){ console.error(rec.factura, e.message); err++; }
+  }
+
+  const msg = `✔ ${ok} reclamaciones actualizadas${err?' · ⚠ '+err+' errores':''}${errores.length?' · '+errores.length+' omitidas':''}`;
+  if(txt){ txt.textContent = msg; txt.style.color = err?'var(--warn)':'#A3D55D'; }
+  if(barra){ barra.style.width='100%'; barra.style.background= err?'var(--warn)':'#A3D55D'; }
+  toast(msg, err?'w':'ok');
+
+  // Mostrar errores si los hay
+  if(errores.length){
+    console.warn('Errores en carga masiva soportes:', errores);
+    toast(`⚠ ${errores.length} filas omitidas — ver consola`,'w');
+  }
+}
+// ══ FIN MASIVO SOPORTES ══════════════════════════════════════
 
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
