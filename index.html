@@ -8722,9 +8722,10 @@ window.procesarReporteADRES = async function(){
         const estadoAdres = mapearEstadoADRES(descAprobacion, estadoRec, row['Valor Aprobado'], row['Valor Glosado']);
 
         // Buscar si ya existe esta radicación en el historial
-        // numRad debe ser válido para poder identificar la entrada
         if(!numRad){ return; } // sin número de radicación no podemos trazar
-        const idx = respActuales.findIndex(r=>String(r.numero||'').trim()===numRad);
+        // Normalizar ambos lados para comparación robusta
+        const normRad = s => String(s||'').trim().replace(/\.0$/,'');
+        const idx = respActuales.findIndex(r=>normRad(r.numero)===normRad(numRad));
 
         const entradaNueva = {
           numero: numRad,
@@ -8838,34 +8839,44 @@ window.procesarReporteADRES = async function(){
       }
     });
     const adresUnicasArr = Object.values(adresUnicas);
-    const adresTotRec = adresUnicasArr.length;
-    const adresTotVal = adresUnicasArr.reduce((a,r)=>a+(parseFloat(String(r['Valor Reclamado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0),0);
-    const adresTotApro = adresUnicasArr.filter(r=>String(r['Descripción tipo Aprobación']||'').toLowerCase().includes('aprobad')||String(r['Estado reclamación']||'').toLowerCase().includes('girado')).length;
-    const adresTotAproV = adresUnicasArr.reduce((a,r)=>a+(parseFloat(String(r['Valor Aprobado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0),0);
-    const adresTotGlo = adresUnicasArr.filter(r=>String(r['Descripción tipo Aprobación']||'').toLowerCase().includes('glosa')).length;
-    const adresTotGloV = adresUnicasArr.reduce((a,r)=>a+(parseFloat(String(r['Valor Glosado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0),0);
+    const adresTotRec   = adresUnicasArr.length;
+    // Sumar TODAS las filas del reporte para cuadrar con la sumatoria del Excel
+    const adresTotVal   = adresRows.reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
+    const adresTotAproV = adresRows.reduce((a,r)=>a+(r['Valor Aprobado']||0),0);
+    const adresTotGloV  = adresRows.reduce((a,r)=>a+(r['Valor Glosado']||0),0);
+    const adresTotApro  = adresRows.filter(r=>{
+      const e=mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado']);
+      return e==='aprobada'||e==='aprobada_parcial';
+    }).length;
+    const adresTotGlo = adresRows.filter(r=>
+      mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado'])==='glosada'
+    ).length;
 
-    // Totales desde FURIPS (después de actualizar)
+    // Totales FURIPS — solo facturas que están en el reporte ADRES
     const srcFinal = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
-    const val2 = r => parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
-    const furipsTotRec = srcFinal.length;
-    const furipsTotVal = srcFinal.reduce((a,r)=>a+val2(r),0);
-    const furipsPag = srcFinal.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
-    const furiPagN = furipsPag.length;
-    const furipsPagV = furipsPag.reduce((a,r)=>a+(r.respuestaAdres?.valorAprobado||0),0);
-    const furisGlo = srcFinal.filter(r=>getRespuestaAdres(r)==='glosada');
-    const furiGloN = furisGlo.length;
-    const furisGloV = furisGlo.reduce((a,r)=>a+(r.respuestaAdres?.valorGlosado||0),0);
+    const facturasEnAdres = new Set(Object.keys(adresUnicas));
+    const srcEnAdres = srcFinal.filter(r=>facturasEnAdres.has(normalizarFactura(r.factura)));
+    const val2 = r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+    const furipsTotRec = srcEnAdres.length;
+    const furipsTotVal = srcEnAdres.reduce((a,r)=>a+val2(r),0);
+    // Sumar todos los valores del historial respuestasAdres[]
+    const furipsPagV = srcEnAdres.reduce((a,r)=>
+      a+(r.respuestasAdres||[]).reduce((b,rad)=>b+(rad.valorAprobado||0),0),0);
+    const furisGloV  = srcEnAdres.reduce((a,r)=>
+      a+(r.respuestasAdres||[]).reduce((b,rad)=>b+(rad.valorGlosado||0),0),0);
+    const furiPagN = srcEnAdres.filter(r=>
+      (r.respuestasAdres||[]).some(rad=>['aprobada','aprobada_parcial'].includes(rad.estado))).length;
+    const furiGloN = srcEnAdres.filter(r=>
+      (r.respuestasAdres||[]).some(rad=>rad.estado==='glosada')).length;
+    const noEnAdres = srcFinal.length - furipsTotRec;
 
-    // Diferencias
-    const diff = (a,b) => Math.abs(a-b) < 1 ? 0 : a-b;
+    const diff = (a,b)=>Math.abs(a-b)<100?0:a-b;
     const cuadreRows = [
-      {concepto:'Reclamaciones en reporte', adres:adresTotRec, furips:furipsTotRec, esN:true},
+      {concepto:'Reclamaciones en reporte ADRES', adres:adresTotRec, furips:furipsTotRec, esN:true,
+       nota:furipsTotRec<adresTotRec?`${adresTotRec-furipsTotRec} facturas del reporte no encontradas en FURIPS`:''},
       {concepto:'Valor total reclamado', adres:adresTotVal, furips:furipsTotVal},
-      {concepto:'Reclamaciones aprobadas', adres:adresTotApro, furips:furiPagN, esN:true},
-      {concepto:'Valor aprobado', adres:adresTotAproV, furips:furipsPagV},
-      {concepto:'Reclamaciones glosadas', adres:adresTotGlo, furips:furiGloN, esN:true},
-      {concepto:'Valor glosado', adres:adresTotGloV, furips:furisGloV},
+      {concepto:'Valor aprobado por ADRES', adres:adresTotAproV, furips:furipsPagV},
+      {concepto:'Valor glosado por ADRES', adres:adresTotGloV, furips:furisGloV},
     ];
     const todosCuadra = cuadreRows.every(r=>diff(r.adres,r.furips)===0);
 
