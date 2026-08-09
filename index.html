@@ -7659,18 +7659,40 @@ window.asignarMasivoExcel=async function(file){
 
 window.descargarPlantillaSoportes=function(){
   if(typeof XLSX==='undefined'){toast('Cargando librería Excel...','w');setTimeout(descargarPlantillaSoportes,1500);return;}
-  const src=window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  // Usar RECS_ALL para incluir TODAS las reclamaciones sin importar el filtro activo
+  const src=(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
   if(!src.length){toast('No hay reclamaciones cargadas.','w');return;}
+  // Ordenar por consecutivo numérico
+  const sorted=[...src].sort((a,b)=>parseInt(a.consec||0)-parseInt(b.consec||0));
   const wb=XLSX.utils.book_new();
-  const header=[['factura','consecutivo','ips','estadoGestion','soporteEstado','soporteJustificacion','soporteActual']];
-  const rows=src.map(r=>{const chq=r.chequeo_soportes||{};return[r.factura||'',r.consec||'',r.codHab||r.nitIPS||'',r.estadoGestion||'',chq.soporteRadicacion||'completo',chq.soporteJustificacion||'',chq.soporteRadicacion||'(sin registro)'];});
+  const header=[['consecutivo','factura','ips','estadoGestion','soporteEstado','soporteJustificacion']];
+  const rows=sorted.map(r=>{
+    const chq=r.chequeo_soportes||{};
+    return[
+      r.consec||'',
+      r.factura||'',
+      r.codHab||r.nitIPS||'',
+      r.estadoGestion||'',
+      chq.soporteRadicacion||'completo',
+      chq.soporteJustificacion||'',
+    ];
+  });
   const ws=XLSX.utils.aoa_to_sheet([...header,...rows]);
-  ws['!cols']=[{wch:18},{wch:12},{wch:16},{wch:18},{wch:24},{wch:50},{wch:20}];
+  ws['!cols']=[{wch:12},{wch:18},{wch:16},{wch:18},{wch:24},{wch:55}];
   XLSX.utils.book_append_sheet(wb,ws,'Soportes');
-  const ws2=XLSX.utils.aoa_to_sheet([['INSTRUCCIONES'],[''],['Edita SOLO: soporteEstado y soporteJustificacion'],[''],['VALORES VÁLIDOS:'],['completo','Soportes completos'],['faltantes_autorizados','Radicada con faltantes - autorización IPS'],['observacion_interna','Observación interna CONEXA']]);
-  ws2['!cols']=[{wch:30},{wch:55}];XLSX.utils.book_append_sheet(wb,ws2,'Instrucciones');
+  const ws2=XLSX.utils.aoa_to_sheet([
+    ['INSTRUCCIONES DE USO'],[''],
+    ['Edita SOLO las columnas: soporteEstado y soporteJustificacion'],
+    ['NO modifiques: consecutivo, factura, ips, estadoGestion'],[''],
+    ['VALORES VÁLIDOS PARA soporteEstado:'],
+    ['completo','Soportes completos sin observaciones (valor por defecto)'],
+    ['faltantes_autorizados','Radicada con faltantes - la IPS autorizó radicar así (requiere justificación)'],
+    ['observacion_interna','Observación interna CONEXA'],
+  ]);
+  ws2['!cols']=[{wch:30},{wch:60}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Instrucciones');
   XLSX.writeFile(wb,`Plantilla_Soportes_${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast(`⬇ Plantilla Excel · ${src.length} reclamaciones`,'ok');
+  toast(`⬇ Plantilla Excel · ${sorted.length} reclamaciones ordenadas por consecutivo`,'ok');
 };
 
 async function procesarSoportesMasivo(file){
