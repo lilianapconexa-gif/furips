@@ -9375,49 +9375,44 @@ window.diagnosticoADRES = async function(){
   const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
   const fm4 = v=>'$'+Math.round(v||0).toLocaleString('es-CO');
 
-  // Simular EXACTAMENTE lo que hace updPortafolio
-  const val = r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
-  const esDeADRES = r=>r.respuestaAdres?.fuenteADRES===true;
-  const getValApro = r=>esDeADRES(r)?(r.respuestaAdres?.valorAprobado||0):0;
-  const getValGlo  = r=>esDeADRES(r)?(r.respuestaAdres?.valorGlosado||0):0;
-
   const pagadas  = src.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
   const glosadas = src.filter(r=>getRespuestaAdres(r)==='glosada');
-  const pagV = pagadas.reduce((a,r)=>a+getValApro(r),0);
-  const gloV = glosadas.reduce((a,r)=>a+getValGlo(r),0);
 
-  // Muestras de pagadas con sus valores
-  const muestraPag = pagadas.slice(0,5).map(r=>
-    `  ${r.factura}: esADRES=${esDeADRES(r)} valApro=${fm4(r.respuestaAdres?.valorAprobado)} estado=${r.respuestaAdres?.estado}`
-  ).join('\n');
-  const muestraGlo = glosadas.slice(0,5).map(r=>
-    `  ${r.factura}: esADRES=${esDeADRES(r)} valGlo=${fm4(r.respuestaAdres?.valorGlosado)} estado=${r.respuestaAdres?.estado}`
-  ).join('\n');
+  // Suma de valorAprobado del singular
+  const sumApro = pagadas.reduce((a,r)=>a+(r.respuestaAdres?.valorAprobado||0),0);
+  const sumGlo  = glosadas.reduce((a,r)=>a+(r.respuestaAdres?.valorGlosado||0),0);
 
-  const sinAdres_pag = pagadas.filter(r=>!esDeADRES(r));
-  const sinAdres_glo = glosadas.filter(r=>!esDeADRES(r));
+  // Desglose: cuántas tienen valor 0 vs >0
+  const pagConValor  = pagadas.filter(r=>(r.respuestaAdres?.valorAprobado||0)>0);
+  const pagSinValor  = pagadas.filter(r=>(r.respuestaAdres?.valorAprobado||0)===0);
+  const gloConValor  = glosadas.filter(r=>(r.respuestaAdres?.valorGlosado||0)>0);
+  const gloSinValor  = glosadas.filter(r=>(r.respuestaAdres?.valorGlosado||0)===0);
+
+  // Mostrar primeras 5 sin valor
+  const muestraSinVal = pagSinValor.slice(0,5).map(r=>
+    `  ${r.factura} estado=${r.respuestaAdres?.estado} fuenteADRES=${r.respuestaAdres?.fuenteADRES} valApro=${r.respuestaAdres?.valorAprobado}`
+  ).join('\n');
 
   const msg =
-    `DASHBOARD calcula:\n`+
-    `  Aprobadas: ${pagadas.length} → ${fm4(pagV)}\n`+
-    `  Glosadas:  ${glosadas.length} → ${fm4(gloV)}\n\n`+
-    `META ADRES:\n`+
-    `  Aprobado: $154.662.139\n`+
-    `  Glosado:  $787.074.008\n\n`+
-    `SIN fuenteADRES (valores excluidos):\n`+
-    `  Aprobadas sin ADRES: ${sinAdres_pag.length}\n`+
-    `  Glosadas sin ADRES:  ${sinAdres_glo.length}\n\n`+
-    `MUESTRA pagadas:\n${muestraPag}\n\n`+
-    `MUESTRA glosadas:\n${muestraGlo}`;
+    `DIAGNÓSTICO EXACTO (${src.length} recs):\n\n`+
+    `APROBADAS: ${pagadas.length}\n`+
+    `  Con valorAprobado>0: ${pagConValor.length} → ${fm4(sumApro)}\n`+
+    `  Con valorAprobado=0: ${pagSinValor.length}\n`+
+    `  META: $154.662.139\n\n`+
+    `GLOSADAS: ${glosadas.length}\n`+
+    `  Con valorGlosado>0: ${gloConValor.length} → ${fm4(sumGlo)}\n`+
+    `  Con valorGlosado=0: ${gloSinValor.length}\n`+
+    `  META: $787.074.008\n\n`+
+    `MUESTRA pagadas sin valorAprobado:\n${muestraSinVal||'(ninguna)'}`;
 
   alert(msg);
   console.log(msg);
-  // También en consola detalle completo
-  console.table(pagadas.map(r=>({
-    factura:r.factura, esADRES:esDeADRES(r),
+  console.log('Pagadas sin valor:', pagSinValor.map(r=>({
+    factura:r.factura,
     estado:r.respuestaAdres?.estado,
-    valorApro:r.respuestaAdres?.valorAprobado,
-    getValApro:getValApro(r)
+    fuenteADRES:r.respuestaAdres?.fuenteADRES,
+    valorAprobado:r.respuestaAdres?.valorAprobado,
+    respuestasAdres:r.respuestasAdres?.length
   })));
 };
 
