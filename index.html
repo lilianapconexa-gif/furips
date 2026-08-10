@@ -7626,7 +7626,11 @@ window.updPortafolio = function(){
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
   const anuladas=recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
   const enTramite=enTramiteRecs; // mismo bucket mutuamente excluyente usado arriba
-  const tramV=enTramite.reduce((a,r)=>a+val(r),0);
+  // $ pendiente = reclamado − aprobado − glosado, sobre TODAS las radicadas activas
+  // (no solo el bucket En trámite), para recuperar el saldo pendiente de cuentas que
+  // ya tienen algo resuelto pero además tienen una radicación nueva sin responder.
+  const radicadasActivas = recsAcum.filter(r=>r.radicado?.numero&&!esAnulada(r)&&!esDevIPS(r));
+  const tramV = radicadasActivas.reduce((a,r)=>a+Math.max(0, val(r)-getValApro(r)-getValGlo(r)), 0);
   const coberturaRad=pct(radTotal.length,total);
   const efectividad=pct(pagV,auditadasV);
   const tasaGlosa=pct(glosadas.length,Math.max(auditadasAdres.length,1));
@@ -7639,8 +7643,7 @@ window.updPortafolio = function(){
   const pct2=(a,b)=>b>0?Math.round(a/b*100):0;
   const setCard=(pfx,n,v,t)=>{_s(pfx+'-n',n);_s(pfx+'-v',fm(v));const pEl=document.getElementById(pfx+'-pct');if(pEl)pEl.textContent=pct2(n,t)+'%';};
   setCard('cli-sinrad',sinRad.length,sinV,total);
-  const enTramiteV2=enTramiteRecs.reduce((a,r)=>a+val(r),0);
-  setCard('cli-rad',enTramiteRecs.length,enTramiteV2,total);
+  setCard('cli-rad',enTramiteRecs.length,tramV,total);
   setCard('cli-pag',pagadas.length,pagV,total);
   setCard('cli-glo',glosadas.length,gloV,total);
   const cliIPS=document.getElementById('dash-cli-ips');
