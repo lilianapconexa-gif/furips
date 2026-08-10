@@ -6586,17 +6586,17 @@ window.getRespuestaAdres = (r) => {
     if(v === 'en_revision') return null;
     return v;
   };
-  // Si tiene sync de ADRES (fuenteADRES=true en singular), el singular tiene el estado correcto
+  // PRIORIDAD 1: singular con fuenteADRES=true — contiene estado Y valores correctos
   if(r.respuestaAdres?.fuenteADRES && r.respuestaAdres?.estado)
     return norm(r.respuestaAdres.estado);
-  // Si tiene array, usar el estado de la última radicación
+  // PRIORIDAD 2: singular sin sync ADRES (radicaciones manuales)
+  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado);
+  // PRIORIDAD 3: array (solo para trazabilidad, no para dashboard)
   if(r.respuestasAdres?.length){
     const sorted=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const ultima=sorted[sorted.length-1];
     if(ultima?.estado) return norm(ultima.estado);
   }
-  // Fallback: singular sin sync ADRES
-  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado);
   // Modelo viejo: derivar desde radicado.estado
   const old = r.radicado?.estado;
   if(!old) return null;
@@ -7585,11 +7585,11 @@ window.updPortafolio = function(){
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
   const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
   // Valor aprobado y glosado: leer desde respuestasAdres[] o respuestaAdres singular
-  // Solo sumar valores de reclamaciones sincronizadas con ADRES
-  // Las no sincronizadas no tienen respuesta ADRES confirmada
+  // Valores: SIEMPRE desde singular (tiene los totales correctos de ADRES)
+  // El array tiene valores por radicación individual (no el total)
   const esDeADRES = r => r.respuestaAdres?.fuenteADRES === true;
-  const getValApro = r => esDeADRES(r) ? (r.respuestaAdres?.valorAprobado||0) : 0;
-  const getValGlo  = r => esDeADRES(r) ? (r.respuestaAdres?.valorGlosado||0)  : 0;
+  const getValApro = r => r.respuestaAdres?.valorAprobado||0;
+  const getValGlo  = r => r.respuestaAdres?.valorGlosado||0;
   const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
