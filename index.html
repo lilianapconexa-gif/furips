@@ -8123,6 +8123,12 @@ function mapearEstadoADRES(desc, estadoRec, valorAprobado, valorGlosado){
   // Girado = ya se pagó el dinero
   if(eR.includes('girado')) return 'aprobada';
 
+  // En trámite = la descripción de ADRES lo dice explícitamente. Esto tiene PRIORIDAD
+  // sobre los valores numéricos: una fila puede traer un valor glosado preliminar/
+  // provisional y seguir estando "En Trámite" según el texto oficial de ADRES — el
+  // texto manda, no un valor numérico que aún puede cambiar.
+  if(d.includes('trámite') || d.includes('tramite') || d.includes('radicada')) return 'en_tramite';
+
   // Aprobada parcial = tiene valor aprobado Y valor glosado
   if((d.includes('aprobada') || d.includes('parcial')) && vA > 0 && vG > 0) return 'aprobada_parcial';
 
@@ -8141,8 +8147,8 @@ function mapearEstadoADRES(desc, estadoRec, valorAprobado, valorGlosado){
   // Devuelta
   if(d.includes('devuelta')) return 'devuelta';
 
-  // En trámite (tiene número de radicación pero sin respuesta definitiva)
-  if(d.includes('trámite') || d.includes('tramite') || d.includes('radicada') || d === '') return 'en_tramite';
+  // Descripción vacía → sin respuesta aún
+  if(d === '') return 'en_tramite';
 
   return 'en_tramite'; // por defecto si tiene radicación
 }
