@@ -8992,6 +8992,38 @@ window.procesarReporteADRES = async function(){
       (r.respuestasAdres||[]).some(rad=>rad.estado==='glosada')).length;
     const noEnAdres = srcFinal.length - furipsTotRec;
 
+    // ── Valor pendiente (en trámite) — mismo criterio que el dashboard ──
+    const adresTotPendV = adresRows.filter(r=>
+      mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado'])==='en_tramite'
+    ).reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
+    const furipsPendV = srcEnAdres.reduce((a,r)=>{
+      const v=getValoresAdresTotal(r);
+      return a+(v.tieneHistorial?v.valorPendiente:val2(r));
+    },0);
+
+    // ── Diagnóstico de facturas responsables del residual en "En trámite" ──
+    const diagPendiente = [];
+    adresRows.forEach(row=>{
+      const eRow = mapearEstadoADRES(row['Descripción tipo Aprobación'],row['Estado reclamación'],row['Valor Aprobado'],row['Valor Glosado']);
+      if(eRow!=='en_tramite') return;
+      const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
+      const numRad = String(row['Número de Radicación']||'').trim();
+      const vRecFila = parseFloat(String(row['Valor Reclamado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;
+      const rec = srcFinal.find(r=>normalizarFactura(r.factura)===fac);
+      if(!rec){
+        diagPendiente.push({factura:row['Número de Factura']||fac, numRad, valor:vRecFila, motivo:'Factura no encontrada en FURIPS'});
+        return;
+      }
+      const rondaGuardada = (rec.respuestasAdres||[]).find(x=>String(x.numero||'').trim().replace(/\.0$/,'')===numRad.replace(/\.0$/,''));
+      if(!rondaGuardada){
+        diagPendiente.push({factura:rec.factura, numRad, valor:vRecFila, motivo:'Radicación no encontrada en el historial guardado'});
+      } else if(rondaGuardada.estado!=='en_tramite'){
+        diagPendiente.push({factura:rec.factura, numRad, valor:vRecFila, motivo:`Guardada con estado "${rondaGuardada.estado}", no "en_tramite"`});
+      } else if(Math.abs((rondaGuardada.valorReclamado||0)-vRecFila)>=100){
+        diagPendiente.push({factura:rec.factura, numRad, valor:vRecFila, motivo:`Valor reclamado guardado ($${(rondaGuardada.valorReclamado||0).toLocaleString('es-CO')}) difiere del Excel`});
+      }
+    });
+
     const diff = (a,b)=>Math.abs(a-b)<100?0:a-b;
     const cuadreRows = [
       {concepto:'Reclamaciones en reporte ADRES', adres:adresTotRec, furips:furipsTotRec, esN:true,
@@ -8999,6 +9031,8 @@ window.procesarReporteADRES = async function(){
       {concepto:'Valor total reclamado', adres:adresTotVal, furips:furipsTotVal},
       {concepto:'Valor aprobado por ADRES', adres:adresTotAproV, furips:furipsPagV},
       {concepto:'Valor glosado por ADRES', adres:adresTotGloV, furips:furisGloV},
+      {concepto:'Valor pendiente (en trámite)', adres:adresTotPendV, furips:furipsPendV,
+       nota:diagPendiente.length?`${diagPendiente.length} filas explican la diferencia — ver detalle abajo`:''},
     ];
     const todosCuadra = cuadreRows.every(r=>diff(r.adres,r.furips)===0);
 
@@ -9038,6 +9072,32 @@ window.procesarReporteADRES = async function(){
           ℹ️ <strong>Nota sobre diferencias:</strong><br>
           • El reporte ADRES contiene ${adresTotRec} facturas de las ${furipsTotRec} en FURIPS — la diferencia (${furipsTotRec-adresTotRec}) son reclamaciones sin radicar o de otros períodos no incluidos en este reporte.<br>
           • Las diferencias en valores aprobados/glosados se corrigen automáticamente con la sincronización. Si persisten, vuelve a sincronizar.
+        </div>`:''}
+        ${diagPendiente.length?`<div style="margin-top:14px;">
+          <div style="font-size:11px;font-weight:700;color:#f85149;margin-bottom:6px;">
+            🔍 Detalle — ${diagPendiente.length} fila${diagPendiente.length!==1?'s':''} responsable${diagPendiente.length!==1?'s':''} del residual en "Valor pendiente":
+          </div>
+          <div style="max-height:220px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">
+            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+              <thead>
+                <tr style="background:var(--sur2);position:sticky;top:0;">
+                  <th style="padding:5px 8px;text-align:left;color:var(--tx2);border-bottom:1px solid var(--brd);">Factura</th>
+                  <th style="padding:5px 8px;text-align:left;color:var(--tx2);border-bottom:1px solid var(--brd);">N° Radicación</th>
+                  <th style="padding:5px 8px;text-align:right;color:var(--tx2);border-bottom:1px solid var(--brd);">Valor (Excel)</th>
+                  <th style="padding:5px 8px;text-align:left;color:var(--tx2);border-bottom:1px solid var(--brd);">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${diagPendiente.slice(0,200).map(d=>`<tr style="border-bottom:1px solid var(--brd);">
+                  <td style="padding:5px 8px;font-family:var(--mono);font-weight:600;">${d.factura}</td>
+                  <td style="padding:5px 8px;font-family:var(--mono);color:var(--tx3);">${d.numRad||'—'}</td>
+                  <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm2(d.valor)}</td>
+                  <td style="padding:5px 8px;color:#f85149;">${d.motivo}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          ${diagPendiente.length>200?`<div style="font-size:10px;color:var(--tx3);margin-top:4px;">Mostrando las primeras 200 de ${diagPendiente.length}.</div>`:''}
         </div>`:''}
       </div>
       ${[
