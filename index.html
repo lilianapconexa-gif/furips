@@ -6607,6 +6607,24 @@ window.getRespuestaAdres = (r) => {
   return null;
 };
 
+// Valores ADRES REALES = suma de valorAprobado/valorGlosado de TODAS las rondas
+// registradas en respuestasAdres[] (una reclamación puede tener varias radicaciones/
+// respuestas ADRES a lo largo del tiempo). Si no hay array, se usa el singular como
+// respaldo (compatibilidad con datos antiguos o cargados manualmente).
+window.getValoresAdresTotal = (r) => {
+  if(!r) return {valorAprobado:0, valorGlosado:0};
+  if(r.respuestasAdres?.length){
+    return {
+      valorAprobado: r.respuestasAdres.reduce((a,x)=>a+(x.valorAprobado||0),0),
+      valorGlosado:  r.respuestasAdres.reduce((a,x)=>a+(x.valorGlosado||0),0),
+    };
+  }
+  return {
+    valorAprobado: r.respuestaAdres?.valorAprobado||0,
+    valorGlosado:  r.respuestaAdres?.valorGlosado||0,
+  };
+};
+
 // Devuelve los dos badges (gestión + ADRES) para usar en la UI del parche B
 window.getBadges = (r) => {
   const eg = getEstadoGestion(r);
@@ -7588,8 +7606,8 @@ window.updPortafolio = function(){
   // Valores: SIEMPRE desde singular (tiene los totales correctos de ADRES)
   // El array tiene valores por radicación individual (no el total)
   const esDeADRES = r => r.respuestaAdres?.fuenteADRES === true;
-  const getValApro = r => r.respuestaAdres?.valorAprobado||0;
-  const getValGlo  = r => r.respuestaAdres?.valorGlosado||0;
+  const getValApro = r => getValoresAdresTotal(r).valorAprobado;
+  const getValGlo  = r => getValoresAdresTotal(r).valorGlosado;
   const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
@@ -9090,19 +9108,23 @@ window.limpiarDuplicadosADRES = async function(){
 
     const ordenadas = [...dedup].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const ultima = ordenadas[ordenadas.length-1];
+    // Total real = suma de valorAprobado/valorGlosado de TODAS las rondas deduplicadas
+    // (el estado sí refleja solo la última ronda, pero el valor debe sumar el historial completo)
+    const totalAproDedup = dedup.reduce((a,r)=>a+(r.valorAprobado||0),0);
+    const totalGloDedup  = dedup.reduce((a,r)=>a+(r.valorGlosado||0),0);
 
     try{
       const updateData = { actualizado: serverTimestamp() };
       if(dedup.length > 0){
         updateData['respuestasAdres'] = dedup;
         updateData['respuestaAdres.estado'] = ultima?.estado || rec.respuestaAdres?.estado || '';
-        updateData['respuestaAdres.valorAprobado'] = ultima?.valorAprobado || 0;
-        updateData['respuestaAdres.valorGlosado'] = ultima?.valorGlosado || 0;
+        updateData['respuestaAdres.valorAprobado'] = totalAproDedup;
+        updateData['respuestaAdres.valorGlosado'] = totalGloDedup;
         rec.respuestasAdres = dedup;
         if(rec.respuestaAdres){
           rec.respuestaAdres.estado = ultima?.estado || '';
-          rec.respuestaAdres.valorAprobado = ultima?.valorAprobado || 0;
-          rec.respuestaAdres.valorGlosado = ultima?.valorGlosado || 0;
+          rec.respuestaAdres.valorAprobado = totalAproDedup;
+          rec.respuestaAdres.valorGlosado = totalGloDedup;
         }
       } else {
         // Sin array — limpiar valores inflados en singular
@@ -9378,15 +9400,15 @@ window.diagnosticoADRES = async function(){
   const pagadas  = src.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
   const glosadas = src.filter(r=>getRespuestaAdres(r)==='glosada');
 
-  // Suma de valorAprobado del singular
-  const sumApro = pagadas.reduce((a,r)=>a+(r.respuestaAdres?.valorAprobado||0),0);
-  const sumGlo  = glosadas.reduce((a,r)=>a+(r.respuestaAdres?.valorGlosado||0),0);
+  // Suma real = TODAS las rondas ADRES (respuestasAdres[]), con respaldo al singular
+  const sumApro = pagadas.reduce((a,r)=>a+getValoresAdresTotal(r).valorAprobado,0);
+  const sumGlo  = glosadas.reduce((a,r)=>a+getValoresAdresTotal(r).valorGlosado,0);
 
   // Desglose: cuántas tienen valor 0 vs >0
-  const pagConValor  = pagadas.filter(r=>(r.respuestaAdres?.valorAprobado||0)>0);
-  const pagSinValor  = pagadas.filter(r=>(r.respuestaAdres?.valorAprobado||0)===0);
-  const gloConValor  = glosadas.filter(r=>(r.respuestaAdres?.valorGlosado||0)>0);
-  const gloSinValor  = glosadas.filter(r=>(r.respuestaAdres?.valorGlosado||0)===0);
+  const pagConValor  = pagadas.filter(r=>getValoresAdresTotal(r).valorAprobado>0);
+  const pagSinValor  = pagadas.filter(r=>getValoresAdresTotal(r).valorAprobado===0);
+  const gloConValor  = glosadas.filter(r=>getValoresAdresTotal(r).valorGlosado>0);
+  const gloSinValor  = glosadas.filter(r=>getValoresAdresTotal(r).valorGlosado===0);
 
   // Mostrar primeras 5 sin valor
   const muestraSinVal = pagSinValor.slice(0,5).map(r=>
@@ -10882,7 +10904,7 @@ window.previewExpAdres = () => {
   recs.forEach(r => {
     const ea = getRespuestaAdres(r);
     if(c[ea] !== undefined) c[ea]++;
-    totAprob += r.respuestaAdres?.valorAprobado || 0;
+    totAprob += getValoresAdresTotal(r).valorAprobado;
   });
   const ipsCount = new Set(recs.map(r => r.codHab).filter(Boolean));
   g('aexp-resumen').innerHTML = `
