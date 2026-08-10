@@ -404,7 +404,8 @@ select option{background:var(--sur2);}
 .dash-card .dc-val{font-size:12px;opacity:.85;margin-top:6px;font-family:var(--mono);}
 .dash-card .dc-bg{position:absolute;right:-10px;bottom:-10px;font-size:76px;opacity:.07;}
 .dash-card .dc-pct{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;}
-@media print{.sidebar,.topbar,nav,button,select{display:none!important;}body{background:white!important;-webkit-print-color-adjust:exact;}}
+@media print{.sidebar,.topbar,nav,button,select{display:none!important;}body{background:white!important;-webkit-print-color-adjust:exact;}.pdf-page-break{page-break-before:always;}}
+.pdf-page-break{page-break-before:always;break-before:page;}
 </style>
 <div style="padding:0 0 20px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
@@ -454,7 +455,7 @@ select option{background:var(--sur2);}
         <div id="port-indicadores"></div>
       </div>
     </div>
-    <div style="margin-bottom:12px;">
+    <div class="pdf-page-break" style="margin-bottom:12px;">
       <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:10px;">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:14px;">🔄 Pipeline de Gestión CONEXA</div>
         <div id="dash-funnel" style="display:flex;align-items:stretch;gap:2px;"></div>
@@ -473,7 +474,7 @@ select option{background:var(--sur2);}
         </div>
       </div>
     </div>
-    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px;">
+    <div class="pdf-page-break" style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);">🤖 Conclusiones del Portafolio</div>
         <button id="btn-generar-conclusiones" onclick="generarConclusiones()" style="background:#00B2E2;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">✨ Generar conclusiones</button>
@@ -8017,7 +8018,7 @@ window.descargarPDF=async function(){
   if(typeof html2pdf==='undefined'){toast('Cargando librería PDF...','w');setTimeout(descargarPDF,1500);return;}
   toast('📄 Generando PDF...','ok');
   const el=document.getElementById('dash-cli');if(!el){toast('No hay contenido.','w');return;}
-  const opt={margin:[8,8,8,8],filename:`FURIPS_Portafolio_${new Date().toISOString().split('T')[0]}.pdf`,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}};
+  const opt={margin:[8,8,8,8],filename:`FURIPS_Portafolio_${new Date().toISOString().split('T')[0]}.pdf`,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],before:'.pdf-page-break'}};
   try{await html2pdf().set(opt).from(el).save();toast('✔ PDF descargado','ok');}catch(e){toast('Error PDF: '+e.message,'e');}
 };
 
