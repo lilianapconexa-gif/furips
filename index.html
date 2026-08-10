@@ -6586,13 +6586,16 @@ window.getRespuestaAdres = (r) => {
     if(v === 'en_revision') return null;
     return v;
   };
-  // FUENTE ÚNICA: array respuestasAdres[] viene de ADRES — es la verdad
+  // Si tiene sync de ADRES (fuenteADRES=true en singular), el singular tiene el estado correcto
+  if(r.respuestaAdres?.fuenteADRES && r.respuestaAdres?.estado)
+    return norm(r.respuestaAdres.estado);
+  // Si tiene array, usar el estado de la última radicación
   if(r.respuestasAdres?.length){
     const sorted=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const ultima=sorted[sorted.length-1];
     if(ultima?.estado) return norm(ultima.estado);
   }
-  // Fallback: singular (para reclamaciones sin sync ADRES aún)
+  // Fallback: singular sin sync ADRES
   if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado);
   // Modelo viejo: derivar desde radicado.estado
   const old = r.radicado?.estado;
@@ -7582,18 +7585,12 @@ window.updPortafolio = function(){
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
   const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
   // Valor aprobado y glosado: leer desde respuestasAdres[] o respuestaAdres singular
-  // FUENTE ÚNICA: array respuestasAdres[] si existe, sino singular
-  // El array es la fuente de verdad (viene de ADRES sync)
-  const getValApro=r=>{
-    if(r.respuestasAdres?.length>0)
-      return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorAprobado||0),0);
-    return r.respuestaAdres?.valorAprobado||0;
-  };
-  const getValGlo=r=>{
-    if(r.respuestasAdres?.length>0)
-      return r.respuestasAdres.reduce((a,rad)=>a+(rad.valorGlosado||0),0);
-    return r.respuestaAdres?.valorGlosado||0;
-  };
+  // Para VALORES: usar respuestaAdres singular (contiene el TOTAL correcto de ADRES sync)
+  // Para ESTADO: usar array (getRespuestaAdres ya lo maneja)
+  const getValApro=r=>r.respuestaAdres?.valorAprobado||
+    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorAprobado||0),0);
+  const getValGlo=r=>r.respuestaAdres?.valorGlosado||
+    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorGlosado||0),0);
   const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
