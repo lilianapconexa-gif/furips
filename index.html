@@ -6611,17 +6611,24 @@ window.getRespuestaAdres = (r) => {
 // registradas en respuestasAdres[] (una reclamación puede tener varias radicaciones/
 // respuestas ADRES a lo largo del tiempo). Si no hay array, se usa el singular como
 // respaldo (compatibilidad con datos antiguos o cargados manualmente).
+// valorPendiente = suma de valorReclamado SOLO de las rondas cuyo estado sigue
+// 'en_tramite' — esto replica exactamente el filtro fila-por-fila que se hace en el
+// Excel de ADRES, y es robusto sin importar cuántas rondas (2, 3, 5...) tenga la cuenta.
 window.getValoresAdresTotal = (r) => {
-  if(!r) return {valorAprobado:0, valorGlosado:0};
+  if(!r) return {valorAprobado:0, valorGlosado:0, valorPendiente:0, tieneHistorial:false};
   if(r.respuestasAdres?.length){
     return {
       valorAprobado: r.respuestasAdres.reduce((a,x)=>a+(x.valorAprobado||0),0),
       valorGlosado:  r.respuestasAdres.reduce((a,x)=>a+(x.valorGlosado||0),0),
+      valorPendiente: r.respuestasAdres.filter(x=>x.estado==='en_tramite').reduce((a,x)=>a+(x.valorReclamado||0),0),
+      tieneHistorial: true,
     };
   }
   return {
     valorAprobado: r.respuestaAdres?.valorAprobado||0,
     valorGlosado:  r.respuestaAdres?.valorGlosado||0,
+    valorPendiente: 0, // sin historial de rondas sincronizado — el caller debe usar fallback (valor reclamado completo)
+    tieneHistorial: false,
   };
 };
 
@@ -7626,11 +7633,17 @@ window.updPortafolio = function(){
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
   const anuladas=recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
   const enTramite=enTramiteRecs; // mismo bucket mutuamente excluyente usado arriba
-  // $ pendiente = reclamado − aprobado − glosado, sobre TODAS las radicadas activas
-  // (no solo el bucket En trámite), para recuperar el saldo pendiente de cuentas que
-  // ya tienen algo resuelto pero además tienen una radicación nueva sin responder.
+  // $ pendiente = suma directa del valorReclamado de las rondas AÚN en 'en_tramite'
+  // (igual que el filtro fila-por-fila del Excel ADRES) — sobre TODAS las radicadas
+  // activas, para recuperar el saldo pendiente de cuentas que ya tienen algo resuelto
+  // pero además tienen una radicación nueva sin responder. Si una cuenta radicada aún
+  // no tiene historial sincronizado (tieneHistorial=false), todo su valor reclamado
+  // cuenta como pendiente.
   const radicadasActivas = recsAcum.filter(r=>r.radicado?.numero&&!esAnulada(r)&&!esDevIPS(r));
-  const tramV = radicadasActivas.reduce((a,r)=>a+Math.max(0, val(r)-getValApro(r)-getValGlo(r)), 0);
+  const tramV = radicadasActivas.reduce((a,r)=>{
+    const v = getValoresAdresTotal(r);
+    return a + (v.tieneHistorial ? v.valorPendiente : val(r));
+  }, 0);
   const coberturaRad=pct(radTotal.length,total);
   const efectividad=pct(pagV,auditadasV);
   const tasaGlosa=pct(glosadas.length,Math.max(auditadasAdres.length,1));
