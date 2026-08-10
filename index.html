@@ -8018,7 +8018,11 @@ window.descargarPDF=async function(){
   if(typeof html2pdf==='undefined'){toast('Cargando librería PDF...','w');setTimeout(descargarPDF,1500);return;}
   toast('📄 Generando PDF...','ok');
   const el=document.getElementById('dash-cli');if(!el){toast('No hay contenido.','w');return;}
-  const opt={margin:[8,8,8,8],filename:`FURIPS_Portafolio_${new Date().toISOString().split('T')[0]}.pdf`,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],before:'.pdf-page-break'}};
+  const nombreIPS=((typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas_las_IPS')
+    .toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'') // quitar tildes
+    .replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  const fechaPDF=new Date().toISOString().split('T')[0];
+  const opt={margin:[8,8,8,8],filename:`Portafolio_${nombreIPS}_${fechaPDF}.pdf`,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],before:'.pdf-page-break'}};
   try{await html2pdf().set(opt).from(el).save();toast('✔ PDF descargado','ok');}catch(e){toast('Error PDF: '+e.message,'e');}
 };
 
