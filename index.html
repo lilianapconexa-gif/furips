@@ -7585,12 +7585,11 @@ window.updPortafolio = function(){
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
   const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
   // Valor aprobado y glosado: leer desde respuestasAdres[] o respuestaAdres singular
-  // Para VALORES: usar respuestaAdres singular (contiene el TOTAL correcto de ADRES sync)
-  // Para ESTADO: usar array (getRespuestaAdres ya lo maneja)
-  const getValApro=r=>r.respuestaAdres?.valorAprobado||
-    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorAprobado||0),0);
-  const getValGlo=r=>r.respuestaAdres?.valorGlosado||
-    (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorGlosado||0),0);
+  // Solo sumar valores de reclamaciones sincronizadas con ADRES
+  // Las no sincronizadas no tienen respuesta ADRES confirmada
+  const esDeADRES = r => r.respuestaAdres?.fuenteADRES === true;
+  const getValApro = r => esDeADRES(r) ? (r.respuestaAdres?.valorAprobado||0) : 0;
+  const getValGlo  = r => esDeADRES(r) ? (r.respuestaAdres?.valorGlosado||0)  : 0;
   const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
