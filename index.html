@@ -9373,64 +9373,52 @@ window.resetValoresADRES = async function(){
 window.diagnosticoADRES = async function(){
   if(USER?.rol !== 'superadmin') return;
   const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
-  
-  // Contar por fuente de datos
-  let soloSingular=0, soloArray=0, ambos=0, ninguno=0;
-  let totalAproSing=0, totalGloSing=0, totalAproArr=0, totalGloArr=0;
-  
-  src.forEach(r=>{
-    const tieneSing = !!r.respuestaAdres?.estado;
-    const tieneArr  = (r.respuestasAdres?.length||0) > 0;
-    if(tieneSing && tieneArr) ambos++;
-    else if(tieneSing) soloSingular++;
-    else if(tieneArr) soloArray++;
-    else ninguno++;
-    
-    totalAproSing += r.respuestaAdres?.valorAprobado||0;
-    totalGloSing  += r.respuestaAdres?.valorGlosado||0;
-    totalAproArr  += (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorAprobado||0),0);
-    totalGloArr   += (r.respuestasAdres||[]).reduce((a,rad)=>a+(rad.valorGlosado||0),0);
-  });
-  
-  const fm = v=>'$'+Math.round(v).toLocaleString('es-CO');
-  // Contar clasificaciones
-  const aprobDash = src.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
-  const glosaDash = src.filter(r=>getRespuestaAdres(r)==='glosada');
-  const aprobConArr = aprobDash.filter(r=>r.respuestasAdres?.length>0);
-  const glosConArr  = glosaDash.filter(r=>r.respuestasAdres?.length>0);
-  const aprobVArr = aprobConArr.reduce((a,r)=>a+r.respuestasAdres.reduce((b,rad)=>b+(rad.valorAprobado||0),0),0);
-  const glosVArr  = glosConArr.reduce((a,r)=>a+r.respuestasAdres.reduce((b,rad)=>b+(rad.valorGlosado||0),0),0);
-  const aprobVSing = aprobDash.reduce((a,r)=>a+(r.respuestaAdres?.valorAprobado||0),0);
-  const glosVSing  = glosaDash.reduce((a,r)=>a+(r.respuestaAdres?.valorGlosado||0),0);
-  const fm4=v=>'$'+Math.round(v).toLocaleString('es-CO');
-  const msg = `DIAGNÓSTICO ADRES (${src.length} reclamaciones):\n\n`+
-    `DASHBOARD muestra:\n`+
-    `  Aprobadas: ${aprobDash.length} (${aprobConArr.length} con array, ${aprobDash.length-aprobConArr.length} solo singular)\n`+
-    `  Glosadas:  ${glosaDash.length} (${glosConArr.length} con array, ${glosaDash.length-glosConArr.length} solo singular)\n\n`+
-    `VALORES desde array:\n`+
-    `  Aprobado: ${fm4(aprobVArr)} (meta: $154.662.139)\n`+
-    `  Glosado:  ${fm4(glosVArr)} (meta: $787.074.008)\n\n`+
-    `VALORES desde singular:\n`+
-    `  Aprobado: ${fm4(aprobVSing)}\n`+
-    `  Glosado:  ${fm4(glosVSing)}\n\n`+
-    `FUENTES (total):\n`+
-    `Fuentes:\n`+
-    `  Solo singular: ${soloSingular}\n`+
-    `  Solo array: ${soloArray}\n`+
-    `  Ambos: ${ambos}\n`+
-    `  Ninguno: ${ninguno}\n\n`+
-    `Valores desde singular:\n`+
-    `  Aprobado: ${fm(totalAproSing)}\n`+
-    `  Glosado:  ${fm(totalGloSing)}\n\n`+
-    `Valores desde array:\n`+
-    `  Aprobado: ${fm(totalAproArr)}\n`+
-    `  Glosado:  ${fm(totalGloArr)}\n\n`+
-    `Meta ADRES Excel:\n`+
+  const fm4 = v=>'$'+Math.round(v||0).toLocaleString('es-CO');
+
+  // Simular EXACTAMENTE lo que hace updPortafolio
+  const val = r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+  const esDeADRES = r=>r.respuestaAdres?.fuenteADRES===true;
+  const getValApro = r=>esDeADRES(r)?(r.respuestaAdres?.valorAprobado||0):0;
+  const getValGlo  = r=>esDeADRES(r)?(r.respuestaAdres?.valorGlosado||0):0;
+
+  const pagadas  = src.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
+  const glosadas = src.filter(r=>getRespuestaAdres(r)==='glosada');
+  const pagV = pagadas.reduce((a,r)=>a+getValApro(r),0);
+  const gloV = glosadas.reduce((a,r)=>a+getValGlo(r),0);
+
+  // Muestras de pagadas con sus valores
+  const muestraPag = pagadas.slice(0,5).map(r=>
+    `  ${r.factura}: esADRES=${esDeADRES(r)} valApro=${fm4(r.respuestaAdres?.valorAprobado)} estado=${r.respuestaAdres?.estado}`
+  ).join('\n');
+  const muestraGlo = glosadas.slice(0,5).map(r=>
+    `  ${r.factura}: esADRES=${esDeADRES(r)} valGlo=${fm4(r.respuestaAdres?.valorGlosado)} estado=${r.respuestaAdres?.estado}`
+  ).join('\n');
+
+  const sinAdres_pag = pagadas.filter(r=>!esDeADRES(r));
+  const sinAdres_glo = glosadas.filter(r=>!esDeADRES(r));
+
+  const msg =
+    `DASHBOARD calcula:\n`+
+    `  Aprobadas: ${pagadas.length} → ${fm4(pagV)}\n`+
+    `  Glosadas:  ${glosadas.length} → ${fm4(gloV)}\n\n`+
+    `META ADRES:\n`+
     `  Aprobado: $154.662.139\n`+
-    `  Glosado:  $787.074.008`;
-  
+    `  Glosado:  $787.074.008\n\n`+
+    `SIN fuenteADRES (valores excluidos):\n`+
+    `  Aprobadas sin ADRES: ${sinAdres_pag.length}\n`+
+    `  Glosadas sin ADRES:  ${sinAdres_glo.length}\n\n`+
+    `MUESTRA pagadas:\n${muestraPag}\n\n`+
+    `MUESTRA glosadas:\n${muestraGlo}`;
+
   alert(msg);
   console.log(msg);
+  // También en consola detalle completo
+  console.table(pagadas.map(r=>({
+    factura:r.factura, esADRES:esDeADRES(r),
+    estado:r.respuestaAdres?.estado,
+    valorApro:r.respuestaAdres?.valorAprobado,
+    getValApro:getValApro(r)
+  })));
 };
 
 // ══ VALIDACIÓN VALOR RADICADO ══════════════════════════════
