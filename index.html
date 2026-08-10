@@ -7595,16 +7595,23 @@ window.updPortafolio = function(){
   const recsAcum=BASE;
   const val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
   const total=recsAcum.length,totalVal=recsAcum.reduce((a,r)=>a+val(r),0);
-  // NOTA: lo aprobado y lo glosado quedan en firme por ronda y siempre se acumulan;
-  // lo que cambia entre rondas es el valor reclamado restante. Por eso "Aprobadas" y
-  // "Glosadas" se definen por TENER valor acumulado > 0 (getValoresAdresTotal), no por
-  // el estado actual del último round — una reclamación puede seguir "en trámite" por
-  // el saldo pendiente y a la vez ya tener valor aprobado y/o glosado en firme.
-  const pagadas=recsAcum.filter(r=>getValoresAdresTotal(r).valorAprobado>0);
-  const glosadas=recsAcum.filter(r=>getValoresAdresTotal(r).valorGlosado>0);
+  // NOTA: cada reclamación se clasifica en UN SOLO bucket (la cuenta es unitaria, el
+  // total de buckets debe sumar 1358). Pero lo aprobado y lo glosado quedan en firme
+  // por ronda y siempre se acumulan — por eso el $ mostrado en las tarjetas suma sobre
+  // TODO el portafolio, no solo sobre las cuentas que quedaron clasificadas en ese bucket.
+  const esAnulada = r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres';
+  const esDevIPS  = r=>getEstadoGestion(r)==='devuelta_ips';
+  // Ya tiene algo aprobado en firme (incluye parcial) → cuenta como "Aprobada"
+  const pagadas=recsAcum.filter(r=>r.radicado?.numero&&!esAnulada(r)&&!esDevIPS(r)&&getValoresAdresTotal(r).valorAprobado>0);
+  // Solo glosado, sin nada aprobado aún → cuenta como "Glosada" (evita doble conteo con Aprobadas)
+  const glosadas=recsAcum.filter(r=>r.radicado?.numero&&!esAnulada(r)&&!esDevIPS(r)&&getValoresAdresTotal(r).valorAprobado===0&&getValoresAdresTotal(r).valorGlosado>0);
   const sinRad=recsAcum.filter(r=>!r.radicado?.numero&&getEstadoGestion(r)!=='devuelta_ips');
-  // En trámite = radicadas ante ADRES pero sin respuesta definitiva aún
-  const enTramiteRecs=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite'||(!getRespuestaAdres(r)&&r.radicado?.numero));
+  // En trámite = radicada, sin nada aprobado ni glosado en firme todavía (pendiente puro)
+  const enTramiteRecs=recsAcum.filter(r=>{
+    if(!r.radicado?.numero||esAnulada(r)||esDevIPS(r)) return false;
+    const v=getValoresAdresTotal(r);
+    return v.valorAprobado===0&&v.valorGlosado===0;
+  });
   const radTotal=recsAcum.filter(r=>r.radicado?.numero);
   const auditadasAdres=recsAcum.filter(r=>['aprobada','aprobada_parcial','glosada'].includes(getRespuestaAdres(r)));
   // Valor aprobado y glosado: leer desde respuestasAdres[] o respuestaAdres singular
@@ -7613,11 +7620,12 @@ window.updPortafolio = function(){
   const esDeADRES = r => r.respuestaAdres?.fuenteADRES === true;
   const getValApro = r => getValoresAdresTotal(r).valorAprobado;
   const getValGlo  = r => getValoresAdresTotal(r).valorGlosado;
-  const pagV=pagadas.reduce((a,r)=>a+getValApro(r),0),gloV=glosadas.reduce((a,r)=>a+getValGlo(r),0);
+  // $ acumulado sobre TODO el portafolio (no solo el bucket) — así siempre cuadra con ADRES
+  const pagV=recsAcum.reduce((a,r)=>a+getValApro(r),0),gloV=recsAcum.reduce((a,r)=>a+getValGlo(r),0);
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
   const anuladas=recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
-  const enTramite=recsAcum.filter(r=>getRespuestaAdres(r)==='en_tramite');
+  const enTramite=enTramiteRecs; // mismo bucket mutuamente excluyente usado arriba
   const tramV=enTramite.reduce((a,r)=>a+val(r),0);
   const coberturaRad=pct(radTotal.length,total);
   const efectividad=pct(pagV,auditadasV);
