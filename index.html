@@ -7758,6 +7758,61 @@ window.loadTxt=function(){
   if(noEl)noEl.classList.add('hidden');if(fmEl)fmEl.classList.remove('hidden');
   const fec=document.getElementById('tx-fec');if(fec&&!fec.value)fec.value=new Date().toISOString().split('T')[0];
 };
+
+// ── Panel "Archivos Planos (.txt)" ──
+// Maneja el select de IPS Prestadora: si elige "otro" habilita el campo manual,
+// si elige una IPS de la lista, autocompleta y bloquea el campo de código.
+window.selIPSTxt=(val)=>{
+  const el=g('tx-cod'); if(!el) return;
+  if(val==='otro'){ el.value=''; el.readOnly=false; el.placeholder='Escriba el código (12 dígitos)'; el.focus(); }
+  else if(val){ el.value=val; el.readOnly=true; }
+  else { el.value=''; el.readOnly=false; }
+};
+
+// Filtra RECS según el código de habilitación y el rango de consecutivo del panel.
+// Devuelve null (y avisa) si falta el código o si no hay resultados.
+function filtrarRecsTxt(){
+  const cod=(g('tx-cod')?.value||'').trim();
+  if(!cod){ toast('Selecciona o escribe el código de habilitación de la IPS','w'); return null; }
+  const ini=g('tx-cons-ini')?.value?parseInt(g('tx-cons-ini').value):null;
+  const fin=g('tx-cons-fin')?.value?parseInt(g('tx-cons-fin').value):null;
+  const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'?RECS_ALL:[]);
+  let recs=usar.filter(r=>String(r.codHab||r.furips1?.c4||'').trim()===cod);
+  if(ini!=null) recs=recs.filter(r=>(parseInt(r.consec)||0)>=ini);
+  if(fin!=null) recs=recs.filter(r=>(parseInt(r.consec)||0)<=fin);
+  if(!recs.length){ toast('No hay reclamaciones para esa IPS/rango de consecutivo','w'); return null; }
+  return recs;
+}
+
+// Genera y descarga el plano FURIPS1 o FURIPS2 para el filtro seleccionado.
+window.expTxt=(tipo)=>{
+  const recs=filtrarRecsTxt(); if(!recs) return;
+  const fec=g('tx-fec')?.value || new Date().toISOString().split('T')[0];
+  const p=fec.split('-'); const ddmmaaaa=p.length===3?`${p[2]}${p[1]}${p[0]}`:fec.replace(/-/g,'');
+  const cod=(g('tx-cod')?.value||'').trim().replace(/[^a-zA-Z0-9]/g,'');
+  if(tipo==='FURIPS1'){
+    const contenido=recs.map(r=>generarTXT_F1(r)).join('\n');
+    descargarComoArchivo(contenido, `FURIPS1${cod}${ddmmaaaa}.txt`, 'text/plain;charset=utf-8');
+    toast(`✔ FURIPS 1 generado — ${recs.length} reclamaciones`,'ok');
+  } else {
+    const lineas=[];
+    recs.forEach(r=>{ const t=generarTXT_F2(r); if(t) lineas.push(t); });
+    descargarComoArchivo(lineas.join('\n'), `FURIPS2${cod}${ddmmaaaa}.txt`, 'text/plain;charset=utf-8');
+    toast(`✔ FURIPS 2 generado — ${recs.length} reclamaciones`,'ok');
+  }
+};
+
+// Previsualiza (sin descargar) los primeros renglones de FURIPS 1 y 2 para el filtro actual.
+window.prevTxt=()=>{
+  const recs=filtrarRecsTxt(); if(!recs) return;
+  const f1=recs.map(r=>generarTXT_F1(r)).join('\n');
+  const f2Lineas=[]; recs.forEach(r=>{ const t=generarTXT_F2(r); if(t) f2Lineas.push(t); });
+  const pv1=g('pv-f1'), pv2=g('pv-f2'), w=g('prev-w');
+  if(pv1) pv1.textContent = f1;
+  if(pv2) pv2.textContent = f2Lineas.join('\n');
+  if(w) w.classList.remove('hidden');
+  toast(`Vista previa: ${recs.length} reclamaciones`,'ok');
+};
 window.loadXL=function(){
   const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0?RECS_ALL:[]);
   const noEl=document.getElementById('xl-no'),fmEl=document.getElementById('xl-fm');
