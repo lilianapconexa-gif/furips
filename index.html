@@ -7702,11 +7702,21 @@ window.updPortafolio = function(){
   const semGlosa=tasaGlosa<=10?'🟢':tasaGlosa<=20?'🟡':'🔴';
   const semRech=tasaRechazo<=5?'🟢':tasaRechazo<=10?'🟡':'🔴';
   const semCob=coberturaRad>=80?'🟢':coberturaRad>=60?'🟡':'🔴';
+  // ── Glosadas que ya recibieron respuesta (nueva radicación posterior a una ronda glosada) ──
+  const conGlosaAlgunaVez = recsAcum.filter(r=>(r.respuestasAdres||[]).some(x=>x.estado==='glosada'));
+  const glosadasConRespuesta = conGlosaAlgunaVez.filter(r=>{
+    const rondas=[...(r.respuestasAdres||[])].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const idxGlosada=rondas.findIndex(x=>x.estado==='glosada');
+    return idxGlosada>-1 && idxGlosada<rondas.length-1; // hay una ronda posterior = se respondió
+  });
+  const tasaRespGlosa=pct(glosadasConRespuesta.length,Math.max(conGlosaAlgunaVez.length,1));
+  const semRespGlosa=tasaRespGlosa>=80?'🟢':tasaRespGlosa>=50?'🟡':'🔴';
   const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
   const glosasJust=glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
   ind.innerHTML=
     kpiR('Efectividad de cobro',efectividad+'%',semEfect,'>80%',`${pagadas.length} aprobadas de ${auditadasAdres.length} auditadas ADRES`)+
     kpiR('Tasa de glosa',tasaGlosa+'%',semGlosa,'<10%',`${glosadas.length} glosadas${glosasJust.length>0?' · '+glosasJust.length+' justificadas (autorización IPS)':''}`)+
+    kpiR('Tasa de respuesta a glosa',tasaRespGlosa+'%',semRespGlosa,'>80%',`${glosadasConRespuesta.length} de ${conGlosaAlgunaVez.length} glosadas ya radicadas de nuevo`)+
     kpiR('Tasa de rechazo',tasaRechazo+'%',semRech,'<5%',`${anuladas.length} anuladas del portafolio`)+
     kpiR('Cobertura de radicación',coberturaRad+'%',semCob,'>80%',`${radTotal.length} de ${total} enviadas a ADRES`)+
     kpiR('Valor en trámite ADRES',fm(tramV),tramV>0?'⏳':'🟢','Por cobrar',`${enTramite.length} reclamaciones en auditoría`);
