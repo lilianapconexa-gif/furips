@@ -7711,12 +7711,26 @@ window.updPortafolio = function(){
   });
   const tasaRespGlosa=pct(glosadasConRespuesta.length,Math.max(conGlosaAlgunaVez.length,1));
   const semRespGlosa=tasaRespGlosa>=80?'🟢':tasaRespGlosa>=50?'🟡':'🔴';
+  // ── Cuánto de lo glosado se recuperó: valor glosado (ronda original) vs
+  // valor aprobado en la(s) ronda(s) posteriores a esa glosa (la respuesta/reradicación) ──
+  let valorGlosadoConResp=0, valorRecuperado=0;
+  glosadasConRespuesta.forEach(r=>{
+    const rondas=[...(r.respuestasAdres||[])].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const idxGlosada=rondas.findIndex(x=>x.estado==='glosada');
+    const glosadoPrevio=rondas.slice(0,idxGlosada+1).filter(x=>x.estado==='glosada').reduce((a,x)=>a+(x.valorGlosado||0),0);
+    const recuperadoPosterior=rondas.slice(idxGlosada+1).reduce((a,x)=>a+(x.valorAprobado||0),0);
+    valorGlosadoConResp+=glosadoPrevio;
+    valorRecuperado+=recuperadoPosterior;
+  });
+  const tasaRecuperacion=pct(valorRecuperado,Math.max(valorGlosadoConResp,1));
+  const semRecup=tasaRecuperacion>=80?'🟢':tasaRecuperacion>=60?'🟡':'🔴';
   const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
   const glosasJust=glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
   ind.innerHTML=
     kpiR('Efectividad de cobro',efectividad+'%',semEfect,'>80%',`${pagadas.length} aprobadas de ${auditadasAdres.length} auditadas ADRES`)+
     kpiR('Tasa de glosa',tasaGlosa+'%',semGlosa,'<10%',`${glosadas.length} glosadas${glosasJust.length>0?' · '+glosasJust.length+' justificadas (autorización IPS)':''}`)+
     kpiR('Tasa de respuesta a glosa',tasaRespGlosa+'%',semRespGlosa,'>80%',`${glosadasConRespuesta.length} de ${conGlosaAlgunaVez.length} glosadas ya radicadas de nuevo`)+
+    kpiR('Recuperación de glosas',tasaRecuperacion+'%',semRecup,'>80%',`${fm(valorRecuperado)} recuperados de ${fm(valorGlosadoConResp)} glosados con respuesta`)+
     kpiR('Tasa de rechazo',tasaRechazo+'%',semRech,'<5%',`${anuladas.length} anuladas del portafolio`)+
     kpiR('Cobertura de radicación',coberturaRad+'%',semCob,'>80%',`${radTotal.length} de ${total} enviadas a ADRES`)+
     kpiR('Valor en trámite ADRES',fm(tramV),tramV>0?'⏳':'🟢','Por cobrar',`${enTramite.length} reclamaciones en auditoría`);
