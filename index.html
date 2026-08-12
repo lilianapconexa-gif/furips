@@ -417,6 +417,7 @@ select option{background:var(--sur2);}
       <select id="port-mes-sel" onchange="updPortafolio();" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);cursor:pointer;"><option value="">Todo el historial</option></select>
       <button onclick="descargarInformeMensual()" style="background:#A3D55D;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;">⬇ Informe Comité</button>
       <button onclick="descargarPDF()" style="background:#9DB455;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;">⬇ PDF</button>
+      <button onclick="exportarTrazabilidad()" style="background:#00B2E2;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;">⬇ Trazabilidad</button>
       <button onclick="window.print()" style="background:var(--sur2);color:var(--tx);border:1px solid var(--brd);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;">🖨 Imprimir</button>
     </div>
   </div>
@@ -8111,6 +8112,61 @@ window.descargarPDF=async function(){
   const fechaPDF=new Date().toISOString().split('T')[0];
   const opt={margin:[8,8,8,8],filename:`Portafolio_${nombreIPS}_${fechaPDF}.pdf`,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],before:'.pdf-page-break'}};
   try{await html2pdf().set(opt).from(el).save();toast('✔ PDF descargado','ok');}catch(e){toast('Error PDF: '+e.message,'e');}
+};
+
+// ── Trazabilidad cuenta por cuenta: una fila por movimiento (radicación, respuesta ADRES,
+// cambio de gestión interna), ordenado por factura y fecha. Respeta el cliente activo. ──
+window.exportarTrazabilidad=function(){
+  if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); return; }
+  const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'?RECS_ALL:[]);
+  if(!usar.length){ toast('No hay reclamaciones para exportar.','w'); return; }
+  const fm3=v=>Math.round(v||0);
+  const filas=[];
+  usar.forEach(r=>{
+    const factura=r.factura||'';
+    const ips=IPS_NOMBRES?.[r.codHab]||r.codHab||'';
+    // 1) Creación / carga del registro
+    filas.push({
+      factura, ips, fecha:r.creado?.toDate?.()?.toISOString?.()||r.fechaEvento||'',
+      tipo:'Creación', de:'', a:'', numRad:'', lote:'',
+      valReclamado:parseInt(r.furips1?.c97||r.furips1?.c96||0)||0, valAprobado:'', valGlosado:'',
+      usuario:r.creadoPor||r.importadoPor||'', motivo:'Registro cargado al sistema',
+    });
+    // 2) Rondas de radicación / respuesta ADRES
+    (r.respuestasAdres||[]).slice().sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||''))).forEach(ronda=>{
+      filas.push({
+        factura, ips, fecha:ronda.fecha||'',
+        tipo:'Radicación/Respuesta ADRES', de:'', a:ronda.estado||'',
+        numRad:ronda.numero||'', lote:ronda.lote||'',
+        valReclamado:fm3(ronda.valorReclamado), valAprobado:fm3(ronda.valorAprobado), valGlosado:fm3(ronda.valorGlosado),
+        usuario:'ADRES', motivo:ronda.descripcion||'',
+      });
+    });
+    // 3) Cambios de gestión interna
+    (r.historial||[]).slice().sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||''))).forEach(h=>{
+      filas.push({
+        factura, ips, fecha:h.fecha||'',
+        tipo:h.tipo==='adres'?'Cambio estado ADRES':h.tipo==='migracion'?'Migración':'Cambio gestión interna',
+        de:h.de||'', a:h.a||'', numRad:'', lote:'',
+        valReclamado:'', valAprobado:'', valGlosado:'',
+        usuario:h.usuarioNombre||h.usuario||'', motivo:h.motivo||'',
+      });
+    });
+  });
+  // Ordenar por factura, luego por fecha
+  filas.sort((a,b)=> (a.factura!==b.factura ? a.factura.localeCompare(b.factura) : String(a.fecha||'').localeCompare(String(b.fecha||''))));
+  const header=['Factura','IPS','Fecha','Tipo de evento','De','A','N° Radicación','N° Consolidado','Valor Reclamado','Valor Aprobado','Valor Glosado','Usuario','Motivo'];
+  const rows=filas.map(f=>[f.factura,f.ips,f.fecha,f.tipo,f.de,f.a,f.numRad,f.lote,f.valReclamado,f.valAprobado,f.valGlosado,f.usuario,f.motivo]);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+  ws['!cols']=[{wch:18},{wch:22},{wch:20},{wch:24},{wch:14},{wch:14},{wch:16},{wch:16},{wch:14},{wch:14},{wch:14},{wch:18},{wch:40}];
+  ws['!autofilter']={ref:`A1:M${rows.length+1}`};
+  XLSX.utils.book_append_sheet(wb,ws,'Trazabilidad');
+  const nombreIPS=((typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas_las_IPS')
+    .toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  const fecha=new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb,`Trazabilidad_${nombreIPS}_${fecha}.xlsx`);
+  toast(`✔ Trazabilidad exportada · ${usar.length} cuentas, ${filas.length} movimientos`,'ok');
 };
 
 // Event listeners
