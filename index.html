@@ -4132,7 +4132,7 @@ function updGloKpis(){
     <div class="stat"><div class="sv" style="color:var(--green)">${noAcept}</div><div class="sl">No Aceptadas</div></div>
     <div class="stat"><div class="sv" style="color:var(--warn)">${parcial}</div><div class="sl">Parciales</div></div>
     <div class="stat"><div class="sv" style="font-size:14px;color:var(--red)">${fmt$(totGlo)}</div><div class="sl">Total Glosado</div></div>
-    <div class="stat"><div class="sv" style="font-size:14px;color:var(--green)">${fmt$(totNoAc)}</div><div class="sl">Recuperado</div></div>`;
+    <div class="stat" title="Calculado a partir de las respuestas que registras aquí mismo (glosas → aceptada/no aceptada/parcial). Es distinto del KPI 'Recuperación de glosas' del Portafolio, que se calcula desde el historial de rondas ante ADRES."><div class="sv" style="font-size:14px;color:var(--green)">${fmt$(totNoAc)}</div><div class="sl">Recuperado (resp. manual)</div></div>`;
 }
 
 window.procesarGlosasExcel = (file) => {
@@ -4239,8 +4239,8 @@ window.guardarGlosas = async () => {
   if(!gv('glo-ips-sel')){ toast('Selecciona la IPS primero.','w'); return; }
   loader(true);
   let ok=0, err=0;
-  for(const g of GLOSAS_PREVIEW){
-    try{ await addDoc(collection(db,'glosas'),{...g, creado:serverTimestamp()}); ok++; }
+  for(const glo of GLOSAS_PREVIEW){
+    try{ await addDoc(collection(db,'glosas'),{...glo, creado:serverTimestamp()}); ok++; }
     catch(e){ err++; }
   }
   loader(false);
@@ -4299,7 +4299,7 @@ window.renderGlosasResp = function(){
   if(cnt) cnt.textContent=`${facturasFiltradas.length} factura${facturasFiltradas.length!==1?'s':''} · ${facturasFiltradas.reduce((a,[,items])=>a+items.length,0)} glosas`;
 
   if(!facturasFiltradas.length){
-    lista.innerHTML=`<div style="color:var(--tx3);text-align:center;padding:32px;">No hay facturas con${busq?' "'+busq+'"':''} ese filtro.</div>`;
+    lista.innerHTML=`<div style="color:var(--tx3);text-align:center;padding:32px;">No hay facturas que coincidan con ese filtro.</div>`;
     return;
   }
 
@@ -4340,7 +4340,7 @@ window.renderGlosasResp = function(){
       <div id="fac-${fac.replace(/[^a-z0-9]/gi,'')}-${rad}">
         ${items.map((gl)=>{
           const est=gl.respuesta||'pendiente';
-          const estCol=est==='aceptada'?'#d32f2f':est==='no_aceptada'?'var(--green)':est==='parcial'?'var(--warn)':'var(--tx3)';
+          const estCol=window.colorDecisionEstado(est);
           return `
           <div style="padding:14px 16px;border-top:1px solid var(--brd);${est!=='pendiente'?'opacity:.85':''}">
             <!-- Info del elemento -->
@@ -4359,7 +4359,7 @@ window.renderGlosasResp = function(){
             <div style="display:grid;grid-template-columns:200px 1fr 100px 100px;gap:8px;align-items:start;">
               <div>
                 <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;font-family:var(--mono);">DECISIÓN</div>
-                <select onchange="window.updGlosaRespuesta('${gl.id}','tipo',this.value)"
+                <select id="dec-${gl.id}" onchange="window.actualizarColorDecision(this); window.updGlosaRespuesta('${gl.id}','tipo',this.value)"
                   style="width:100%;padding:6px 8px;border-radius:5px;border:2px solid ${estCol};background:var(--sur2);color:${estCol};font-size:11px;font-weight:700;">
                   <option value="pendiente" ${est==='pendiente'?'selected':''}>⏳ Sin responder</option>
                   <option value="no_aceptada" ${est==='no_aceptada'?'selected':''}>✕ No se acepta</option>
@@ -4401,6 +4401,16 @@ window.renderGlosasResp = function(){
       </div>
     </div>`;
   }).join('');
+};
+
+// Colores por estado de decisión (misma lógica que en el render, centralizada para no duplicar)
+window.colorDecisionEstado = (est) => est==='aceptada'?'#d32f2f':est==='no_aceptada'?'var(--green)':est==='parcial'?'var(--warn)':'var(--tx3)';
+
+// Actualiza en vivo el color del <select> de Decisión sin esperar al re-render completo
+window.actualizarColorDecision = (selectEl) => {
+  const col = window.colorDecisionEstado(selectEl.value);
+  selectEl.style.borderColor = col;
+  selectEl.style.color = col;
 };
 
 window.toggleFacGlosa=(id)=>{
@@ -4749,6 +4759,7 @@ window.expGlosasExcelMasivo=()=>{
   if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
   const pf=agruparGlosFiltered();
   const wb=XLSX.utils.book_new();
+  const nombresUsados=new Set();
   Object.entries(pf).forEach(([key,items],idx)=>{
     const [fac,rad,doc]=key.split('|||');
     const ipsNom=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'';
@@ -4768,7 +4779,14 @@ window.expGlosasExcelMasivo=()=>{
     data.push(['','','TOTAL',tGlo,'',tAc,tNoAc]);
     const ws=XLSX.utils.aoa_to_sheet(data);
     ws['!cols']=[{wch:14},{wch:35},{wch:50},{wch:14},{wch:60},{wch:14},{wch:14}];
-    const sn=fac.replace(/[^a-zA-Z0-9]/g,'').substring(0,28)||`F${idx+1}`;
+    // Nombre de hoja único: si el nombre base (truncado a 28) ya se usó, agrega sufijo numérico.
+    let sn=fac.replace(/[^a-zA-Z0-9]/g,'').substring(0,28)||`F${idx+1}`;
+    if(nombresUsados.has(sn)){
+      let n=2, base=sn.substring(0,25);
+      while(nombresUsados.has(`${base}_${n}`)) n++;
+      sn=`${base}_${n}`;
+    }
+    nombresUsados.add(sn);
     XLSX.utils.book_append_sheet(wb,ws,sn);
   });
   const fecha=new Date().toISOString().split('T')[0].replace(/-/g,'');
