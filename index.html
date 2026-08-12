@@ -7633,7 +7633,7 @@ window.updPortafolio = function(){
   const sinV=sinRad.reduce((a,r)=>a+val(r),0),radTotalV=radTotal.reduce((a,r)=>a+val(r),0);
   const auditadasV=auditadasAdres.reduce((a,r)=>a+val(r),0);
   const anuladas=recsAcum.filter(r=>getEstadoGestion(r)==='anulada'||getRespuestaAdres(r)==='anulada_adres');
-  const enTramite=enTramiteRecs; // mismo bucket mutuamente excluyente usado arriba
+  const enTramite=enTramiteRecs; // mismo bucket mutuamente excluyente usado arriba (para el desglose 393)
   // $ pendiente = suma directa del valorReclamado de las rondas AÚN en 'en_tramite'
   // (igual que el filtro fila-por-fila del Excel ADRES) — sobre TODAS las radicadas
   // activas, para recuperar el saldo pendiente de cuentas que ya tienen algo resuelto
@@ -7645,6 +7645,14 @@ window.updPortafolio = function(){
     const v = getValoresAdresTotal(r);
     return a + (v.tieneHistorial ? v.valorPendiente : val(r));
   }, 0);
+  // N para la TARJETA "En Trámite ADRES": cuántas cuentas tienen saldo pendiente >0,
+  // sin importar si ya están contadas en Aprobadas/Glosadas (una cuenta puede tener
+  // ambas cosas a la vez). A propósito NO es mutuamente excluyente con esos buckets —
+  // por eso puede no sumar 393 junto con las otras tarjetas, y está bien así.
+  const conSaldoPendiente = radicadasActivas.filter(r=>{
+    const v = getValoresAdresTotal(r);
+    return (v.tieneHistorial ? v.valorPendiente : val(r)) > 0;
+  });
   const coberturaRad=pct(radTotal.length,total);
   const efectividad=pct(pagV,auditadasV);
   const tasaGlosa=pct(glosadas.length,Math.max(auditadasAdres.length,1));
@@ -7657,7 +7665,7 @@ window.updPortafolio = function(){
   const pct2=(a,b)=>b>0?Math.round(a/b*100):0;
   const setCard=(pfx,n,v,t)=>{_s(pfx+'-n',n);_s(pfx+'-v',fm(v));const pEl=document.getElementById(pfx+'-pct');if(pEl)pEl.textContent=pct2(n,t)+'%';};
   setCard('cli-sinrad',sinRad.length,sinV,total);
-  setCard('cli-rad',enTramiteRecs.length,tramV,total);
+  setCard('cli-rad',conSaldoPendiente.length,tramV,total);
   setCard('cli-pag',pagadas.length,pagV,total);
   setCard('cli-glo',glosadas.length,gloV,total);
   const cliIPS=document.getElementById('dash-cli-ips');
