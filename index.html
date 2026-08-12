@@ -8121,52 +8121,57 @@ window.exportarTrazabilidad=function(){
   const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'?RECS_ALL:[]);
   if(!usar.length){ toast('No hay reclamaciones para exportar.','w'); return; }
   const fm3=v=>Math.round(v||0);
-  const filas=[];
-  usar.forEach(r=>{
-    const factura=r.factura||'';
-    const ips=IPS_NOMBRES?.[r.codHab]||r.codHab||'';
-    // 1) Creación / carga del registro
-    filas.push({
-      factura, ips, fecha:r.creado?.toDate?.()?.toISOString?.()||r.fechaEvento||'',
-      tipo:'Creación', de:'', a:'', numRad:'', lote:'',
-      valReclamado:parseInt(r.furips1?.c97||r.furips1?.c96||0)||0, valAprobado:'', valGlosado:'',
-      usuario:r.creadoPor||r.importadoPor||'', motivo:'Registro cargado al sistema',
-    });
-    // 2) Rondas de radicación / respuesta ADRES
-    (r.respuestasAdres||[]).slice().sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||''))).forEach(ronda=>{
-      filas.push({
-        factura, ips, fecha:ronda.fecha||'',
-        tipo:'Radicación/Respuesta ADRES', de:'', a:ronda.estado||'',
-        numRad:ronda.numero||'', lote:ronda.lote||'',
-        valReclamado:fm3(ronda.valorReclamado), valAprobado:fm3(ronda.valorAprobado), valGlosado:fm3(ronda.valorGlosado),
-        usuario:'ADRES', motivo:ronda.descripcion||'',
-      });
-    });
-    // 3) Cambios de gestión interna
-    (r.historial||[]).slice().sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||''))).forEach(h=>{
-      filas.push({
-        factura, ips, fecha:h.fecha||'',
-        tipo:h.tipo==='adres'?'Cambio estado ADRES':h.tipo==='migracion'?'Migración':'Cambio gestión interna',
-        de:h.de||'', a:h.a||'', numRad:'', lote:'',
-        valReclamado:'', valAprobado:'', valGlosado:'',
-        usuario:h.usuarioNombre||h.usuario||'', motivo:h.motivo||'',
-      });
-    });
+  const val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+
+  // Una fila por FACTURA, con cada ronda ante ADRES extendiéndose hacia la derecha.
+  const filas = usar.map(r=>{
+    const rondas=[...(r.respuestasAdres||[])].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const totAprobado=rondas.reduce((a,x)=>a+(x.valorAprobado||0),0);
+    const totGlosado =rondas.reduce((a,x)=>a+(x.valorGlosado||0),0);
+    const reclamado=val(r);
+    const saldoPendiente=Math.max(0, reclamado - totAprobado - totGlosado);
+    return {
+      factura:r.factura||'', ips:IPS_NOMBRES?.[r.codHab]||r.codHab||'',
+      radicadoActual:r.radicado?.numero||'', valReclamado:reclamado,
+      rondas, totAprobado, totGlosado, saldoPendiente,
+    };
   });
-  // Ordenar por factura, luego por fecha
-  filas.sort((a,b)=> (a.factura!==b.factura ? a.factura.localeCompare(b.factura) : String(a.fecha||'').localeCompare(String(b.fecha||''))));
-  const header=['Factura','IPS','Fecha','Tipo de evento','De','A','N° Radicación','N° Consolidado','Valor Reclamado','Valor Aprobado','Valor Glosado','Usuario','Motivo'];
-  const rows=filas.map(f=>[f.factura,f.ips,f.fecha,f.tipo,f.de,f.a,f.numRad,f.lote,f.valReclamado,f.valAprobado,f.valGlosado,f.usuario,f.motivo]);
+  filas.sort((a,b)=>a.factura.localeCompare(b.factura));
+
+  const maxRondas=Math.max(1, ...filas.map(f=>f.rondas.length));
+
+  const header=['Factura','IPS','N° Radicado Actual','Valor Reclamado'];
+  for(let i=1;i<=maxRondas;i++){
+    header.push(`Ronda ${i} - Fecha`,`Ronda ${i} - N° Radicación`,`Ronda ${i} - N° Consolidado`,`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`);
+  }
+  header.push('Total Aprobado','Total Glosado','Saldo Pendiente (Meta: $0)');
+
+  const rows=filas.map(f=>{
+    const row=[f.factura, f.ips, f.radicadoActual, f.valReclamado];
+    for(let i=0;i<maxRondas;i++){
+      const rd=f.rondas[i];
+      if(rd) row.push(rd.fecha||'', rd.numero||'', rd.lote||'', rd.estado||'', fm3(rd.valorReclamado), fm3(rd.valorAprobado), fm3(rd.valorGlosado));
+      else row.push('','','','','','','');
+    }
+    row.push(fm3(f.totAprobado), fm3(f.totGlosado), fm3(f.saldoPendiente));
+    return row;
+  });
+
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
-  ws['!cols']=[{wch:18},{wch:22},{wch:20},{wch:24},{wch:14},{wch:14},{wch:16},{wch:16},{wch:14},{wch:14},{wch:14},{wch:18},{wch:40}];
-  ws['!autofilter']={ref:`A1:M${rows.length+1}`};
-  XLSX.utils.book_append_sheet(wb,ws,'Trazabilidad');
+  const cols=[{wch:18},{wch:22},{wch:16},{wch:14}];
+  for(let i=0;i<maxRondas;i++) cols.push({wch:14},{wch:16},{wch:16},{wch:14},{wch:14},{wch:14},{wch:14});
+  cols.push({wch:14},{wch:14},{wch:18});
+  ws['!cols']=cols;
+  const lastCol=XLSX.utils.encode_col(header.length-1);
+  ws['!autofilter']={ref:`A1:${lastCol}${rows.length+1}`};
+  ws['!freeze']={xSplit:4,ySplit:1}; // congela Factura/IPS/Radicado/Reclamado + encabezado
+  XLSX.utils.book_append_sheet(wb,ws,'Trazabilidad ADRES');
   const nombreIPS=((typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas_las_IPS')
     .toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
   const fecha=new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb,`Trazabilidad_${nombreIPS}_${fecha}.xlsx`);
-  toast(`✔ Trazabilidad exportada · ${usar.length} cuentas, ${filas.length} movimientos`,'ok');
+  XLSX.writeFile(wb,`Trazabilidad_ADRES_${nombreIPS}_${fecha}.xlsx`);
+  toast(`✔ Trazabilidad exportada · ${filas.length} facturas, hasta ${maxRondas} rondas`,'ok');
 };
 
 // Event listeners
