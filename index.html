@@ -1995,7 +1995,7 @@ select option{background:var(--sur2);}
           <div class="alert ai" style="margin-bottom:14px;">
             📊 Sube el archivo Excel de glosas que genera ADRES (ReporteGlosasReclamPJ). El sistema lo procesa automáticamente.
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;max-width:600px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;max-width:800px;">
             <div class="field">
               <label class="fl">IPS Prestadora <span class="req">*</span></label>
               <select id="glo-ips-sel">
@@ -2007,6 +2007,11 @@ select option{background:var(--sur2);}
             <div class="field">
               <label class="fl">Período / Lote</label>
               <input id="glo-periodo" placeholder="Ej: Mayo 2024" maxlength="30">
+            </div>
+            <div class="field">
+              <label class="fl">Fecha recepción carta <span class="req">*</span></label>
+              <input type="date" id="glo-fecha-recepcion">
+              <div style="font-size:9px;color:var(--tx3);margin-top:2px;">La fecha en que realmente llegó el correo, no cuando la subes aquí. El plazo (2 meses) corre desde ahí.</div>
             </div>
           </div>
           <!-- Drop zone -->
@@ -2114,6 +2119,9 @@ select option{background:var(--sur2);}
 
           <!-- Resumen general -->
           <div id="glo-resumen" style="margin-bottom:16px;"></div>
+
+          <!-- Top 5 causales más frecuentes por IPS -->
+          <div id="glo-causales" style="margin-bottom:16px;"></div>
 
           <!-- Tabla por factura con acciones -->
           <div id="glo-facturas-lista"></div>
@@ -4133,6 +4141,28 @@ window.renderGlosasPorPaquete = function(){
     return;
   }
 
+  // Vencimiento: 2 meses calendario desde la fecha en que llegó la carta
+  // (nombre distinto al calcVencimiento(rec) global, que es para otra cosa: vencimiento
+  // de radicación de reclamaciones, con una firma y un resultado totalmente distintos)
+  const calcVencimientoPaquete=(fechaRecepcion)=>{
+    if(!fechaRecepcion) return null;
+    const d=new Date(fechaRecepcion+'T00:00:00');
+    if(isNaN(d)) return null;
+    d.setMonth(d.getMonth()+2);
+    return d;
+  };
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const infoVencimiento=(fechaRecepcion)=>{
+    const venc=calcVencimientoPaquete(fechaRecepcion);
+    if(!venc) return {texto:'Sin fecha de recepción', color:'var(--tx3)', dias:null};
+    const dias=Math.round((venc-hoy)/86400000);
+    const fechaTxt=venc.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    if(dias<0) return {texto:`🔴 VENCIDO hace ${Math.abs(dias)} día${Math.abs(dias)!==1?'s':''} (vencía ${fechaTxt})`, color:'#f85149', dias};
+    if(dias<=15) return {texto:`🔴 ${dias} día${dias!==1?'s':''} restantes (vence ${fechaTxt})`, color:'#f85149', dias};
+    if(dias<=30) return {texto:`🟡 ${dias} días restantes (vence ${fechaTxt})`, color:'var(--warn)', dias};
+    return {texto:`🟢 ${dias} días restantes (vence ${fechaTxt})`, color:'var(--green)', dias};
+  };
+
   // Nivel 1: agrupar por Paquete
   const porPaquete={};
   GLOSAS_DB.forEach(gl=>{
@@ -4148,24 +4178,41 @@ window.renderGlosasPorPaquete = function(){
     const totGlo=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
     const codHab=items[0]?.codHab||'';
     const periodo=items[0]?.periodo||'';
+    const fechaRecepcion=items[0]?.fechaRecepcion||'';
+    const venc=infoVencimiento(fechaRecepcion);
     return {
-      paquete, items, facturas, consolidados, totGlo, codHab, periodo,
+      paquete, items, facturas, consolidados, totGlo, codHab, periodo, fechaRecepcion, venc,
       totalGlosas:items.length, pendientes:pend, respondidas:items.length-pend,
       estado: pend===0?'respondido':'pendiente',
     };
   });
-  paquetes.sort((a,b)=> (a.estado!==b.estado ? (a.estado==='pendiente'?-1:1) : String(a.paquete).localeCompare(String(b.paquete))));
+  // Pendientes primero, y entre ellos los más urgentes (menos días) arriba
+  paquetes.sort((a,b)=>{
+    if(a.estado!==b.estado) return a.estado==='pendiente'?-1:1;
+    if(a.estado==='pendiente'){
+      const da=a.venc.dias, db=b.venc.dias;
+      if(da==null&&db==null) return 0;
+      if(da==null) return 1;
+      if(db==null) return -1;
+      return da-db;
+    }
+    return String(a.paquete).localeCompare(String(b.paquete));
+  });
 
   const totPaq=paquetes.length;
   const paqResp=paquetes.filter(p=>p.estado==='respondido').length;
   const paqPend=totPaq-paqResp;
   const pctPaq=totPaq?Math.round(paqResp/totPaq*100):0;
+  const paqVencidos=paquetes.filter(p=>p.estado==='pendiente'&&p.venc.dias!=null&&p.venc.dias<0).length;
+  const paqUrgentes=paquetes.filter(p=>p.estado==='pendiente'&&p.venc.dias!=null&&p.venc.dias>=0&&p.venc.dias<=15).length;
 
   kp.innerHTML=`
     <div class="stat"><div class="sv">${totPaq}</div><div class="sl">Total Paquetes</div></div>
     <div class="stat"><div class="sv" style="color:var(--warn)">${paqPend}</div><div class="sl">Pendientes</div></div>
     <div class="stat"><div class="sv" style="color:var(--green)">${paqResp}</div><div class="sl">✔ Respondidos</div></div>
-    <div class="stat"><div class="sv" style="font-size:14px;color:${pctPaq>=80?'var(--green)':pctPaq>=50?'var(--warn)':'var(--red)'}">${pctPaq}%</div><div class="sl">Avance</div></div>`;
+    <div class="stat"><div class="sv" style="font-size:14px;color:${pctPaq>=80?'var(--green)':pctPaq>=50?'var(--warn)':'var(--red)'}">${pctPaq}%</div><div class="sl">Avance</div></div>
+    <div class="stat"><div class="sv" style="color:#f85149">${paqVencidos}</div><div class="sl">🔴 Vencidos</div></div>
+    <div class="stat"><div class="sv" style="color:var(--warn)">${paqUrgentes}</div><div class="sl">⏰ Urgentes (≤15 días)</div></div>`;
 
   lista.innerHTML=paquetes.map(p=>{
     const idSafe='paq-'+String(p.paquete).replace(/[^a-z0-9]/gi,'');
@@ -4182,12 +4229,13 @@ window.renderGlosasPorPaquete = function(){
     });
 
     return `
-    <div style="background:var(--sur);border:1px solid ${p.estado==='respondido'?'rgba(0,178,226,.3)':'var(--brd)'};border-radius:8px;margin-bottom:12px;overflow:hidden;">
+    <div style="background:var(--sur);border:1px solid ${p.estado==='respondido'?'rgba(0,178,226,.3)':(p.venc.dias!=null&&p.venc.dias<=15?'rgba(248,81,73,.4)':'var(--brd)')};border-radius:8px;margin-bottom:12px;overflow:hidden;">
       <div style="background:var(--sur2);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;" onclick="toggleFacGlosa('${idSafe}')">
         <div style="font-family:var(--mono);font-weight:800;font-size:13px;color:var(--acc);">${nombrePaq}</div>
         <div style="font-size:11px;color:var(--tx2);">🏥 ${ipsNom}</div>
         <div style="font-size:11px;color:var(--tx2);">${p.consolidados.length} consolidado${p.consolidados.length!==1?'s':''} · ${p.facturas.length} factura${p.facturas.length!==1?'s':''}</div>
         ${p.periodo?`<div style="font-size:11px;color:var(--tx3);">${p.periodo}</div>`:''}
+        ${p.estado==='pendiente'?`<div style="font-size:11px;font-weight:700;color:${p.venc.color};">${p.venc.texto}</div>`:''}
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:6px;">
             <div style="width:80px;height:6px;background:var(--brd);border-radius:3px;overflow:hidden;">
@@ -4259,6 +4307,7 @@ function updGloKpis(){
 
 window.procesarGlosasExcel = (file) => {
   if(!file) return;
+  if(!gv('glo-fecha-recepcion')){ toast('Primero indica la fecha en que llegó la carta de glosa (arriba, "Fecha recepción carta").','w'); return; }
   if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(()=>procesarGlosasExcel(file),1500); return; }
   const reader=new FileReader();
   reader.onload=(e)=>{
@@ -4325,6 +4374,7 @@ window.procesarGlosasExcel = (file) => {
           vrGlosado:   Math.round(vrG),
           codHab:      idx.codHab>=0?String(row[idx.codHab]||'').trim():gv('glo-ips-sel'),
           periodo:     gv('glo-periodo'),
+          fechaRecepcion: gv('glo-fecha-recepcion'),
           respuesta:   'pendiente',
           textoResp:   '',
           vrAceptado:  0,
@@ -4626,6 +4676,32 @@ window.recalcParcial=(gloId, campoEditado)=>{
 };
 
 // Actualizar glosa en Firebase
+// Conecta la respuesta de una glosa con la línea de tiempo de la reclamación (historial[]).
+// Se llama solo cuando cambia la DECISIÓN (tipo), no en cada ajuste de valores parciales,
+// para no llenar el historial de entradas intermedias mientras se escribe/ajusta.
+async function registrarHistorialGlosa(gl){
+  try{
+    const q=query(collection(db,'reclamaciones'), where('factura','==',gl.factura));
+    const snap=await getDocs(q);
+    if(snap.empty) return; // la reclamación no existe en el sistema todavía
+    const recDoc=snap.docs[0];
+    const rec=recDoc.data();
+    const etiquetas={aceptada:'Glosa aceptada',no_aceptada:'Glosa no aceptada (en disputa)',parcial:'Glosa respondida parcialmente',pendiente:'Respuesta de glosa reiniciada'};
+    const entrada={
+      fecha: new Date().toISOString(),
+      tipo: 'glosa',
+      de: 'glosada',
+      a: gl.respuesta,
+      motivo: `${etiquetas[gl.respuesta]||gl.respuesta} · ${fmt$(gl.vrGlosado)} glosado${gl.textoResp?(' · '+gl.textoResp.slice(0,200)):''}`,
+      usuario: USER.uid,
+      usuarioNombre: USER.nombre||USER.email||'',
+      paquete: gl.paquete||'', consolidado: gl.consolidado||'',
+    };
+    const historialActual=Array.isArray(rec.historial)?rec.historial:[];
+    await updateDoc(doc(db,'reclamaciones',recDoc.id), { historial:[...historialActual, entrada] });
+  } catch(e){ console.error('No se pudo registrar en historial de la reclamación:', e); }
+}
+
 window.updGlosaRespuesta = async (gloId, campo, valor) => {
   const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
   if(campo==='tipo'){
@@ -4641,6 +4717,7 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
         actualizado:serverTimestamp(),
       });
       updGloKpis();
+      registrarHistorialGlosa(gl); // no bloqueante — la UI no espera esto
     } catch(e){ toast('Error guardando: '+e.message,'e'); }
     return;
   }
@@ -4700,8 +4777,72 @@ function agruparGlosFiltered(){
   return pf;
 }
 
+// ── Top 5 causales de glosa más frecuentes, por IPS ──
+// Agrupa por "Descripción Glosa" (normalizada) dentro de cada IPS, calculando % sobre
+// el valor glosado total y sobre el número de ítems de esa IPS.
+window.renderTopCausales = function(){
+  const cont=g('glo-causales'); if(!cont) return;
+  if(!GLOSAS_DB.length){ cont.innerHTML=''; return; }
+
+  const porIPS={};
+  GLOSAS_DB.forEach(gl=>{
+    const ips=gl.codHab||'__sin_ips__';
+    if(!porIPS[ips]) porIPS[ips]=[];
+    porIPS[ips].push(gl);
+  });
+
+  cont.innerHTML=`<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:8px;letter-spacing:1px;">🎯 TOP 5 CAUSALES DE GLOSA MÁS FRECUENTES POR IPS</div>` +
+    Object.entries(porIPS).map(([codHab,items])=>{
+      const ipsNom=IPS_NOM_GLO[codHab]||codHab||'Sin IPS';
+      const totValIPS=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+      const totNIPS=items.length;
+
+      const porCausal={};
+      items.forEach(gl=>{
+        const causal=(gl.descGlosa||'(sin descripción)').trim().toUpperCase();
+        if(!porCausal[causal]) porCausal[causal]={n:0,valor:0,textoOriginal:gl.descGlosa||'(sin descripción)'};
+        porCausal[causal].n++;
+        porCausal[causal].valor+=(parseInt(gl.vrGlosado)||0);
+      });
+
+      const top5=Object.values(porCausal).sort((a,b)=>b.valor-a.valor).slice(0,5);
+
+      return `
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:var(--tx);">🏥 ${ipsNom}</div>
+          <div style="font-size:10px;color:var(--tx3);">${totNIPS} glosas · ${fmt$(totValIPS)} en total</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--brd);">
+              <th style="text-align:left;padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">CAUSAL</th>
+              <th style="text-align:right;padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">N°</th>
+              <th style="text-align:right;padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">VALOR</th>
+              <th style="text-align:right;padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">% DEL TOTAL</th>
+              <th style="padding:4px 6px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${top5.map(c=>{
+              const pctVal=totValIPS?Math.round(c.valor/totValIPS*100):0;
+              return `<tr style="border-bottom:1px solid var(--brd);">
+                <td style="padding:6px;max-width:340px;">${c.textoOriginal}</td>
+                <td style="padding:6px;text-align:right;font-family:var(--mono);">${c.n}</td>
+                <td style="padding:6px;text-align:right;font-family:var(--mono);color:var(--red);">${fmt$(c.valor)}</td>
+                <td style="padding:6px;text-align:right;font-family:var(--mono);font-weight:700;">${pctVal}%</td>
+                <td style="padding:6px;width:100px;"><div style="width:100%;height:6px;background:var(--brd);border-radius:3px;overflow:hidden;"><div style="width:${pctVal}%;height:100%;background:var(--red);"></div></div></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    }).join('');
+};
+
 window.verResumenGlosas = () => {
   if(!GLOSAS_DB.length){ return; }
+  window.renderTopCausales();
   const pf=agruparGlosFiltered();
   const facturasCount=Object.keys(pf).length;
   const totGlo=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
