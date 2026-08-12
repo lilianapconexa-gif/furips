@@ -1986,6 +1986,7 @@ select option{background:var(--sur2);}
         <div style="display:flex;gap:0;border-bottom:2px solid var(--brd);margin-bottom:16px;">
           <div id="gtab-carga"  onclick="switchGloTab('carga')"  style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:700;color:var(--acc);border-bottom:2px solid var(--acc);margin-bottom:-2px;font-family:var(--mono);">📥 Cargar Glosas ADRES</div>
           <div id="gtab-resp"   onclick="switchGloTab('resp')"   style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">✍️ Responder Glosas</div>
+          <div id="gtab-paq"    onclick="switchGloTab('paq')"    style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">📦 Por Paquete</div>
           <div id="gtab-exp"    onclick="switchGloTab('exp')"    style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:var(--mono);">📤 Exportar Respuesta</div>
         </div>
 
@@ -2033,6 +2034,8 @@ select option{background:var(--sur2);}
                   <tr>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">FACTURA</th>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">RADICADO</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">PAQUETE</th>
+                    <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">CONSOLIDADO</th>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">DOCUMENTO</th>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);">CÓD. ELEMENTO</th>
                     <th style="padding:6px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);min-width:200px;">DESCRIPCIÓN GLOSA</th>
@@ -2092,6 +2095,15 @@ select option{background:var(--sur2);}
             </div>
           </div>
           <div id="glo-resp-lista"></div>
+        </div>
+
+        <!-- TAB: Por Paquete -->
+        <div id="gtab-paq-body" class="hidden">
+          <div class="alert ai" style="margin-bottom:14px;">
+            📦 ADRES responde por paquete (Número Consolidado) — la carta de glosa cubre todas las facturas de ese paquete a la vez. Un paquete queda <strong>✔ Respondido</strong> automáticamente cuando todas sus glosas tienen decisión.
+          </div>
+          <div class="stats" id="paq-kpis" style="margin-bottom:16px;"></div>
+          <div id="paq-lista"></div>
         </div>
 
         <!-- TAB: Exportar -->
@@ -4094,7 +4106,7 @@ const RESP_RAPIDAS = [
 ];
 
 window.switchGloTab = (tab) => {
-  ['carga','resp','exp'].forEach(t=>{
+  ['carga','resp','paq','exp'].forEach(t=>{
     const btn=g('gtab-'+t), body=g('gtab-'+t+'-body'); if(!btn||!body) return;
     const act=t===tab;
     btn.style.color=act?'var(--acc)':'var(--tx3)';
@@ -4103,7 +4115,117 @@ window.switchGloTab = (tab) => {
     body.classList.toggle('hidden',!act);
   });
   if(tab==='resp') window.renderGlosasResp();
+  if(tab==='paq')  window.renderGlosasPorPaquete();
   if(tab==='exp')  { window.verResumenGlosas(); }
+};
+
+// ── Control de respuesta de glosa POR PAQUETE ──
+// Un Paquete agrupa varios Consolidados, y cada Consolidado agrupa varias facturas.
+// ADRES envía la carta de glosa a nivel de Paquete. Un paquete queda "✔ Respondido"
+// automáticamente cuando el 100% de sus glosas (en todos sus consolidados) ya tienen decisión.
+window.renderGlosasPorPaquete = function(){
+  const kp=g('paq-kpis'), lista=g('paq-lista');
+  if(!kp||!lista) return;
+
+  if(!GLOSAS_DB.length){
+    kp.innerHTML='';
+    lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay glosas cargadas. Ve a la pestaña "📥 Cargar Glosas ADRES" para subir el archivo.</div>';
+    return;
+  }
+
+  // Nivel 1: agrupar por Paquete
+  const porPaquete={};
+  GLOSAS_DB.forEach(gl=>{
+    const k=gl.paquete?String(gl.paquete).trim():'__sin_paquete__';
+    if(!porPaquete[k]) porPaquete[k]=[];
+    porPaquete[k].push(gl);
+  });
+
+  const paquetes=Object.entries(porPaquete).map(([paquete,items])=>{
+    const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+    const facturas=[...new Set(items.map(g=>g.factura))];
+    const consolidados=[...new Set(items.map(g=>g.consolidado||'—'))];
+    const totGlo=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+    const codHab=items[0]?.codHab||'';
+    const periodo=items[0]?.periodo||'';
+    return {
+      paquete, items, facturas, consolidados, totGlo, codHab, periodo,
+      totalGlosas:items.length, pendientes:pend, respondidas:items.length-pend,
+      estado: pend===0?'respondido':'pendiente',
+    };
+  });
+  paquetes.sort((a,b)=> (a.estado!==b.estado ? (a.estado==='pendiente'?-1:1) : String(a.paquete).localeCompare(String(b.paquete))));
+
+  const totPaq=paquetes.length;
+  const paqResp=paquetes.filter(p=>p.estado==='respondido').length;
+  const paqPend=totPaq-paqResp;
+  const pctPaq=totPaq?Math.round(paqResp/totPaq*100):0;
+
+  kp.innerHTML=`
+    <div class="stat"><div class="sv">${totPaq}</div><div class="sl">Total Paquetes</div></div>
+    <div class="stat"><div class="sv" style="color:var(--warn)">${paqPend}</div><div class="sl">Pendientes</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green)">${paqResp}</div><div class="sl">✔ Respondidos</div></div>
+    <div class="stat"><div class="sv" style="font-size:14px;color:${pctPaq>=80?'var(--green)':pctPaq>=50?'var(--warn)':'var(--red)'}">${pctPaq}%</div><div class="sl">Avance</div></div>`;
+
+  lista.innerHTML=paquetes.map(p=>{
+    const idSafe='paq-'+String(p.paquete).replace(/[^a-z0-9]/gi,'');
+    const pct=p.totalGlosas?Math.round(p.respondidas/p.totalGlosas*100):0;
+    const ipsNom=IPS_NOM_GLO[p.codHab]||p.codHab||'—';
+    const nombrePaq=p.paquete==='__sin_paquete__'?'⚠️ Sin número de paquete':`📦 Paquete ${p.paquete}`;
+
+    // Nivel 2 dentro del paquete: agrupar por Consolidado
+    const porConsolidado={};
+    p.items.forEach(gl=>{
+      const k=gl.consolidado?String(gl.consolidado).trim():'—';
+      if(!porConsolidado[k]) porConsolidado[k]=[];
+      porConsolidado[k].push(gl);
+    });
+
+    return `
+    <div style="background:var(--sur);border:1px solid ${p.estado==='respondido'?'rgba(0,178,226,.3)':'var(--brd)'};border-radius:8px;margin-bottom:12px;overflow:hidden;">
+      <div style="background:var(--sur2);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;" onclick="toggleFacGlosa('${idSafe}')">
+        <div style="font-family:var(--mono);font-weight:800;font-size:13px;color:var(--acc);">${nombrePaq}</div>
+        <div style="font-size:11px;color:var(--tx2);">🏥 ${ipsNom}</div>
+        <div style="font-size:11px;color:var(--tx2);">${p.consolidados.length} consolidado${p.consolidados.length!==1?'s':''} · ${p.facturas.length} factura${p.facturas.length!==1?'s':''}</div>
+        ${p.periodo?`<div style="font-size:11px;color:var(--tx3);">${p.periodo}</div>`:''}
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:80px;height:6px;background:var(--brd);border-radius:3px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:${pct===100?'var(--green)':'var(--acc)'};border-radius:3px;"></div>
+            </div>
+            <span style="font-size:10px;color:var(--tx2);">${p.respondidas}/${p.totalGlosas}</span>
+          </div>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(p.totGlo)}</span>
+          ${p.estado==='respondido'
+            ?`<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">✔ Respondido</span>`
+            :`<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">⏳ Pendiente</span>`}
+          <span style="font-size:16px;color:var(--tx3);" id="ico-${idSafe}">▾</span>
+        </div>
+      </div>
+      <div id="${idSafe}" style="display:none;">
+        ${Object.entries(porConsolidado).map(([cons,itemsCons])=>{
+          const pendCons=itemsCons.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+          const facturasCons=[...new Set(itemsCons.map(g=>g.factura))];
+          return `
+          <div style="border-top:1px solid var(--brd);background:rgba(0,178,226,.03);padding:8px 16px;">
+            <div style="font-size:10px;font-family:var(--mono);font-weight:700;color:var(--tx2);display:flex;align-items:center;gap:8px;">
+              📄 Consolidado ${cons}
+              <span style="margin-left:auto;">${pendCons===0?'<span style="color:var(--green);">✔ completo</span>':`<span style="color:var(--warn);">⏳ ${pendCons} pendiente${pendCons!==1?'s':''}</span>`}</span>
+            </div>
+          </div>
+          ${facturasCons.map(fac=>{
+            const itemsFac=itemsCons.filter(g=>g.factura===fac);
+            const pendFac=itemsFac.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+            return `<div style="padding:8px 16px 8px 32px;border-top:1px solid var(--brd);font-size:11px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="window.irAGlosasFactura('${fac}')" title="Ir a responder esta factura">
+              <span style="font-family:var(--mono);font-weight:600;color:var(--tx);">${fac}</span>
+              <span style="color:var(--tx3);">${itemsFac.length} ítem${itemsFac.length!==1?'s':''}</span>
+              <span style="margin-left:auto;">${pendFac===0?'<span style="color:var(--green);">✔ completa</span>':`<span style="color:var(--warn);">⏳ ${pendFac} pendiente${pendFac!==1?'s':''}</span>`}</span>
+            </div>`;
+          }).join('')}`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
 };
 
 async function loadGlosas(){
@@ -4164,6 +4286,8 @@ window.procesarGlosasExcel = (file) => {
       const idx={
         codHab:   fi(['Código Habilitación','Habilitacion']),
         radicado: fi(['Radicaci','Radicacion']),
+        consolidado: fi(['Consolidado']),
+        paquete:  fi(['Paquete']),
         factura:  fi(['Factura','FACTURA']),
         docVic:   fi(['Victima','Víctima','Doc Vic']),
         vrGlosado:fi(['Glosado']),
@@ -4191,6 +4315,8 @@ window.procesarGlosasExcel = (file) => {
           idx:i,
           factura:     fac,
           radicado:    String(row[idx.radicado>=0?idx.radicado:0]||'').trim(),
+          consolidado: idx.consolidado>=0?String(row[idx.consolidado]||'').trim():'',
+          paquete:     idx.paquete>=0?String(row[idx.paquete]||'').trim():'',
           docVictima:  String(row[idx.docVic>=0?idx.docVic:0]||'').trim(),
           codElemento: String(row[idx.codElem>=0?idx.codElem:0]||'').trim(),
           descElemento:String(row[idx.descElem>=0?idx.descElem:0]||'').trim(),
@@ -4223,6 +4349,8 @@ window.procesarGlosasExcel = (file) => {
         <tr style="border-bottom:1px solid var(--brd);">
           <td style="padding:5px 10px;font-weight:600;font-family:var(--mono);">${r.factura}</td>
           <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${r.radicado}</td>
+          <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;color:var(--acc);font-weight:600;">${r.paquete||'—'}</td>
+          <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;color:var(--tx2);">${r.consolidado||'—'}</td>
           <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${r.docVictima}</td>
           <td style="padding:5px 10px;font-family:var(--mono);font-size:10px;">${r.codElemento||'—'}</td>
           <td style="padding:5px 10px;font-size:11px;max-width:300px;">${r.descGlosa}</td>
@@ -7611,6 +7739,13 @@ function poblarMesesPortafolio(){
 }
 
 window.updPortafolio = function(){
+  // GLOSAS_DB solo se carga al visitar la pestaña de Glosas — si aún no se ha
+  // cargado en esta sesión, la traemos aquí para que "En gestión de recuperación"
+  // no muestre $0 por falta de datos en memoria, y volvemos a pintar cuando llegue.
+  if(typeof GLOSAS_DB!=='undefined' && GLOSAS_DB.length===0 && !window._glosasCargadasUnaVez && typeof loadGlosas==='function'){
+    window._glosasCargadasUnaVez=true;
+    loadGlosas().then(()=>{ if(document.getElementById('dash-cli')) updPortafolio(); });
+  }
   const mesFiltro=document.getElementById('port-mes-sel')?.value||'';
   const fm=v=>'$'+(v||0).toLocaleString('es-CO');
   const pct=(a,b)=>b>0?Math.round(a/b*100):0;
@@ -7743,13 +7878,35 @@ window.updPortafolio = function(){
   });
   const tasaRecuperacion=pct(valorRecuperado,Math.max(valorGlosadoConResp,1));
   const semRecup=tasaRecuperacion>=80?'🟢':tasaRecuperacion>=60?'🟡':'🔴';
+  // ── En gestión de recuperación: lo que YA se está disputando (marcado no_aceptada/parcial
+  // en el módulo de Glosas), aunque ADRES todavía no lo haya confirmado. Se muestra junto
+  // al recuperado confirmado, no en su reemplazo — uno es actividad, el otro es resultado. ──
+  const codHabActivo=(typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*')?CLIENTE_ACTIVO.nit:null;
+  const glosasCliente=(typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>!codHabActivo||gl.codHab===codHabActivo);
+  const enDisputa=glosasCliente.filter(gl=>gl.respuesta==='no_aceptada'||gl.respuesta==='parcial');
+  const valorEnGestion=enDisputa.reduce((a,gl)=>a+(parseInt(gl.vrNoAceptado)||0),0);
+  // ── Paquetes de glosa: un Paquete agrupa varios Consolidados. Cuenta como respondido
+  // solo cuando el 100% de sus glosas (en todos sus consolidados) tienen decisión. ──
+  const paquetesCliente={};
+  glosasCliente.forEach(gl=>{
+    const k=gl.paquete?String(gl.paquete).trim():'__sin_paquete__';
+    if(!paquetesCliente[k]) paquetesCliente[k]=[];
+    paquetesCliente[k].push(gl);
+  });
+  const listaPaquetes=Object.values(paquetesCliente);
+  const paqPendientes=listaPaquetes.filter(items=>items.some(g=>!g.respuesta||g.respuesta==='pendiente'));
+  const paqRespondidos=listaPaquetes.length-paqPendientes.length;
+  const pctPaquetes=pct(paqRespondidos,Math.max(listaPaquetes.length,1));
+  const semPaq=pctPaquetes>=80?'🟢':pctPaquetes>=50?'🟡':'🔴';
   const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
   const glosasJust=glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
   ind.innerHTML=
     kpiR('Efectividad de cobro',efectividad+'%',semEfect,'>80%',`${pagadas.length} aprobadas de ${auditadasAdres.length} auditadas ADRES`)+
     kpiR('Tasa de glosa',tasaGlosa+'%',semGlosa,'<10%',`${glosadas.length} glosadas${glosasJust.length>0?' · '+glosasJust.length+' justificadas (autorización IPS)':''}`)+
     kpiR('Tasa de respuesta a glosa',tasaRespGlosa+'%',semRespGlosa,'>80%',`${glosadasConRespuesta.length} de ${conGlosaAlgunaVez.length} glosadas ya radicadas de nuevo`)+
-    kpiR('Recuperación de glosas',tasaRecuperacion+'%',semRecup,'>80%',`${fm(valorRecuperado)} recuperados de ${fm(valorGlosadoConResp)} glosados con respuesta`)+
+    kpiR('Paquetes de glosa respondidos',pctPaquetes+'%',semPaq,'>80%',`${paqRespondidos} de ${listaPaquetes.length} paquetes al día`)+
+    kpiR('En gestión de recuperación',fm(valorEnGestion),'⚔️','Actividad',`${enDisputa.length} glosas en disputa · pendientes de confirmar por ADRES`)+
+    kpiR('Recuperación confirmada (ADRES)',tasaRecuperacion+'%',semRecup,'>80%',`${fm(valorRecuperado)} recuperados de ${fm(valorGlosadoConResp)} glosados con respuesta`)+
     kpiR('Tasa de rechazo',tasaRechazo+'%',semRech,'<5%',`${anuladas.length} anuladas del portafolio`)+
     kpiR('Cobertura de radicación',coberturaRad+'%',semCob,'>80%',`${radTotal.length} de ${total} enviadas a ADRES`)+
     kpiR('Valor en trámite ADRES',fm(tramV),tramV>0?'⏳':'🟢','Por cobrar',`${enTramite.length} reclamaciones en auditoría`);
