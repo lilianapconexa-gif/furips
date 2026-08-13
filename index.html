@@ -1980,6 +1980,10 @@ select option{background:var(--sur2);}
         <div id="glosas-pendientes-panel" style="margin-bottom:16px;"></div>
 
         <!-- KPIs -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div></div>
+          <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
+        </div>
         <div class="stats" id="glo-kpis" style="margin-bottom:16px;"></div>
 
         <!-- Tabs -->
@@ -4274,6 +4278,63 @@ window.renderGlosasPorPaquete = function(){
       </div>
     </div>`;
   }).join('');
+};
+
+// ── Deshacer última carga de glosas ──
+// Identifica el lote más reciente (agrupado por IPS + período + fecha de recepción,
+// usando el timestamp real de creación en Firestore) y lo borra por completo, previa
+// confirmación mostrando exactamente qué se va a eliminar. Avisa si alguna de esas
+// glosas ya tiene respuesta registrada, para no borrar trabajo hecho sin advertirlo.
+window.deshacerUltimaCarga = async function(){
+  await loadGlosas(); // refrescar antes de decidir, por si hay cambios recientes de otra sesión
+  if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
+
+  const grupos={};
+  GLOSAS_DB.forEach(gl=>{
+    const k=[gl.codHab||'',gl.periodo||'',gl.fechaRecepcion||''].join('|||');
+    if(!grupos[k]) grupos[k]=[];
+    grupos[k].push(gl);
+  });
+
+  // El lote "más reciente" = el que tiene el timestamp de creación (creado) más alto
+  const toMs=v=>v?.toDate?.()?.getTime?.()||0;
+  let ultimoKey=null, ultimoMax=-1;
+  Object.entries(grupos).forEach(([k,items])=>{
+    const maxCreado=Math.max(...items.map(g=>toMs(g.creado)));
+    if(maxCreado>ultimoMax){ ultimoMax=maxCreado; ultimoKey=k; }
+  });
+  if(!ultimoKey){ toast('No se pudo identificar la última carga.','e'); return; }
+
+  const lote=grupos[ultimoKey];
+  const [codHab,periodo,fechaRecepcion]=ultimoKey.split('|||');
+  const ipsNom=IPS_NOM_GLO[codHab]||codHab||'(sin IPS)';
+  const facturas=[...new Set(lote.map(g=>g.factura))];
+  const yaRespondidas=lote.filter(g=>g.respuesta&&g.respuesta!=='pendiente');
+
+  let msg=`Vas a borrar la ÚLTIMA carga de glosas:\n\n`+
+    `• IPS: ${ipsNom}\n`+
+    `• Período/Lote: ${periodo||'(sin período)'}\n`+
+    `• Fecha recepción carta: ${fechaRecepcion||'(sin fecha)'}\n`+
+    `• ${lote.length} glosas en ${facturas.length} facturas\n`;
+  if(yaRespondidas.length>0){
+    msg+=`\n⚠️ ATENCIÓN: ${yaRespondidas.length} de esas glosas YA TIENEN RESPUESTA registrada — se perderá esa gestión si continúas.\n`;
+  }
+  msg+=`\nEsta acción NO se puede deshacer. ¿Confirmas que quieres borrarla?`;
+
+  if(!confirm(msg)) return;
+  if(yaRespondidas.length>0){
+    if(!confirm(`Última confirmación: se perderán ${yaRespondidas.length} respuestas ya registradas. ¿Continuar de todas formas?`)) return;
+  }
+
+  toast('Borrando...','w');
+  let ok=0, err=0;
+  for(const gl of lote){
+    try{ await deleteDoc(doc(db,'glosas',gl.id)); ok++; }
+    catch(e){ err++; }
+  }
+  toast(`✔ ${ok} glosas eliminadas${err>0?`, ${err} con error`:''}`,'ok');
+  await loadGlosas();
+  if(typeof window.renderGlosasPorPaquete==='function') window.renderGlosasPorPaquete();
 };
 
 async function loadGlosas(){
