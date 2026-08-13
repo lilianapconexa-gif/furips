@@ -10458,6 +10458,17 @@ window.diagnosticoValorInicial = function(){
   const conCambio  = analisis.filter(a=>a.diferencia!==0);
   const totalDiferencia = conCambio.reduce((a,x)=>a+Math.abs(x.diferencia),0);
 
+  // ── Detección de patrón de duplicado: ¿el valor actual es EXACTAMENTE el
+  // doble (o un múltiplo entero) de la 1ª ronda? Eso delata rondas duplicadas
+  // sumándose entre sí, no un ajuste legítimo de ADRES. ──
+  conCambio.forEach(a=>{
+    const ratio = a.valorPrimeraRonda>0 ? a.valorActual/a.valorPrimeraRonda : 0;
+    a.pareceDuplicado = a.rondas===2 && Math.abs(ratio-2)<0.001;
+  });
+  const duplicadosSospechosos = conCambio.filter(a=>a.pareceDuplicado);
+
+  window.RECS_ANALISIS_VALOR_INICIAL = analisis; // guardado para inspección por factura
+
   cont.innerHTML = `
     <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
       <div style="font-weight:700;font-size:13px;margin-bottom:10px;">📉 Impacto de sincronizaciones anteriores sobre el valor reclamado</div>
@@ -10467,8 +10478,11 @@ window.diagnosticoValorInicial = function(){
         <div class="stat"><div class="sv" style="color:var(--warn)">${conCambio.length}</div><div class="sl">⚠️ Ya cambiaron</div></div>
         <div class="stat"><div class="sv" style="font-size:14px;color:var(--warn)">${fm5(totalDiferencia)}</div><div class="sl">Suma de diferencias (abs)</div></div>
       </div>
+      ${duplicadosSospechosos.length>0?`<div class="alert aw" style="margin-bottom:12px;">
+        🔴 <strong>${duplicadosSospechosos.length} de ${conCambio.length}</strong> tienen el valor EXACTAMENTE duplicado (2 rondas, valor actual = 2× la 1ª ronda) — esto parece una ronda repetida sumándose por error, no un ajuste real de ADRES. Haz clic en una factura de la tabla para ver el detalle crudo de sus rondas.
+      </div>`:''}
       ${conCambio.length===0?`<div class="alert as">✔ Ninguna cuenta ha cambiado su valor reclamado desde la primera ronda — el histórico está intacto. Es seguro congelar c96/c97.</div>`:`
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Estas ${conCambio.length} cuentas ya tienen un c96/c97 distinto al de su primera ronda registrada:</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Estas ${conCambio.length} cuentas ya tienen un c96/c97 distinto al de su primera ronda registrada (clic en la factura para ver el detalle de sus rondas):</div>
       <div style="max-height:280px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">
         <table style="width:100%;border-collapse:collapse;font-size:11px;">
           <thead><tr style="background:var(--sur2);">
@@ -10479,8 +10493,8 @@ window.diagnosticoValorInicial = function(){
             <th style="padding:6px 8px;text-align:center;">N° rondas</th>
           </tr></thead>
           <tbody>
-            ${conCambio.map(a=>`<tr style="border-top:1px solid var(--brd);">
-              <td style="padding:5px 8px;font-family:var(--mono);">${a.factura}</td>
+            ${conCambio.map(a=>`<tr style="border-top:1px solid var(--brd);${a.pareceDuplicado?'background:rgba(248,81,73,.06);':''}cursor:pointer;" onclick="window.verRondasFactura('${a.factura}')" title="Clic para ver el detalle de las rondas">
+              <td style="padding:5px 8px;font-family:var(--mono);color:var(--acc);">${a.factura} ${a.pareceDuplicado?'🔴':''}</td>
               <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm5(a.valorPrimeraRonda)}</td>
               <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm5(a.valorActual)}</td>
               <td style="padding:5px 8px;text-align:right;font-family:var(--mono);color:${a.diferencia<0?'var(--green)':'var(--red)'};">${a.diferencia>0?'+':''}${fm5(a.diferencia)}</td>
@@ -10489,8 +10503,45 @@ window.diagnosticoValorInicial = function(){
           </tbody>
         </table>
       </div>`}
+      <div id="rondas-detalle-factura" style="margin-top:14px;"></div>
     </div>`;
-  toast(`Diagnóstico listo: ${conCambio.length} de ${conHistorial.length} cuentas con valor ya modificado`, conCambio.length?'w':'ok');
+  toast(`Diagnóstico listo: ${conCambio.length} de ${conHistorial.length} cuentas con valor ya modificado${duplicadosSospechosos.length?` · ${duplicadosSospechosos.length} parecen duplicadas`:''}`, conCambio.length?'w':'ok');
+};
+
+// Muestra el detalle crudo de las rondas ADRES de una factura puntual, para
+// confirmar si de verdad son rondas distintas o una duplicada por error.
+window.verRondasFactura = function(factura){
+  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const rec = src.find(r=>r.factura===factura);
+  const cont = document.getElementById('rondas-detalle-factura');
+  if(!rec||!cont) return;
+  const fm5 = v=>'$'+Math.round(v||0).toLocaleString('es-CO');
+  const rondas=[...(rec.respuestasAdres||[])].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+  cont.innerHTML = `
+    <div style="border:1px solid var(--acc);border-radius:8px;padding:12px;background:var(--sur2);">
+      <div style="font-weight:700;font-size:12px;margin-bottom:8px;">📄 Rondas de ${factura} (crudo, tal como están guardadas)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <thead><tr>
+          <th style="padding:4px 6px;text-align:left;">N° Radicación</th>
+          <th style="padding:4px 6px;text-align:left;">N° Consolidado</th>
+          <th style="padding:4px 6px;text-align:left;">Fecha</th>
+          <th style="padding:4px 6px;text-align:left;">Estado</th>
+          <th style="padding:4px 6px;text-align:right;">Valor Reclamado</th>
+          <th style="padding:4px 6px;text-align:left;">Fecha Sync</th>
+        </tr></thead>
+        <tbody>
+          ${rondas.map(rd=>`<tr style="border-top:1px solid var(--brd);">
+            <td style="padding:4px 6px;font-family:var(--mono);">${rd.numero||'—'}</td>
+            <td style="padding:4px 6px;font-family:var(--mono);">${rd.lote||'—'}</td>
+            <td style="padding:4px 6px;">${rd.fecha||'—'}</td>
+            <td style="padding:4px 6px;">${rd.estado||'—'}</td>
+            <td style="padding:4px 6px;text-align:right;font-family:var(--mono);">${fm5(rd.valorReclamado)}</td>
+            <td style="padding:4px 6px;font-size:9px;color:var(--tx3);">${rd.fechaSync||'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="font-size:10px;color:var(--tx3);margin-top:8px;">Si el "N° Radicación" es igual (o muy parecido) en ambas filas, es la misma radicación duplicada. Si son números distintos y fechas distintas, sí podría ser una radicación nueva real.</div>
+    </div>`;
 };
 
 window.diagnosticoADRES = async function(){
