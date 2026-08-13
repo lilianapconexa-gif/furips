@@ -726,6 +726,9 @@ select option{background:var(--sur2);}
           <button onclick="diagnosticoValorInicial()" class="btn bs" style="font-size:11px;margin-left:8px;border-color:var(--warn);color:var(--warn);" title="Ver cuántas cuentas ya cambiaron su valor reclamado por sincronizaciones anteriores">
             📉 Impacto valor inicial
           </button>
+          <button onclick="corregirValorReclamadoGlobal()" class="btn bs" style="font-size:11px;margin-left:8px;border-color:#2e7d32;color:#2e7d32;" title="Recalcular el valor reclamado de TODAS las cuentas (ambas IPS) con la fórmula correcta">
+            🔧 Corregir valor reclamado (ambas IPS)
+          </button>
         </div>
 
         <div id="valor-inicial-resultado" style="margin-bottom:14px;"></div>
@@ -9848,12 +9851,21 @@ window.procesarReporteADRES = async function(){
         fuenteADRES: true,
         fechaSync: new Date().toISOString(),
       };
-      // Actualizar valor reclamado en FURIPS 1 con el valor que ADRES tiene registrado
-      // Esto garantiza que los planos cuadren con el Excel ADRES
-      if(totalVRec > 0){
-        cambios['furips1.c97'] = totalVRec;
-        cambios['furips1.c96'] = totalVRec;
+      // Actualizar valor reclamado en FURIPS 1 = Valor ORIGINAL de la factura menos
+      // lo acumulado (aprobado + glosado). El valor original se fija UNA SOLA VEZ
+      // (recuperado de la primera ronda registrada, o del valor actual si es la
+      // primera sincronización de esta cuenta) y nunca se vuelve a tocar — así una
+      // reradicación del mismo valor NO lo duplica, y el "reclamado" refleja
+      // siempre el saldo real pendiente de resolver.
+      let valorOriginal = rec.furips1?.valorOriginalFactura;
+      if(!valorOriginal){
+        const primeraRonda = respOrdenadas[0];
+        valorOriginal = primeraRonda?.valorReclamado || parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
+        cambios['furips1.valorOriginalFactura'] = valorOriginal;
       }
+      const valorReclamadoActual = Math.max(0, valorOriginal - totalVApro - totalVGlo);
+      cambios['furips1.c97'] = valorReclamadoActual;
+      cambios['furips1.c96'] = valorReclamadoActual;
 
       // Radicado actual = último número de radicación
       if(ultima.numero && rec.radicado?.numero !== ultima.numero){
@@ -10439,10 +10451,80 @@ window.resetValoresADRES = async function(){
 // ronda guardada (lo más cercano al valor original que aún conservamos) contra el
 // furips1.c96/c97 ACTUAL — así medimos cuántas cuentas ya cambiaron su valor
 // reclamado por sincronizaciones anteriores, antes de decidir si congelamos el campo.
+// ── Corrección global de Valor Reclamado (ambas IPS) ──
+// Recalcula c96/c97 = valorOriginalFactura − aprobado acumulado − glosado acumulado
+// para TODAS las cuentas, fijando valorOriginalFactura una sola vez (desde la
+// primera ronda registrada, o el valor actual si no hay historial de rondas).
+// Muestra una vista previa con el impacto exacto antes de escribir nada.
+window.corregirValorReclamadoGlobal = async function(){
+  if(USER?.rol !== 'superadmin'){ toast('Solo Super Admin puede correr esta corrección.','e'); return; }
+  const src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
+  if(!src.length){ toast('No hay reclamaciones cargadas.','w'); return; }
+
+  const cambios=[];
+  src.forEach(rec=>{
+    const rondas=[...(rec.respuestasAdres||[])].sort((a,b)=>{
+      const fa=String(a.fecha||'').split('/').reverse().join('-');
+      const fb=String(b.fecha||'').split('/').reverse().join('-');
+      return fa.localeCompare(fb);
+    });
+    let valorOriginal = rec.furips1?.valorOriginalFactura;
+    let necesitaFijarOriginal=false;
+    if(!valorOriginal){
+      const primeraRonda=rondas[0];
+      valorOriginal = primeraRonda?.valorReclamado || parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
+      necesitaFijarOriginal=true;
+    }
+    const totalAprobado = rondas.reduce((a,r)=>a+(r.valorAprobado||0),0);
+    const totalGlosado  = rondas.reduce((a,r)=>a+(r.valorGlosado||0),0);
+    const valorNuevo = Math.max(0, valorOriginal - totalAprobado - totalGlosado);
+    const valorActual = parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
+    if(valorNuevo!==valorActual || necesitaFijarOriginal){
+      cambios.push({rec, valorOriginal, valorActual, valorNuevo, necesitaFijarOriginal, diferencia:valorNuevo-valorActual});
+    }
+  });
+
+  if(!cambios.length){ toast('✔ Todas las cuentas ya tienen el valor reclamado correcto — nada que corregir.','ok'); return; }
+
+  const totalDif = cambios.reduce((a,c)=>a+Math.abs(c.diferencia),0);
+  const fm6 = v=>'$'+Math.round(Math.abs(v)||0).toLocaleString('es-CO');
+  const msg=`Vas a corregir el Valor Reclamado de ${cambios.length} reclamaciones (ambas IPS):\n\n`+
+    `• Suma total de diferencias: ${fm6(totalDif)}\n`+
+    `• Ej: ${cambios[0].rec.factura} → ${fm6(cambios[0].valorActual)} pasa a ${fm6(cambios[0].valorNuevo)}\n\n`+
+    `Esto NO borra el histórico de rondas — solo corrige c96/c97 y fija el valor original de la factura una sola vez.\n\n`+
+    `¿Confirmas que quieres aplicar esta corrección?`;
+  if(!confirm(msg)) return;
+
+  toast('Corrigiendo...','w');
+  let ok=0, err=0;
+  const CHUNK=20;
+  for(let i=0;i<cambios.length;i+=CHUNK){
+    const lote=cambios.slice(i,i+CHUNK);
+    const batch=writeBatch(db);
+    lote.forEach(c=>{
+      const update={ 'furips1.c96':c.valorNuevo, 'furips1.c97':c.valorNuevo, actualizado:serverTimestamp() };
+      if(c.necesitaFijarOriginal) update['furips1.valorOriginalFactura']=c.valorOriginal;
+      batch.update(doc(db,'reclamaciones',c.rec.id), update);
+    });
+    try{
+      await batch.commit();
+      lote.forEach(c=>{
+        c.rec.furips1=c.rec.furips1||{};
+        c.rec.furips1.c96=c.valorNuevo; c.rec.furips1.c97=c.valorNuevo;
+        if(c.necesitaFijarOriginal) c.rec.furips1.valorOriginalFactura=c.valorOriginal;
+      });
+      ok+=lote.length;
+    } catch(e){ err+=lote.length; console.error('Error corrigiendo lote:',e); }
+  }
+  toast(`✔ ${ok} reclamaciones corregidas${err?`, ${err} con error`:''}`, err?'w':'ok');
+  if(typeof updStats==='function') updStats();
+  if(typeof window.diagnosticoValorInicial==='function') window.diagnosticoValorInicial();
+};
+
 window.diagnosticoValorInicial = function(){
   if(USER?.rol !== 'superadmin') return;
   const cont = document.getElementById('valor-inicial-resultado'); if(!cont) return;
-  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
   const fm5 = v=>'$'+Math.round(v||0).toLocaleString('es-CO');
 
   const conHistorial = src.filter(r=>(r.respuestasAdres||[]).length>0);
@@ -10511,7 +10593,7 @@ window.diagnosticoValorInicial = function(){
 // Muestra el detalle crudo de las rondas ADRES de una factura puntual, para
 // confirmar si de verdad son rondas distintas o una duplicada por error.
 window.verRondasFactura = function(factura){
-  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
   const rec = src.find(r=>r.factura===factura);
   const cont = document.getElementById('rondas-detalle-factura');
   if(!rec||!cont) return;
