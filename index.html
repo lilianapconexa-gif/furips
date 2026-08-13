@@ -10547,9 +10547,11 @@ window.diagnosticoValorInicial = function(){
   // "Correcto" = el valor actual YA coincide con lo que da la fórmula (original −
   // aprobado − glosado). Esto incluye cuentas resueltas al 100% (quedan en $0) —
   // eso NO es sospechoso, es el resultado esperado.
-  const correctas = analisis.filter(a=>a.diferenciaVsEsperado===0);
+  // "Correcto" = el valor actual coincide con la fórmula, con tolerancia de $1
+  // para ignorar residuos de redondeo de punto flotante (no son un problema real).
+  const correctas = analisis.filter(a=>Math.abs(a.diferenciaVsEsperado)<1);
   const sinCambio = correctas.filter(a=>a.diferencia===0); // además nunca cambiaron
-  const conCambio = analisis.filter(a=>a.diferenciaVsEsperado!==0); // esto SÍ sigue mal
+  const conCambio = analisis.filter(a=>Math.abs(a.diferenciaVsEsperado)>=1); // esto SÍ sigue mal
   const totalDiferencia = conCambio.reduce((a,x)=>a+Math.abs(x.diferenciaVsEsperado),0);
 
   // ── Detección de patrón de duplicado: ¿el valor actual es EXACTAMENTE el
