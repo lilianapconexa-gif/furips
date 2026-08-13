@@ -10531,14 +10531,26 @@ window.diagnosticoValorInicial = function(){
   const analisis = conHistorial.map(r=>{
     const rondas=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const primera=rondas[0];
-    const valorPrimeraRonda=parseInt(primera?.valorReclamado||0)||0;
+    const valorOriginal = r.furips1?.valorOriginalFactura || parseInt(primera?.valorReclamado||0)||0;
+    const totalAprobado = rondas.reduce((a,x)=>a+(x.valorAprobado||0),0);
+    const totalGlosado  = rondas.reduce((a,x)=>a+(x.valorGlosado||0),0);
+    const valorEsperado = Math.max(0, valorOriginal - totalAprobado - totalGlosado);
     const valorActual=parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
-    return { factura:r.factura, valorPrimeraRonda, valorActual, diferencia:valorActual-valorPrimeraRonda, rondas:rondas.length };
+    return {
+      factura:r.factura, valorPrimeraRonda:valorOriginal, valorActual, valorEsperado,
+      diferencia:valorActual-valorOriginal,        // vs el original (informativo)
+      diferenciaVsEsperado: valorActual-valorEsperado, // vs lo que la fórmula dice que DEBERÍA ser
+      rondas:rondas.length,
+    };
   });
 
-  const sinCambio = analisis.filter(a=>a.diferencia===0);
-  const conCambio  = analisis.filter(a=>a.diferencia!==0);
-  const totalDiferencia = conCambio.reduce((a,x)=>a+Math.abs(x.diferencia),0);
+  // "Correcto" = el valor actual YA coincide con lo que da la fórmula (original −
+  // aprobado − glosado). Esto incluye cuentas resueltas al 100% (quedan en $0) —
+  // eso NO es sospechoso, es el resultado esperado.
+  const correctas = analisis.filter(a=>a.diferenciaVsEsperado===0);
+  const sinCambio = correctas.filter(a=>a.diferencia===0); // además nunca cambiaron
+  const conCambio = analisis.filter(a=>a.diferenciaVsEsperado!==0); // esto SÍ sigue mal
+  const totalDiferencia = conCambio.reduce((a,x)=>a+Math.abs(x.diferenciaVsEsperado),0);
 
   // ── Detección de patrón de duplicado: ¿el valor actual es EXACTAMENTE el
   // doble (o un múltiplo entero) de la 1ª ronda? Eso delata rondas duplicadas
@@ -10553,23 +10565,25 @@ window.diagnosticoValorInicial = function(){
 
   cont.innerHTML = `
     <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
-      <div style="font-weight:700;font-size:13px;margin-bottom:10px;">📉 Impacto de sincronizaciones anteriores sobre el valor reclamado</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:10px;">📉 Consistencia del valor reclamado (c96/c97) vs. la fórmula esperada</div>
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:10px;">Fórmula esperada: Valor original − Aprobado acumulado − Glosado acumulado. Una cuenta resuelta al 100% quedando en $0 es CORRECTO, no una alarma.</div>
       <div class="stats" style="margin-bottom:14px;">
         <div class="stat"><div class="sv">${conHistorial.length}</div><div class="sl">Cuentas con historial ADRES</div></div>
-        <div class="stat"><div class="sv" style="color:var(--green)">${sinCambio.length}</div><div class="sl">✔ Sin cambio vs. 1ª ronda</div></div>
-        <div class="stat"><div class="sv" style="color:var(--warn)">${conCambio.length}</div><div class="sl">⚠️ Ya cambiaron</div></div>
-        <div class="stat"><div class="sv" style="font-size:14px;color:var(--warn)">${fm5(totalDiferencia)}</div><div class="sl">Suma de diferencias (abs)</div></div>
+        <div class="stat"><div class="sv" style="color:var(--green)">${correctas.length}</div><div class="sl">✔ Coinciden con la fórmula</div></div>
+        <div class="stat"><div class="sv" style="color:var(--red)">${conCambio.length}</div><div class="sl">🔴 NO coinciden (revisar)</div></div>
+        <div class="stat"><div class="sv" style="font-size:14px;color:var(--warn)">${fm5(totalDiferencia)}</div><div class="sl">Suma de diferencias reales (abs)</div></div>
       </div>
       ${duplicadosSospechosos.length>0?`<div class="alert aw" style="margin-bottom:12px;">
-        🔴 <strong>${duplicadosSospechosos.length} de ${conCambio.length}</strong> tienen el valor EXACTAMENTE duplicado (2 rondas, valor actual = 2× la 1ª ronda) — esto parece una ronda repetida sumándose por error, no un ajuste real de ADRES. Haz clic en una factura de la tabla para ver el detalle crudo de sus rondas.
+        🔴 <strong>${duplicadosSospechosos.length} de ${conCambio.length}</strong> tienen el valor EXACTAMENTE duplicado (2 rondas, valor actual = 2× la 1ª ronda) — esto parece una ronda repetida sumándose por error. Haz clic en una factura de la tabla para ver el detalle crudo de sus rondas.
       </div>`:''}
-      ${conCambio.length===0?`<div class="alert as">✔ Ninguna cuenta ha cambiado su valor reclamado desde la primera ronda — el histórico está intacto. Es seguro congelar c96/c97.</div>`:`
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Estas ${conCambio.length} cuentas ya tienen un c96/c97 distinto al de su primera ronda registrada (clic en la factura para ver el detalle de sus rondas):</div>
+      ${conCambio.length===0?`<div class="alert as">✔ Las ${conHistorial.length} cuentas con historial coinciden exactamente con la fórmula (original − aprobado − glosado). No queda ninguna inconsistencia real por corregir.</div>`:`
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Estas ${conCambio.length} cuentas tienen un c96/c97 que NO coincide con lo que la fórmula dice que debería ser (clic en la factura para ver el detalle de sus rondas):</div>
       <div style="max-height:280px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">
         <table style="width:100%;border-collapse:collapse;font-size:11px;">
           <thead><tr style="background:var(--sur2);">
             <th style="padding:6px 8px;text-align:left;">Factura</th>
-            <th style="padding:6px 8px;text-align:right;">1ª ronda</th>
+            <th style="padding:6px 8px;text-align:right;">Valor original</th>
+            <th style="padding:6px 8px;text-align:right;">Esperado (fórmula)</th>
             <th style="padding:6px 8px;text-align:right;">Actual (c96/c97)</th>
             <th style="padding:6px 8px;text-align:right;">Diferencia</th>
             <th style="padding:6px 8px;text-align:center;">N° rondas</th>
@@ -10578,8 +10592,9 @@ window.diagnosticoValorInicial = function(){
             ${conCambio.map(a=>`<tr style="border-top:1px solid var(--brd);${a.pareceDuplicado?'background:rgba(248,81,73,.06);':''}cursor:pointer;" onclick="window.verRondasFactura('${a.factura}')" title="Clic para ver el detalle de las rondas">
               <td style="padding:5px 8px;font-family:var(--mono);color:var(--acc);">${a.factura} ${a.pareceDuplicado?'🔴':''}</td>
               <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm5(a.valorPrimeraRonda)}</td>
+              <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm5(a.valorEsperado)}</td>
               <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm5(a.valorActual)}</td>
-              <td style="padding:5px 8px;text-align:right;font-family:var(--mono);color:${a.diferencia<0?'var(--green)':'var(--red)'};">${a.diferencia>0?'+':''}${fm5(a.diferencia)}</td>
+              <td style="padding:5px 8px;text-align:right;font-family:var(--mono);color:var(--red);">${a.diferenciaVsEsperado>0?'+':''}${fm5(a.diferenciaVsEsperado)}</td>
               <td style="padding:5px 8px;text-align:center;">${a.rondas}</td>
             </tr>`).join('')}
           </tbody>
@@ -10587,7 +10602,7 @@ window.diagnosticoValorInicial = function(){
       </div>`}
       <div id="rondas-detalle-factura" style="margin-top:14px;"></div>
     </div>`;
-  toast(`Diagnóstico listo: ${conCambio.length} de ${conHistorial.length} cuentas con valor ya modificado${duplicadosSospechosos.length?` · ${duplicadosSospechosos.length} parecen duplicadas`:''}`, conCambio.length?'w':'ok');
+  toast(`Diagnóstico listo: ${correctas.length} de ${conHistorial.length} coinciden con la fórmula · ${conCambio.length} necesitan revisión${duplicadosSospechosos.length?` (${duplicadosSospechosos.length} parecen duplicadas)`:''}`, conCambio.length?'w':'ok');
 };
 
 // Muestra el detalle crudo de las rondas ADRES de una factura puntual, para
