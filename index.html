@@ -1980,9 +1980,12 @@ select option{background:var(--sur2);}
         <div id="glosas-pendientes-panel" style="margin-bottom:16px;"></div>
 
         <!-- KPIs -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
           <div></div>
-          <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
+          <div style="display:flex;gap:8px;">
+            <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
+            <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
+          </div>
         </div>
         <div class="stats" id="glo-kpis" style="margin-bottom:16px;"></div>
 
@@ -4338,6 +4341,45 @@ window.deshacerUltimaCarga = async function(){
   if(typeof window.renderGlosasPorPaquete==='function') window.renderGlosasPorPaquete();
 };
 
+// ── Borrar glosas "huérfanas" sin número de paquete asignado ──
+// A diferencia de deshacerUltimaCarga (que solo mira la carga más reciente por fecha),
+// esta busca específicamente registros sin `paquete` — típicamente basura de pruebas o
+// cargas de antes de que existiera ese campo. Se limita a la IPS activa para no tocar
+// datos de otras IPS por accidente.
+window.borrarGlosasSinPaquete = async function(){
+  await loadGlosas();
+  const src=window.glosasFiltradasCliente();
+  const huerfanas=src.filter(gl=>!gl.paquete);
+  if(!huerfanas.length){ toast('No hay glosas sin número de paquete en la IPS activa.','ok'); return; }
+
+  const facturas=[...new Set(huerfanas.map(g=>g.factura))];
+  const yaRespondidas=huerfanas.filter(g=>g.respuesta&&g.respuesta!=='pendiente');
+  const ipsNom=(typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.razon)||'la IPS activa';
+
+  let msg=`Vas a borrar TODAS las glosas SIN número de paquete de ${ipsNom}:\n\n`+
+    `• ${huerfanas.length} glosas en ${facturas.length} facturas\n`;
+  if(yaRespondidas.length>0){
+    msg+=`\n⚠️ ATENCIÓN: ${yaRespondidas.length} de esas glosas YA TIENEN RESPUESTA registrada — se perderá esa gestión si continúas.\n`;
+  }
+  msg+=`\nEsta acción NO se puede deshacer. ¿Confirmas que quieres borrarlas?`;
+
+  if(!confirm(msg)) return;
+  if(yaRespondidas.length>0){
+    if(!confirm(`Última confirmación: se perderán ${yaRespondidas.length} respuestas ya registradas. ¿Continuar de todas formas?`)) return;
+  }
+
+  toast('Borrando...','w');
+  let ok=0, err=0;
+  for(const gl of huerfanas){
+    try{ await deleteDoc(doc(db,'glosas',gl.id)); ok++; }
+    catch(e){ err++; }
+  }
+  toast(`✔ ${ok} glosas eliminadas${err>0?`, ${err} con error`:''}`,'ok');
+  await loadGlosas();
+  if(typeof window.renderGlosasPorPaquete==='function') window.renderGlosasPorPaquete();
+};
+
+
 async function loadGlosas(){
   try {
     const snap = await getDocs(collection(db,'glosas'));
@@ -4418,8 +4460,24 @@ window.procesarGlosasExcel = (file) => {
         anotacion:fi(['Anotación','Anotacion']),
       };
 
+      // ADRES suele combinar celdas (merge) en las columnas de agrupación: Paquete,
+      // Consolidado, Factura, Radicado, Documento, Código Habilitación — solo la
+      // primera fila del grupo trae el valor, las siguientes quedan vacías en el
+      // archivo aunque visualmente se vean "combinadas". Se rellena hacia abajo
+      // con el último valor no vacío visto en esa columna, ANTES de procesar filas.
+      const dataRows=aoa.slice(headerRow+1).map(r=>[...r]); // copia para no mutar aoa original
+      const colsRellenar=[idx.paquete,idx.consolidado,idx.factura,idx.radicado,idx.docVic,idx.codHab].filter(c=>c>=0);
+      const ultimoValor={};
+      dataRows.forEach(row=>{
+        colsRellenar.forEach(c=>{
+          const v=String(row[c]??'').trim();
+          if(v) ultimoValor[c]=v;
+          else if(ultimoValor[c]!==undefined) row[c]=ultimoValor[c];
+        });
+      });
+
       GLOSAS_PREVIEW=[];
-      aoa.slice(headerRow+1).forEach((row,i)=>{
+      dataRows.forEach((row,i)=>{
         const fac=String(row[idx.factura]||'').trim();
         if(!fac) return;
 
