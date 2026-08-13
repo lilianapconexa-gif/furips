@@ -4138,10 +4138,11 @@ window.switchGloTab = (tab) => {
 window.renderGlosasPorPaquete = function(){
   const kp=g('paq-kpis'), lista=g('paq-lista');
   if(!kp||!lista) return;
+  const src=window.glosasFiltradasCliente();
 
-  if(!GLOSAS_DB.length){
+  if(!src.length){
     kp.innerHTML='';
-    lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay glosas cargadas. Ve a la pestaña "📥 Cargar Glosas ADRES" para subir el archivo.</div>';
+    lista.innerHTML=`<div style="color:var(--tx3);text-align:center;padding:32px;">${GLOSAS_DB.length?'No hay glosas cargadas para la IPS activa. Cambia de IPS o revisa el filtro.':'No hay glosas cargadas. Ve a la pestaña "📥 Cargar Glosas ADRES" para subir el archivo.'}</div>`;
     return;
   }
 
@@ -4169,7 +4170,7 @@ window.renderGlosasPorPaquete = function(){
 
   // Nivel 1: agrupar por Paquete
   const porPaquete={};
-  GLOSAS_DB.forEach(gl=>{
+  src.forEach(gl=>{
     const k=gl.paquete?String(gl.paquete).trim():'__sin_paquete__';
     if(!porPaquete[k]) porPaquete[k]=[];
     porPaquete[k].push(gl);
@@ -4346,14 +4347,23 @@ async function loadGlosas(){
   } catch(e){ console.error('Error cargando glosas:',e); }
 }
 
+// Filtra GLOSAS_DB por la IPS activa (mismo criterio que usa el Portafolio con RECS).
+// Si CLIENTE_ACTIVO es '*' (todas las IPS), no filtra nada.
+window.glosasFiltradasCliente = function(){
+  const codHabActivo=(typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*')?CLIENTE_ACTIVO.nit:null;
+  if(!codHabActivo) return GLOSAS_DB;
+  return GLOSAS_DB.filter(gl=>gl.codHab===codHabActivo);
+};
+
 function updGloKpis(){
-  const tot     = GLOSAS_DB.length;
-  const pend    = GLOSAS_DB.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
-  const acept   = GLOSAS_DB.filter(g=>g.respuesta==='aceptada').length;
-  const noAcept = GLOSAS_DB.filter(g=>g.respuesta==='no_aceptada').length;
-  const parcial = GLOSAS_DB.filter(g=>g.respuesta==='parcial').length;
-  const totGlo  = GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
-  const totNoAc = GLOSAS_DB.filter(g=>g.respuesta==='no_aceptada'||g.respuesta==='parcial').reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||g.vrGlosado||0),0);
+  const src     = window.glosasFiltradasCliente();
+  const tot     = src.length;
+  const pend    = src.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+  const acept   = src.filter(g=>g.respuesta==='aceptada').length;
+  const noAcept = src.filter(g=>g.respuesta==='no_aceptada').length;
+  const parcial = src.filter(g=>g.respuesta==='parcial').length;
+  const totGlo  = src.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+  const totNoAc = src.filter(g=>g.respuesta==='no_aceptada'||g.respuesta==='parcial').reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||g.vrGlosado||0),0);
 
   const kp=g('glo-kpis'); if(!kp) return;
   kp.innerHTML=`
@@ -4501,15 +4511,16 @@ window.limpiarGlosas = () => {
 window.renderGlosasResp = function(){
   const filtEst = g('glo-filtro-est')?.value||'';
   const lista = g('glo-resp-lista'); if(!lista) return;
+  const src = window.glosasFiltradasCliente();
 
-  if(!GLOSAS_DB.length){
-    lista.innerHTML='<div style="color:var(--tx3);text-align:center;padding:32px;">No hay glosas cargadas. Ve a la pestaña "📥 Cargar Glosas ADRES" para subir el archivo.</div>';
+  if(!src.length){
+    lista.innerHTML=`<div style="color:var(--tx3);text-align:center;padding:32px;">${GLOSAS_DB.length?'No hay glosas cargadas para la IPS activa. Cambia de IPS o revisa el filtro.':'No hay glosas cargadas. Ve a la pestaña "📥 Cargar Glosas ADRES" para subir el archivo.'}</div>`;
     return;
   }
 
-  // Agrupar TODAS las glosas por factura primero
+  // Agrupar TODAS las glosas (de la IPS activa) por factura primero
   const porFactura={};
-  GLOSAS_DB.forEach(gl=>{
+  src.forEach(gl=>{
     const k=gl.factura+'|||'+gl.radicado+'|||'+(gl.docVictima||'');
     if(!porFactura[k]) porFactura[k]=[];
     porFactura[k].push(gl);
@@ -4812,9 +4823,9 @@ function agruparGlosPorFactura(){
 
 // Versión con filtros avanzados aplicados — usada en Exportar
 function agruparGlosFiltered(){
-  // Aplicar filtros avanzados igual que en la vista Responder
+  // Aplicar filtros avanzados igual que en la vista Responder, y respetar la IPS activa
   const filtEst = g('glo-filtro-est')?.value||'';
-  const glosFiltradas = aplicarFltGlosas([...GLOSAS_DB]);
+  const glosFiltradas = aplicarFltGlosas([...window.glosasFiltradasCliente()]);
 
   const pf={};
   glosFiltradas.forEach(gl=>{
@@ -4843,10 +4854,11 @@ function agruparGlosFiltered(){
 // el valor glosado total y sobre el número de ítems de esa IPS.
 window.renderTopCausales = function(){
   const cont=g('glo-causales'); if(!cont) return;
-  if(!GLOSAS_DB.length){ cont.innerHTML=''; return; }
+  const src=window.glosasFiltradasCliente();
+  if(!src.length){ cont.innerHTML=''; return; }
 
   const porIPS={};
-  GLOSAS_DB.forEach(gl=>{
+  src.forEach(gl=>{
     const ips=gl.codHab||'__sin_ips__';
     if(!porIPS[ips]) porIPS[ips]=[];
     porIPS[ips].push(gl);
@@ -4902,14 +4914,15 @@ window.renderTopCausales = function(){
 };
 
 window.verResumenGlosas = () => {
-  if(!GLOSAS_DB.length){ return; }
+  const src=window.glosasFiltradasCliente();
+  if(!src.length){ return; }
   window.renderTopCausales();
   const pf=agruparGlosFiltered();
   const facturasCount=Object.keys(pf).length;
-  const totGlo=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
-  const totNoAc=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
-  const totAc=GLOSAS_DB.reduce((a,g)=>a+(parseInt(g.vrAceptado)||0),0);
-  const pend=GLOSAS_DB.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+  const totGlo=src.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+  const totNoAc=src.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
+  const totAc=src.reduce((a,g)=>a+(parseInt(g.vrAceptado)||0),0);
+  const pend=src.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
 
   // Resumen KPIs
   const res=g('glo-resumen'); if(res) res.innerHTML=`
@@ -11772,6 +11785,14 @@ window.seleccionarCliente = function(nit){
     }
     if(typeof cambiarCliente === 'function' && CLIENTE_ACTIVO.nit !== '*'){
       cambiarCliente(CLIENTE_ACTIVO.nit);
+    }
+    // Refrescar el módulo de Glosas si está a la vista (no filtra por defecto al cargar,
+    // solo tiene sentido recalcular si el usuario ya tiene esa pantalla abierta)
+    if(g('n-glosas')?.classList.contains('on') || g('glosas-pendientes-panel')){
+      if(typeof updGloKpis==='function') updGloKpis();
+      if(typeof window.renderGlosasResp==='function' && !g('gtab-resp-body')?.classList.contains('hidden')) window.renderGlosasResp();
+      if(typeof window.renderGlosasPorPaquete==='function' && !g('gtab-paq-body')?.classList.contains('hidden')) window.renderGlosasPorPaquete();
+      if(typeof window.verResumenGlosas==='function' && !g('gtab-exp-body')?.classList.contains('hidden')) window.verResumenGlosas();
     }
     checkIPSVacia();
   }, 150);
