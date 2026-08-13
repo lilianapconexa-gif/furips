@@ -723,7 +723,12 @@ select option{background:var(--sur2);}
           <button onclick="diagnosticoADRES()" class="btn bs" style="font-size:11px;margin-left:8px;" title="Ver diagnóstico de fuentes de datos">
             🔎 Diagnóstico
           </button>
+          <button onclick="diagnosticoValorInicial()" class="btn bs" style="font-size:11px;margin-left:8px;border-color:var(--warn);color:var(--warn);" title="Ver cuántas cuentas ya cambiaron su valor reclamado por sincronizaciones anteriores">
+            📉 Impacto valor inicial
+          </button>
         </div>
+
+        <div id="valor-inicial-resultado" style="margin-bottom:14px;"></div>
 
         <!-- Progress -->
         <div id="adres-progress" style="display:none;background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:14px;">
@@ -10429,6 +10434,65 @@ window.resetValoresADRES = async function(){
 // ══ FIN RESET ══
 
 
+// ── Diagnóstico: impacto de las sincronizaciones pasadas sobre el valor reclamado ──
+// Compara, para cada cuenta con historial de rondas ADRES, el valor de la PRIMERA
+// ronda guardada (lo más cercano al valor original que aún conservamos) contra el
+// furips1.c96/c97 ACTUAL — así medimos cuántas cuentas ya cambiaron su valor
+// reclamado por sincronizaciones anteriores, antes de decidir si congelamos el campo.
+window.diagnosticoValorInicial = function(){
+  if(USER?.rol !== 'superadmin') return;
+  const cont = document.getElementById('valor-inicial-resultado'); if(!cont) return;
+  const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
+  const fm5 = v=>'$'+Math.round(v||0).toLocaleString('es-CO');
+
+  const conHistorial = src.filter(r=>(r.respuestasAdres||[]).length>0);
+  const analisis = conHistorial.map(r=>{
+    const rondas=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const primera=rondas[0];
+    const valorPrimeraRonda=parseInt(primera?.valorReclamado||0)||0;
+    const valorActual=parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+    return { factura:r.factura, valorPrimeraRonda, valorActual, diferencia:valorActual-valorPrimeraRonda, rondas:rondas.length };
+  });
+
+  const sinCambio = analisis.filter(a=>a.diferencia===0);
+  const conCambio  = analisis.filter(a=>a.diferencia!==0);
+  const totalDiferencia = conCambio.reduce((a,x)=>a+Math.abs(x.diferencia),0);
+
+  cont.innerHTML = `
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
+      <div style="font-weight:700;font-size:13px;margin-bottom:10px;">📉 Impacto de sincronizaciones anteriores sobre el valor reclamado</div>
+      <div class="stats" style="margin-bottom:14px;">
+        <div class="stat"><div class="sv">${conHistorial.length}</div><div class="sl">Cuentas con historial ADRES</div></div>
+        <div class="stat"><div class="sv" style="color:var(--green)">${sinCambio.length}</div><div class="sl">✔ Sin cambio vs. 1ª ronda</div></div>
+        <div class="stat"><div class="sv" style="color:var(--warn)">${conCambio.length}</div><div class="sl">⚠️ Ya cambiaron</div></div>
+        <div class="stat"><div class="sv" style="font-size:14px;color:var(--warn)">${fm5(totalDiferencia)}</div><div class="sl">Suma de diferencias (abs)</div></div>
+      </div>
+      ${conCambio.length===0?`<div class="alert as">✔ Ninguna cuenta ha cambiado su valor reclamado desde la primera ronda — el histórico está intacto. Es seguro congelar c96/c97.</div>`:`
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Estas ${conCambio.length} cuentas ya tienen un c96/c97 distinto al de su primera ronda registrada:</div>
+      <div style="max-height:280px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead><tr style="background:var(--sur2);">
+            <th style="padding:6px 8px;text-align:left;">Factura</th>
+            <th style="padding:6px 8px;text-align:right;">1ª ronda</th>
+            <th style="padding:6px 8px;text-align:right;">Actual (c96/c97)</th>
+            <th style="padding:6px 8px;text-align:right;">Diferencia</th>
+            <th style="padding:6px 8px;text-align:center;">N° rondas</th>
+          </tr></thead>
+          <tbody>
+            ${conCambio.map(a=>`<tr style="border-top:1px solid var(--brd);">
+              <td style="padding:5px 8px;font-family:var(--mono);">${a.factura}</td>
+              <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm5(a.valorPrimeraRonda)}</td>
+              <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm5(a.valorActual)}</td>
+              <td style="padding:5px 8px;text-align:right;font-family:var(--mono);color:${a.diferencia<0?'var(--green)':'var(--red)'};">${a.diferencia>0?'+':''}${fm5(a.diferencia)}</td>
+              <td style="padding:5px 8px;text-align:center;">${a.rondas}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`}
+    </div>`;
+  toast(`Diagnóstico listo: ${conCambio.length} de ${conHistorial.length} cuentas con valor ya modificado`, conCambio.length?'w':'ok');
+};
+
 window.diagnosticoADRES = async function(){
   if(USER?.rol !== 'superadmin') return;
   const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
@@ -10548,6 +10612,7 @@ window.procesarValoresMasivo = async function(file){
   if(!rows.length){ toast('Sin filas válidas.','w'); return; }
 
   const actualizaciones=[];
+  let omitidasPorRadicadas=0;
   rows.forEach(r=>{
     const fac=String(r.factura||'').trim();
     const vRad=parseInt(String(r.valorRadicado||'').replace(/[^0-9]/g,''))||0;
@@ -10556,10 +10621,17 @@ window.procesarValoresMasivo = async function(file){
     if(!fac||!vRad) return;
     const rec=RECS.find(r2=>r2.factura===fac);
     if(!rec) return;
+    // Una vez radicada, el valor reclamado ya NO se toca desde esta herramienta
+    // manual — solo puede cambiar por sincronización con ADRES o al aceptar una
+    // glosa (ajuste automático), para blindar el dato oficial ya enviado.
+    if(rec.radicado?.numero){ omitidasPorRadicadas++; return; }
     // Solo actualizar si hay diferencia o si se quiere confirmar
     actualizaciones.push({rec,vRad,vFur,obs,difiere:vRad!==vFur});
   });
 
+  if(omitidasPorRadicadas>0){
+    toast(`⚠️ ${omitidasPorRadicadas} ya están radicadas — el valor reclamado no se toca ahí (bloqueado tras radicar).`,'w');
+  }
   if(!actualizaciones.length){ toast('Sin reclamaciones para actualizar.','w'); return; }
 
   const conDif = actualizaciones.filter(a=>a.difiere);
@@ -10609,16 +10681,31 @@ window.generarTXT_F1 = (rec) => {
   });
 
   // Dos columnas iniciales adicionales (fuera del c1-c101 oficial), SOLO cuando es
-  // un reproceso (la cuenta ya tuvo respuesta de ADRES — glosada o aprobada parcial).
-  // En radicación nueva (sin respuesta ADRES todavía) se deja el formato original de
-  // 101 columnas intacto, sin las 2 columnas extra.
+  // un reproceso — es decir, cuando hay glosas cargadas (módulo de Glosas) para esta
+  // factura, sin importar si ya se sincronizó la respuesta ADRES o si aún no se ha
+  // contestado la glosa. En radicación nueva (sin ninguna glosa cargada) se deja el
+  // formato original de 101 columnas intacto, sin las 2 columnas extra.
   //  Campo 1: Número de radicación individual actual de la reclamación.
-  //  Campo 2: 0 = glosa total (glosada sin nada aprobado) · 1 = glosa parcial (aprobada_parcial).
-  const estadoAdres = typeof getRespuestaAdres==='function' ? getRespuestaAdres(rec) : null;
-  const esReproceso = estadoAdres==='glosada' || estadoAdres==='aprobada_parcial';
+  //  Campo 2: 0 = glosa total · 1 = glosa parcial.
+  //
+  // Total vs parcial se determina por VALOR, no por conteo de líneas: un mismo ítem
+  // puede tener varias líneas de glosa (distintas causales explicando el mismo valor),
+  // así que se deduplica tomando el máximo glosado por ítem — no la suma — y se
+  // compara contra el valor total de la factura. Si lo cubre, es total.
+  const glosasFactura = (typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>gl.factura===rec.factura);
+  const esReproceso = glosasFactura.length>0;
   if(esReproceso){
     const radicadoIndividual = txtCleanValue(rec.radicado?.numero || '');
-    const flagGlosa = estadoAdres==='glosada' ? '0' : '1';
+    const valorFactura = parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
+    const porItem={};
+    glosasFactura.forEach(gl=>{
+      const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
+      const v=parseInt(gl.vrGlosado)||0;
+      if(!porItem[key] || v>porItem[key]) porItem[key]=v;
+    });
+    const totalGlosadoDedup=Object.values(porItem).reduce((a,v)=>a+v,0);
+    const esTotal = valorFactura>0 && totalGlosadoDedup>=valorFactura;
+    const flagGlosa = esTotal ? '0' : '1';
     return [radicadoIndividual, flagGlosa, ...valores].join(',');
   }
   return valores.join(',');
