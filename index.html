@@ -5346,14 +5346,10 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     });
 
     const furips2Final=furips2.filter((_,i)=>!indicesQuitar.has(i));
-    const valorActual=parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
-    const valorNuevo=Math.max(0, valorActual-totalAceptadoEsteAjuste);
 
     const batch=writeBatch(db);
     batch.update(doc(db,'reclamaciones',recDoc.id), {
       furips2: furips2Final,
-      'furips1.c96': valorNuevo,
-      'furips1.c97': valorNuevo,
       actualizado: serverTimestamp(),
     });
     pendientesAplicar.forEach(gl=>{
@@ -5364,7 +5360,7 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     // Reflejar en memoria para que la UI no muestre datos viejos hasta el próximo reload
     pendientesAplicar.forEach(gl=>{ gl.aplicadoFurips=true; });
 
-    let msg=`✔ FURIPS ajustado: valor reclamado ${fmt$(valorActual)} → ${fmt$(valorNuevo)}`;
+    let msg=`✔ FURIPS2 ajustado — ${fmt$(totalAceptadoEsteAjuste)} aceptado`;
     if(indicesQuitar.size) msg+=` · ${indicesQuitar.size} ítem(s) quitados de FURIPS2`;
     if(sinMatch.length) msg+=` · ⚠️ ${sinMatch.length} sin coincidencia en FURIPS2 (revisar manualmente)`;
     toast(msg, sinMatch.length?'w':'ok');
@@ -8325,7 +8321,7 @@ window.updPortafolio = function(){
   let recs=BASE;
   if(mesFiltro)recs=BASE.filter(r=>getMes(r)===mesFiltro);
   const recsAcum=BASE;
-  const val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+  const val=r=>parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const total=recsAcum.length,totalVal=recsAcum.reduce((a,r)=>a+val(r),0);
   // NOTA: cada reclamación se clasifica en UN SOLO bucket (la cuenta es unitaria, el
   // total de buckets debe sumar 1358). Pero lo aprobado y lo glosado quedan en firme
@@ -8867,7 +8863,7 @@ window.generarConclusiones=function(){
   const btn=document.getElementById('btn-generar-conclusiones'),out=document.getElementById('conclusiones-output');if(!out)return;
   const BASE=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0?RECS_ALL:[]);
   if(!BASE.length){toast('No hay datos para analizar.','w');return;}
-  const fm2=v=>'$'+(v||0).toLocaleString('es-CO'),pct2=(a,b)=>b>0?Math.round(a/b*100):0,val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+  const fm2=v=>'$'+(v||0).toLocaleString('es-CO'),pct2=(a,b)=>b>0?Math.round(a/b*100):0,val=r=>parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const total=BASE.length,totalV=BASE.reduce((a,r)=>a+val(r),0);
   const pagadas=BASE.filter(r=>['aprobada','aprobada_parcial'].includes(getRespuestaAdres(r)));
   const glosadas=BASE.filter(r=>getRespuestaAdres(r)==='glosada');
@@ -8918,9 +8914,7 @@ window.exportarTrazabilidad=function(){
   const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'?RECS_ALL:[]);
   if(!usar.length){ toast('No hay reclamaciones para exportar.','w'); return; }
   const fm3=v=>Math.round(v||0);
-  const val=r=>parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
-
-  // Una fila por FACTURA, con cada ronda ante ADRES extendiéndose hacia la derecha.
+  const val=r=>parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const filas = usar.map(r=>{
     const rondas=[...(r.respuestasAdres||[])].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const totAprobado=rondas.reduce((a,x)=>a+(x.valorAprobado||0),0);
@@ -9851,21 +9845,20 @@ window.procesarReporteADRES = async function(){
         fuenteADRES: true,
         fechaSync: new Date().toISOString(),
       };
-      // Actualizar valor reclamado en FURIPS 1 = Valor ORIGINAL de la factura menos
-      // lo acumulado (aprobado + glosado). El valor original se fija UNA SOLA VEZ
-      // (recuperado de la primera ronda registrada, o del valor actual si es la
-      // primera sincronización de esta cuenta) y nunca se vuelve a tocar — así una
-      // reradicación del mismo valor NO lo duplica, y el "reclamado" refleja
-      // siempre el saldo real pendiente de resolver.
-      let valorOriginal = rec.furips1?.valorOriginalFactura;
-      if(!valorOriginal){
+      // c96/c97 = Valor ORIGINAL de la factura, FIJO. Se fija UNA SOLA VEZ (recuperado
+      // de la primera ronda registrada, o del valor actual si es la primera
+      // sincronización de esta cuenta) y NUNCA se vuelve a tocar — así una
+      // reradicación del mismo valor NO lo duplica ni lo cambia. El progreso hacia
+      // la resolución (aprobado + glosado acumulado) se sigue viendo en las rondas
+      // y en el saldo pendiente calculado aparte (Valor en Trámite ADRES), sin
+      // tocar el valor original de la factura.
+      if(!rec.furips1?.valorOriginalFactura){
         const primeraRonda = respOrdenadas[0];
-        valorOriginal = primeraRonda?.valorReclamado || parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
+        const valorOriginal = primeraRonda?.valorReclamado || parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
         cambios['furips1.valorOriginalFactura'] = valorOriginal;
+        cambios['furips1.c97'] = valorOriginal;
+        cambios['furips1.c96'] = valorOriginal;
       }
-      const valorReclamadoActual = Math.max(0, valorOriginal - totalVApro - totalVGlo);
-      cambios['furips1.c97'] = valorReclamadoActual;
-      cambios['furips1.c96'] = valorReclamadoActual;
 
       // Radicado actual = último número de radicación
       if(ultima.numero && rec.radicado?.numero !== ultima.numero){
@@ -10461,6 +10454,10 @@ window.corregirValorReclamadoGlobal = async function(){
   const src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
   if(!src.length){ toast('No hay reclamaciones cargadas.','w'); return; }
 
+  // c96/c97 deben quedar SIEMPRE en el valor original de la factura, sin descontar
+  // nada (eso ya se ve aparte, en el saldo pendiente). Esta corrección: (a) recupera
+  // el valor original correcto (de la 1ª ronda, para blindarse contra el bug de
+  // rondas duplicadas sumándose) y (b) deja c96/c97 = ese valor original, fijo.
   const cambios=[];
   src.forEach(rec=>{
     const rondas=[...(rec.respuestasAdres||[])].sort((a,b)=>{
@@ -10475,23 +10472,20 @@ window.corregirValorReclamadoGlobal = async function(){
       valorOriginal = primeraRonda?.valorReclamado || parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
       necesitaFijarOriginal=true;
     }
-    const totalAprobado = rondas.reduce((a,r)=>a+(r.valorAprobado||0),0);
-    const totalGlosado  = rondas.reduce((a,r)=>a+(r.valorGlosado||0),0);
-    const valorNuevo = Math.max(0, valorOriginal - totalAprobado - totalGlosado);
     const valorActual = parseInt(rec.furips1?.c97||rec.furips1?.c96||0)||0;
-    if(valorNuevo!==valorActual || necesitaFijarOriginal){
-      cambios.push({rec, valorOriginal, valorActual, valorNuevo, necesitaFijarOriginal, diferencia:valorNuevo-valorActual});
+    if(valorActual!==valorOriginal || necesitaFijarOriginal){
+      cambios.push({rec, valorOriginal, valorActual, necesitaFijarOriginal, diferencia:valorOriginal-valorActual});
     }
   });
 
-  if(!cambios.length){ toast('✔ Todas las cuentas ya tienen el valor reclamado correcto — nada que corregir.','ok'); return; }
+  if(!cambios.length){ toast('✔ Todas las cuentas ya tienen c96/c97 igual a su valor original — nada que corregir.','ok'); return; }
 
   const totalDif = cambios.reduce((a,c)=>a+Math.abs(c.diferencia),0);
   const fm6 = v=>'$'+Math.round(Math.abs(v)||0).toLocaleString('es-CO');
-  const msg=`Vas a corregir el Valor Reclamado de ${cambios.length} reclamaciones (ambas IPS):\n\n`+
+  const msg=`Vas a RESTAURAR c96/c97 al valor ORIGINAL de la factura en ${cambios.length} reclamaciones (ambas IPS):\n\n`+
     `• Suma total de diferencias: ${fm6(totalDif)}\n`+
-    `• Ej: ${cambios[0].rec.factura} → ${fm6(cambios[0].valorActual)} pasa a ${fm6(cambios[0].valorNuevo)}\n\n`+
-    `Esto NO borra el histórico de rondas — solo corrige c96/c97 y fija el valor original de la factura una sola vez.\n\n`+
+    `• Ej: ${cambios[0].rec.factura} → ${fm6(cambios[0].valorActual)} pasa a ${fm6(cambios[0].valorOriginal)}\n\n`+
+    `Esto NO borra el histórico de rondas. c96/c97 quedan fijos en el valor original de la factura, sin descontar aprobado/glosado (eso se sigue viendo aparte en el dashboard).\n\n`+
     `¿Confirmas que quieres aplicar esta corrección?`;
   if(!confirm(msg)) return;
 
@@ -10502,7 +10496,7 @@ window.corregirValorReclamadoGlobal = async function(){
     const lote=cambios.slice(i,i+CHUNK);
     const batch=writeBatch(db);
     lote.forEach(c=>{
-      const update={ 'furips1.c96':c.valorNuevo, 'furips1.c97':c.valorNuevo, actualizado:serverTimestamp() };
+      const update={ 'furips1.c96':c.valorOriginal, 'furips1.c97':c.valorOriginal, actualizado:serverTimestamp() };
       if(c.necesitaFijarOriginal) update['furips1.valorOriginalFactura']=c.valorOriginal;
       batch.update(doc(db,'reclamaciones',c.rec.id), update);
     });
@@ -10510,13 +10504,13 @@ window.corregirValorReclamadoGlobal = async function(){
       await batch.commit();
       lote.forEach(c=>{
         c.rec.furips1=c.rec.furips1||{};
-        c.rec.furips1.c96=c.valorNuevo; c.rec.furips1.c97=c.valorNuevo;
+        c.rec.furips1.c96=c.valorOriginal; c.rec.furips1.c97=c.valorOriginal;
         if(c.necesitaFijarOriginal) c.rec.furips1.valorOriginalFactura=c.valorOriginal;
       });
       ok+=lote.length;
     } catch(e){ err+=lote.length; console.error('Error corrigiendo lote:',e); }
   }
-  toast(`✔ ${ok} reclamaciones corregidas${err?`, ${err} con error`:''}`, err?'w':'ok');
+  toast(`✔ ${ok} reclamaciones restauradas a su valor original${err?`, ${err} con error`:''}`, err?'w':'ok');
   if(typeof updStats==='function') updStats();
   if(typeof window.diagnosticoValorInicial==='function') window.diagnosticoValorInicial();
 };
@@ -10532,23 +10526,18 @@ window.diagnosticoValorInicial = function(){
     const rondas=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
     const primera=rondas[0];
     const valorOriginal = r.furips1?.valorOriginalFactura || parseInt(primera?.valorReclamado||0)||0;
-    const totalAprobado = rondas.reduce((a,x)=>a+(x.valorAprobado||0),0);
-    const totalGlosado  = rondas.reduce((a,x)=>a+(x.valorGlosado||0),0);
-    const valorEsperado = Math.max(0, valorOriginal - totalAprobado - totalGlosado);
+    const valorEsperado = valorOriginal; // c96/c97 deben ser SIEMPRE el valor original, fijo
     const valorActual=parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
     return {
       factura:r.factura, valorPrimeraRonda:valorOriginal, valorActual, valorEsperado,
       diferencia:valorActual-valorOriginal,        // vs el original (informativo)
-      diferenciaVsEsperado: valorActual-valorEsperado, // vs lo que la fórmula dice que DEBERÍA ser
+      diferenciaVsEsperado: valorActual-valorEsperado, // vs lo que debería ser: el valor original
       rondas:rondas.length,
     };
   });
 
-  // "Correcto" = el valor actual YA coincide con lo que da la fórmula (original −
-  // aprobado − glosado). Esto incluye cuentas resueltas al 100% (quedan en $0) —
-  // eso NO es sospechoso, es el resultado esperado.
-  // "Correcto" = el valor actual coincide con la fórmula, con tolerancia de $1
-  // para ignorar residuos de redondeo de punto flotante (no son un problema real).
+  // "Correcto" = c96/c97 coincide con el valor original de la factura (con
+  // tolerancia de $1 para ignorar residuos de redondeo de punto flotante).
   const correctas = analisis.filter(a=>Math.abs(a.diferenciaVsEsperado)<1);
   const sinCambio = correctas.filter(a=>a.diferencia===0); // además nunca cambiaron
   const conCambio = analisis.filter(a=>Math.abs(a.diferenciaVsEsperado)>=1); // esto SÍ sigue mal
@@ -10567,8 +10556,8 @@ window.diagnosticoValorInicial = function(){
 
   cont.innerHTML = `
     <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;">
-      <div style="font-weight:700;font-size:13px;margin-bottom:10px;">📉 Consistencia del valor reclamado (c96/c97) vs. la fórmula esperada</div>
-      <div style="font-size:10px;color:var(--tx3);margin-bottom:10px;">Fórmula esperada: Valor original − Aprobado acumulado − Glosado acumulado. Una cuenta resuelta al 100% quedando en $0 es CORRECTO, no una alarma.</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:10px;">📉 Consistencia del valor reclamado (c96/c97) vs. el valor original de la factura</div>
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:10px;">c96/c97 deben ser SIEMPRE el valor original de la factura, fijo — nunca cambia, ni con glosas ni con aprobaciones. El saldo pendiente se ve aparte, en el dashboard.</div>
       <div class="stats" style="margin-bottom:14px;">
         <div class="stat"><div class="sv">${conHistorial.length}</div><div class="sl">Cuentas con historial ADRES</div></div>
         <div class="stat"><div class="sv" style="color:var(--green)">${correctas.length}</div><div class="sl">✔ Coinciden con la fórmula</div></div>
@@ -10585,7 +10574,7 @@ window.diagnosticoValorInicial = function(){
           <thead><tr style="background:var(--sur2);">
             <th style="padding:6px 8px;text-align:left;">Factura</th>
             <th style="padding:6px 8px;text-align:right;">Valor original</th>
-            <th style="padding:6px 8px;text-align:right;">Esperado (fórmula)</th>
+            <th style="padding:6px 8px;text-align:right;">Esperado (=original)</th>
             <th style="padding:6px 8px;text-align:right;">Actual (c96/c97)</th>
             <th style="padding:6px 8px;text-align:right;">Diferencia</th>
             <th style="padding:6px 8px;text-align:center;">N° rondas</th>
