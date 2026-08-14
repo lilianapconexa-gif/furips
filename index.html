@@ -10803,12 +10803,27 @@ window.procesarValoresMasivo = async function(file){
 window.generarTXT_F1 = (rec) => {
   if(!rec) return '';
   const f1 = rec.furips1 || {};
+
+  // Valor para el TXT: c96/c97 en la BASE DE DATOS siempre son el valor ORIGINAL
+  // de la factura (fijo, nunca se toca). Pero el TXT que se genera para reenviar
+  // debe reflejar lo que sigue realmente en disputa: valor original menos lo que
+  // ya se ACEPTÓ en el módulo de Glosas (lo aceptado = se concede, ya no se
+  // vuelve a reclamar). Lo "no aceptado" se sigue reclamando, así que se queda.
+  // Esto NO se guarda en ningún lado — se calcula solo al generar el archivo.
+  const glosasFacturaParaValor = (typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>gl.factura===rec.factura);
+  const totalAceptadoGlosas = glosasFacturaParaValor.reduce((a,gl)=>a+(parseInt(gl.vrAceptado)||0),0);
+  const valorOriginalFactura = parseInt(f1.c97||f1.c96||0)||0;
+  const valorParaTXT = Math.max(0, valorOriginalFactura - totalAceptadoGlosas);
+
   const valores = window.FURIPS1_CAMPOS_ORDEN.map(campo => {
     let v = f1[campo];
     // Espejos especiales: c2=factura, c3=consec, c4=codHab si están a nivel raíz
     if(campo === 'c2' && (!v || v === '') && rec.factura) v = rec.factura;
     if(campo === 'c3' && (!v || v === '') && rec.consec)  v = rec.consec;
     if(campo === 'c4' && (!v || v === '') && rec.codHab)  v = rec.codHab;
+    // c96/c97 (Valor Facturado/Reclamado Méd-Qx): en el TXT va el valor AJUSTADO
+    // (original − aceptado en glosas), no el valor original guardado en BD.
+    if(campo === 'c96' || campo === 'c97') v = valorParaTXT;
     if(F1_FECHAS.has(campo))    return txtCleanFecha(v);
     if(F1_NUMERICOS.has(campo)) return txtCleanNum(v);
     // Padding con ceros a la izquierda (ej: número de póliza)
