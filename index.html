@@ -5322,6 +5322,12 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     if(!pendientesAplicar.length) return;
 
     const furips2=[...(rec.furips2||[])];
+    // Respaldo del FURIPS2 original — se guarda UNA SOLA VEZ, antes de tocar nada,
+    // igual que se hace con valorOriginalFactura en FURIPS1. Así siempre queda
+    // disponible el detalle original, aunque los ítems se vayan quitando/reduciendo
+    // con cada glosa aceptada.
+    const necesitaBackupFurips2 = !rec.furips2Original;
+    const furips2Original = necesitaBackupFurips2 ? [...furips2] : rec.furips2Original;
     const indicesQuitar=new Set();
     const sinMatch=[];
     let totalAceptadoEsteAjuste=0;
@@ -5386,6 +5392,7 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
 
     const batch=writeBatch(db);
     const updateRec={ furips2: furips2Final, actualizado: serverTimestamp() };
+    if(necesitaBackupFurips2) updateRec.furips2Original = furips2Original;
     if(rondaActualizada) updateRec.respuestasAdres=rondas;
     batch.update(doc(db,'reclamaciones',recDoc.id), updateRec);
     pendientesAplicar.forEach(gl=>{
@@ -5399,6 +5406,7 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     // Reflejar en memoria para que la UI no muestre datos viejos hasta el próximo reload
     pendientesAplicar.forEach(gl=>{ gl.aplicadoFurips=true; gl.montoAplicadoFurips=gl._montoAplicado||0; });
     if(rondaActualizada) rec.respuestasAdres=rondas;
+    if(necesitaBackupFurips2) rec.furips2Original=furips2Original;
 
     let msg=`✔ FURIPS2 ajustado — ${fmt$(totalAceptadoEsteAjuste)} aceptado`;
     if(indicesQuitar.size) msg+=` · ${indicesQuitar.size} ítem(s) quitados de FURIPS2`;
