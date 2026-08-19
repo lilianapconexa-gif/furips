@@ -406,6 +406,7 @@ select option{background:var(--sur2);}
 .dash-card .dc-pct{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;}
 @media print{.sidebar,.topbar,nav,button,select{display:none!important;}body{background:white!important;-webkit-print-color-adjust:exact;}.pdf-page-break{page-break-before:always;}}
 .pdf-page-break{page-break-before:always;break-before:page;}
+.pdf-avoid-break{page-break-inside:avoid;break-inside:avoid;}
 </style>
 <div style="padding:0 0 20px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
@@ -446,13 +447,15 @@ select option{background:var(--sur2);}
       <div id="port-barra-estados" style="display:flex;border-radius:6px;overflow:hidden;height:14px;margin-bottom:8px;"></div>
       <div id="port-barra-leyenda" style="display:flex;flex-wrap:wrap;gap:10px;font-size:10px;"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:10px;">📋 Desglose del portafolio</div>
+    <div class="pdf-page-break" style="display:flex;justify-content:center;margin-bottom:12px;">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;width:100%;max-width:680px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:10px;text-align:center;">📋 Desglose del portafolio</div>
         <div id="cli-desglose"></div>
       </div>
-      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:10px;">📈 Indicadores de gestión</div>
+    </div>
+    <div class="pdf-page-break" style="display:flex;justify-content:center;margin-bottom:12px;">
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px;width:100%;max-width:680px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:10px;text-align:center;">📈 Indicadores de gestión</div>
         <div id="port-indicadores"></div>
       </div>
     </div>
@@ -8592,7 +8595,7 @@ window.updPortafolio = function(){
     const tramN=enTramite.length,devN=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length;
     const devV=recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').reduce((a,r)=>a+val(r),0);
     const anN=anuladas.length,anV=anuladas.reduce((a,r)=>a+val(r),0);
-    const row=(lbl,n,v,col,indent)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:${indent?'3px 4px 3px 16px':'6px 6px'};border-radius:5px;${indent?'':'background:var(--sur2);margin-bottom:3px;'}"><span style="font-size:${indent?'10':'11'}px;color:${indent?'var(--tx3)':'var(--tx)'};font-weight:${indent?400:600};">${lbl}</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);font-size:${indent?10:11}px;font-weight:600;color:${col};">${n}</span><span style="font-family:var(--mono);font-size:${indent?9:10}px;color:var(--tx3);min-width:85px;text-align:right;">${fm(v)}</span></span></div>`;
+    const row=(lbl,n,v,col,indent)=>`<div class="pdf-avoid-break" style="display:flex;align-items:center;justify-content:space-between;padding:${indent?'3px 4px 3px 16px':'6px 6px'};border-radius:5px;${indent?'':'background:var(--sur2);margin-bottom:3px;'}"><span style="font-size:${indent?'10':'11'}px;color:${indent?'var(--tx3)':'var(--tx)'};font-weight:${indent?400:600};">${lbl}</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);font-size:${indent?10:11}px;font-weight:600;color:${col};">${n}</span><span style="font-family:var(--mono);font-size:${indent?9:10}px;color:var(--tx3);min-width:85px;text-align:right;">${fm(v)}</span></span></div>`;
     des.innerHTML=row('⏸ Sin radicar',sinRad.length,sinV,'#999899',false)+row('📬 Radicadas',radTotal.length,radTotalV,'#00B2E2',false)+row('⏳ · En trámite ADRES',tramN,tramV,'#00B2E2',true)+row('✔ · Reconocidas (aprobado)',pagadas.length,pagV,'#A3D55D',true)+row('↩ · En glosa (glosado)',glosadas.length,gloV,'#9DB455',true)+row('↩ · Devuelta IPS',devN,devV,'#c0c0c0',true)+row('∅ · Anuladas ADRES',anN,anV,'#c0c0c0',true)+`<div style="border-top:1px solid var(--brd);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:700;">TOTAL PORTAFOLIO</span><span style="display:flex;gap:10px;"><span style="font-family:var(--mono);color:#00B2E2;font-weight:700;">${total}</span><span style="font-family:var(--mono);color:#00B2E2;min-width:85px;text-align:right;">${fm(totalVal)}</span></span></div>`;
   }
   const ind=document.getElementById('port-indicadores');if(!ind)return;
@@ -8642,7 +8645,7 @@ window.updPortafolio = function(){
   const paqRespondidos=listaPaquetes.length-paqPendientes.length;
   const pctPaquetes=pct(paqRespondidos,Math.max(listaPaquetes.length,1));
   const semPaq=pctPaquetes>=80?'🟢':pctPaquetes>=50?'🟡':'🔴';
-  const kpiR=(lbl,valor,emoji,meta,sub)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
+  const kpiR=(lbl,valor,emoji,meta,sub)=>`<div class="pdf-avoid-break" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sur2);margin-bottom:6px;"><span style="font-size:20px;">${emoji}</span><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--tx);">${lbl}</div>${sub?`<div style="font-size:9px;color:var(--tx3);">Meta: ${meta} · ${sub}</div>`:''}</div><span style="font-family:var(--mono);font-size:16px;font-weight:700;">${valor}</span></div>`;
   const glosasJust=glosadas.filter(r=>r.chequeo_soportes?.soporteRadicacion==='faltantes_autorizados');
   ind.innerHTML=
     kpiR('Efectividad de cobro',efectividad+'%',semEfect,'>80%',`${pagadas.length} aprobadas de ${auditadasAdres.length} auditadas ADRES`)+
