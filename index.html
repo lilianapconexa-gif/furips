@@ -10230,7 +10230,8 @@ window.procesarReporteADRES = async function(){
     const cuadreRows = [
       {concepto:'Reclamaciones en reporte ADRES', adres:adresTotRec, furips:furipsTotRec, esN:true,
        nota:furipsTotRec<adresTotRec?`${adresTotRec-furipsTotRec} facturas del reporte no encontradas en FURIPS`:''},
-      {concepto:'Valor total reclamado', adres:adresTotVal, furips:furipsTotVal},
+      {concepto:'Valor total reclamado', adres:adresTotVal, furips:furipsTotVal,
+       nota:'ADRES suma cada radicación/resubmisión como evento aparte (bruto histórico). FURIPS mantiene el valor FIJO original de la factura — no deben coincidir.'},
       {concepto:'Valor aprobado por ADRES', adres:adresTotAproV, furips:furipsPagV},
       {concepto:'Valor glosado por ADRES (bruto histórico)', adres:adresTotGloV, furips:furisGloV,
        nota:'Suma cruda de todo lo glosado alguna vez. El Portafolio muestra el NETO (descontando lo recuperado) — no deben coincidir.'},
@@ -10276,6 +10277,9 @@ window.procesarReporteADRES = async function(){
           • El reporte ADRES contiene ${adresTotRec} facturas de las ${furipsTotRec} en FURIPS — la diferencia (${furipsTotRec-adresTotRec}) son reclamaciones sin radicar o de otros períodos no incluidos en este reporte.<br>
           • Las diferencias en valores aprobados/glosados se corrigen automáticamente con la sincronización. Si persisten, vuelve a sincronizar.
         </div>`:''}
+        <div style="margin-top:10px;font-size:10px;color:var(--tx3);">
+          ℹ️ <strong>Sobre "Valor total reclamado"</strong>: ADRES suma cada radicación/resubmisión de una misma factura como evento aparte (bruto histórico). FURIPS mantiene el valor <strong>FIJO</strong> original de la factura (nunca se duplica) — es normal y esperado que esos dos números NO coincidan entre sí.
+        </div>
         <div style="margin-top:10px;font-size:10px;color:var(--tx3);">
           ℹ️ <strong>Sobre "Valor glosado por ADRES"</strong>: esta fila compara el bruto histórico (todo lo glosado alguna vez, sin descontar nada) entre el Excel y lo guardado. El Portafolio muestra en cambio el <strong>NETO</strong> (bruto menos lo recuperado por gestión) — es normal y esperado que esos dos números NO coincidan entre sí.
         </div>
