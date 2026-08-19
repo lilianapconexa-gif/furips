@@ -9939,14 +9939,24 @@ window.procesarReporteADRES = async function(){
 
     // Agrupar por factura (puede haber varias filas)
     const adrexIdx = {}; // factura_norm → array de rows ADRES
+    const fechaComparable = f => String(f||'').split('/').reverse().join('-'); // dd/mm/aaaa → aaaa-mm-dd
     adresRows.forEach(row=>{
       const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
       const numRad = String(row['Número de Radicación']||row['Numero de Radicacion']||'').trim();
       if(!fac) return;
       if(!adrexIdx[fac]) adrexIdx[fac] = [];
-      // Solo agregar si el numRad no está ya en el array
-      if(!adrexIdx[fac].find(r=>String(r['Número de Radicación']||r['Numero de Radicacion']||'').trim()===numRad)){
+      const idxExistente = adrexIdx[fac].findIndex(r=>String(r['Número de Radicación']||r['Numero de Radicacion']||'').trim()===numRad);
+      if(idxExistente===-1){
         adrexIdx[fac].push(row);
+      } else {
+        // ADRES puede reportar la MISMA radicación en fechas distintas (una
+        // revisión inicial y luego una actualización) — quedarse con la fila
+        // de fecha MÁS RECIENTE, no con la primera que aparezca en el Excel.
+        const fechaExistente = fechaComparable(adrexIdx[fac][idxExistente]['Fecha Radicación']);
+        const fechaNueva = fechaComparable(row['Fecha Radicación']);
+        if(fechaNueva >= fechaExistente){
+          adrexIdx[fac][idxExistente] = row;
+        }
       }
     });
 
@@ -10130,9 +10140,14 @@ window.procesarReporteADRES = async function(){
     // ── CUADRE: calcular totales del Excel ADRES ──
     const fm2 = v => '$'+(Math.round(v)||0).toLocaleString('es-CO');
 
+    // Filas deduplicadas (una por cada factura+número de radicación único, quedándose
+    // con la más reciente) — es la MISMA deduplicación que ya se aplicó en adrexIdx
+    // más arriba, para que el cuadre compare lo mismo que realmente se procesa.
+    const adresRowsDeduped = Object.values(adrexIdx).flat();
+
     // Totales desde el Excel ADRES (por factura única — última radicación)
     const adresUnicas = {}; // factura → última fila
-    adresRows.forEach(row => {
+    adresRowsDeduped.forEach(row => {
       const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
       if(!fac) return;
       const numRad = String(row['Número de Radicación']||'').trim();
@@ -10143,15 +10158,17 @@ window.procesarReporteADRES = async function(){
     });
     const adresUnicasArr = Object.values(adresUnicas);
     const adresTotRec   = adresUnicasArr.length;
-    // Sumar TODAS las filas del reporte para cuadrar con la sumatoria del Excel
-    const adresTotVal   = adresRows.reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
-    const adresTotAproV = adresRows.reduce((a,r)=>a+(r['Valor Aprobado']||0),0);
-    const adresTotGloV  = adresRows.reduce((a,r)=>a+(r['Valor Glosado']||0),0);
-    const adresTotApro  = adresRows.filter(r=>{
+    // Sumar las filas YA deduplicadas (una por radicación única) — no las filas
+    // crudas del Excel, que pueden traer la misma radicación repetida en distintas
+    // fechas (actualizaciones de ADRES sobre el mismo número).
+    const adresTotVal   = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
+    const adresTotAproV = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Aprobado']||0),0);
+    const adresTotGloV  = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Glosado']||0),0);
+    const adresTotApro  = adresRowsDeduped.filter(r=>{
       const e=mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado']);
       return e==='aprobada'||e==='aprobada_parcial';
     }).length;
-    const adresTotGlo = adresRows.filter(r=>
+    const adresTotGlo = adresRowsDeduped.filter(r=>
       mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado'])==='glosada'
     ).length;
 
@@ -10174,7 +10191,7 @@ window.procesarReporteADRES = async function(){
     const noEnAdres = srcFinal.length - furipsTotRec;
 
     // ── Valor pendiente (en trámite) — mismo criterio que el dashboard ──
-    const adresTotPendV = adresRows.filter(r=>
+    const adresTotPendV = adresRowsDeduped.filter(r=>
       mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado'])==='en_tramite'
     ).reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
     const furipsPendV = srcEnAdres.reduce((a,r)=>{
@@ -10184,7 +10201,7 @@ window.procesarReporteADRES = async function(){
 
     // ── Diagnóstico de facturas responsables del residual en "En trámite" ──
     const diagPendiente = [];
-    adresRows.forEach(row=>{
+    adresRowsDeduped.forEach(row=>{
       const eRow = mapearEstadoADRES(row['Descripción tipo Aprobación'],row['Estado reclamación'],row['Valor Aprobado'],row['Valor Glosado']);
       if(eRow!=='en_tramite') return;
       const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
@@ -10211,7 +10228,8 @@ window.procesarReporteADRES = async function(){
        nota:furipsTotRec<adresTotRec?`${adresTotRec-furipsTotRec} facturas del reporte no encontradas en FURIPS`:''},
       {concepto:'Valor total reclamado', adres:adresTotVal, furips:furipsTotVal},
       {concepto:'Valor aprobado por ADRES', adres:adresTotAproV, furips:furipsPagV},
-      {concepto:'Valor glosado por ADRES', adres:adresTotGloV, furips:furisGloV},
+      {concepto:'Valor glosado por ADRES (bruto histórico)', adres:adresTotGloV, furips:furisGloV,
+       nota:'Suma cruda de todo lo glosado alguna vez. El Portafolio muestra el NETO (descontando lo recuperado) — no deben coincidir.'},
       {concepto:'Valor pendiente (en trámite)', adres:adresTotPendV, furips:furipsPendV,
        nota:diagPendiente.length?`${diagPendiente.length} filas explican la diferencia — ver detalle abajo`:''},
     ];
@@ -10254,6 +10272,9 @@ window.procesarReporteADRES = async function(){
           • El reporte ADRES contiene ${adresTotRec} facturas de las ${furipsTotRec} en FURIPS — la diferencia (${furipsTotRec-adresTotRec}) son reclamaciones sin radicar o de otros períodos no incluidos en este reporte.<br>
           • Las diferencias en valores aprobados/glosados se corrigen automáticamente con la sincronización. Si persisten, vuelve a sincronizar.
         </div>`:''}
+        <div style="margin-top:10px;font-size:10px;color:var(--tx3);">
+          ℹ️ <strong>Sobre "Valor glosado por ADRES"</strong>: esta fila compara el bruto histórico (todo lo glosado alguna vez, sin descontar nada) entre el Excel y lo guardado. El Portafolio muestra en cambio el <strong>NETO</strong> (bruto menos lo recuperado por gestión) — es normal y esperado que esos dos números NO coincidan entre sí.
+        </div>
         ${diagPendiente.length?`<div style="margin-top:14px;">
           <div style="font-size:11px;font-weight:700;color:#f85149;margin-bottom:6px;">
             🔍 Detalle — ${diagPendiente.length} fila${diagPendiente.length!==1?'s':''} responsable${diagPendiente.length!==1?'s':''} del residual en "Valor pendiente":
