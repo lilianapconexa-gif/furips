@@ -8965,47 +8965,49 @@ window.exportarTrazabilidad=function(){
   const fm3=v=>Math.round(v||0);
   const val=r=>parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const filas = usar.map(r=>{
-    const rondas=[...(r.respuestasAdres||[])].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    // Empieza con la ÚLTIMA radicación (más reciente primero)
+    const rondas=[...(r.respuestasAdres||[])].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
     const totAprobado=rondas.reduce((a,x)=>a+(x.valorAprobado||0),0);
     const totGlosado =rondas.reduce((a,x)=>a+(x.valorGlosado||0),0);
     const reclamado=val(r);
-    const saldoPendiente=Math.max(0, reclamado - totAprobado - totGlosado);
+    // Valor total por recuperar = reclamado − aprobado − glosado (se descuenta, no se suma)
+    const valorPorRecuperar=Math.max(0, reclamado - totAprobado - totGlosado);
     return {
       factura:r.factura||'', ips:IPS_NOMBRES?.[r.codHab]||r.codHab||'',
-      radicadoActual:r.radicado?.numero||'', valReclamado:reclamado,
-      rondas, totAprobado, totGlosado, saldoPendiente,
+      radicadoActual:r.radicado?.numero||'', valReclamado:reclamado, valorPorRecuperar,
+      rondas, totAprobado, totGlosado,
     };
   });
   filas.sort((a,b)=>a.factura.localeCompare(b.factura));
 
   const maxRondas=Math.max(1, ...filas.map(f=>f.rondas.length));
 
-  const header=['Factura','IPS','N° Radicado Actual','Valor Reclamado'];
+  const header=['Factura','Valor Total por Recuperar','IPS','N° Radicado Actual','Valor Reclamado'];
   for(let i=1;i<=maxRondas;i++){
     header.push(`Ronda ${i} - Fecha`,`Ronda ${i} - N° Radicación`,`Ronda ${i} - N° Consolidado`,`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`);
   }
-  header.push('Total Aprobado','Total Glosado','Saldo Pendiente (Meta: $0)');
+  header.push('Total Aprobado','Total Glosado');
 
   const rows=filas.map(f=>{
-    const row=[f.factura, f.ips, f.radicadoActual, f.valReclamado];
+    const row=[f.factura, fm3(f.valorPorRecuperar), f.ips, f.radicadoActual, f.valReclamado];
     for(let i=0;i<maxRondas;i++){
       const rd=f.rondas[i];
       if(rd) row.push(rd.fecha||'', rd.numero||'', rd.lote||'', rd.estado||'', fm3(rd.valorReclamado), fm3(rd.valorAprobado), fm3(rd.valorGlosado));
       else row.push('','','','','','','');
     }
-    row.push(fm3(f.totAprobado), fm3(f.totGlosado), fm3(f.saldoPendiente));
+    row.push(fm3(f.totAprobado), fm3(f.totGlosado));
     return row;
   });
 
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
-  const cols=[{wch:18},{wch:22},{wch:16},{wch:14}];
+  const cols=[{wch:18},{wch:20},{wch:22},{wch:16},{wch:14}];
   for(let i=0;i<maxRondas;i++) cols.push({wch:14},{wch:16},{wch:16},{wch:14},{wch:14},{wch:14},{wch:14});
-  cols.push({wch:14},{wch:14},{wch:18});
+  cols.push({wch:14},{wch:14});
   ws['!cols']=cols;
   const lastCol=XLSX.utils.encode_col(header.length-1);
   ws['!autofilter']={ref:`A1:${lastCol}${rows.length+1}`};
-  ws['!freeze']={xSplit:4,ySplit:1}; // congela Factura/IPS/Radicado/Reclamado + encabezado
+  ws['!freeze']={xSplit:5,ySplit:1}; // congela Factura/Por Recuperar/IPS/Radicado/Reclamado + encabezado
   XLSX.utils.book_append_sheet(wb,ws,'Trazabilidad ADRES');
   const nombreIPS=((typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas_las_IPS')
     .toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
