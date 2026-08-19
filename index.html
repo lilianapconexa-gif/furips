@@ -9937,27 +9937,16 @@ window.procesarReporteADRES = async function(){
     const adresRows = await leerExcelADRES(file);
     setP(15,`${adresRows.length} registros ADRES encontrados`,'Indexando por factura y radicación...');
 
-    // Agrupar por factura (puede haber varias filas)
+    // Agrupar por factura (puede haber varias filas). NOTA: aunque el mismo número
+    // de radicación aparezca repetido en fechas distintas, cada fila es un evento
+    // INDEPENDIENTE (no una actualización que reemplaza a la anterior) — así que
+    // se procesan TODAS, sin deduplicar por número de radicación.
     const adrexIdx = {}; // factura_norm → array de rows ADRES
-    const fechaComparable = f => String(f||'').split('/').reverse().join('-'); // dd/mm/aaaa → aaaa-mm-dd
     adresRows.forEach(row=>{
       const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
-      const numRad = String(row['Número de Radicación']||row['Numero de Radicacion']||'').trim();
       if(!fac) return;
       if(!adrexIdx[fac]) adrexIdx[fac] = [];
-      const idxExistente = adrexIdx[fac].findIndex(r=>String(r['Número de Radicación']||r['Numero de Radicacion']||'').trim()===numRad);
-      if(idxExistente===-1){
-        adrexIdx[fac].push(row);
-      } else {
-        // ADRES puede reportar la MISMA radicación en fechas distintas (una
-        // revisión inicial y luego una actualización) — quedarse con la fila
-        // de fecha MÁS RECIENTE, no con la primera que aparezca en el Excel.
-        const fechaExistente = fechaComparable(adrexIdx[fac][idxExistente]['Fecha Radicación']);
-        const fechaNueva = fechaComparable(row['Fecha Radicación']);
-        if(fechaNueva >= fechaExistente){
-          adrexIdx[fac][idxExistente] = row;
-        }
-      }
+      adrexIdx[fac].push(row);
     });
 
     setP(20,'Cargando reclamaciones del sistema...');
@@ -10009,11 +9998,16 @@ window.procesarReporteADRES = async function(){
 
         const estadoAdres = mapearEstadoADRES(descAprobacion, estadoRec, row['Valor Aprobado'], row['Valor Glosado']);
 
-        // Buscar si ya existe esta radicación en el historial
+        // Buscar si ya existe esta radicación en el historial. La llave es
+        // número de radicación + FECHA — así, si ADRES reporta el mismo número
+        // de radicación en fechas distintas (eventos independientes, no una
+        // actualización), cada uno queda como su propia ronda. Pero si se
+        // vuelve a sincronizar el MISMO Excel más adelante, la combinación
+        // número+fecha ya existente se reconoce y se actualiza en vez de
+        // duplicarse.
         if(!numRad){ return; } // sin número de radicación no podemos trazar
-        // Normalizar ambos lados para comparación robusta
         const normRad = s => String(s||'').trim().replace(/\.0$/,'');
-        const idx = respActuales.findIndex(r=>normRad(r.numero)===normRad(numRad));
+        const idx = respActuales.findIndex(r=>normRad(r.numero)===normRad(numRad) && String(r.fecha||'').trim()===fechaRad);
 
         const valorReclamado = parseFloat(String(row['Valor Reclamado']||'0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
         const entradaNueva = {
@@ -10344,7 +10338,7 @@ window.procesarReporteADRES = async function(){
 // ══ LIMPIEZA DE DUPLICADOS ADRES (uso único para corregir sync anterior) ══
 window.limpiarDuplicadosADRES = async function(){
   if(USER?.rol !== 'superadmin'){ toast('Solo Super Admin.','w'); return; }
-  if(!confirm('¿Limpiar entradas duplicadas en respuestasAdres? Esto mantiene solo una entrada por número de radicación.')) return;
+  if(!confirm('¿Limpiar entradas duplicadas en respuestasAdres? Esto mantiene solo una entrada por número de radicación + fecha (los eventos en fechas distintas se conservan por separado).')) return;
 
   const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
   // Buscar reclamaciones con respuestaAdres que parezcan duplicados
@@ -10384,13 +10378,16 @@ window.limpiarDuplicadosADRES = async function(){
 
     const rads = rec.respuestasAdres;
 
-    // Deduplicar por número de radicación
+    // Deduplicar por número de radicación + FECHA (no solo el número): ADRES
+    // puede reportar el mismo número de radicación en fechas distintas como
+    // eventos independientes, no como actualizaciones — esos NO son duplicados
+    // reales y deben conservarse por separado.
     const seen = {};
     rads.forEach(r => {
-      const num = String(r.numero||'').trim();
-      if(!num) return;
-      if(!seen[num] || (r.fechaSync && (!seen[num].fechaSync || r.fechaSync > seen[num].fechaSync))){
-        seen[num] = r;
+      const clave = String(r.numero||'').trim()+'|||'+String(r.fecha||'').trim();
+      if(!String(r.numero||'').trim()) return;
+      if(!seen[clave] || (r.fechaSync && (!seen[clave].fechaSync || r.fechaSync > seen[clave].fechaSync))){
+        seen[clave] = r;
       }
     });
 
