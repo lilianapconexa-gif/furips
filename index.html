@@ -476,6 +476,10 @@ select option{background:var(--sur2);}
       </div>
     </div>
     <div class="pdf-page-break" style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);margin-bottom:12px;">🏆 Impacto de la Gestión — Recuperación de Glosas</div>
+      <div id="impacto-gestion"></div>
+    </div>
+    <div class="pdf-page-break" style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx2);">🤖 Conclusiones del Portafolio</div>
         <button id="btn-generar-conclusiones" onclick="generarConclusiones()" style="background:#00B2E2;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">✨ Generar conclusiones</button>
@@ -8358,6 +8362,116 @@ function poblarMesesPortafolio(){
   sel.innerHTML='<option value="">Todo el historial</option>'+meses.map(m=>{const[y,mo]=m.split('-');const lbl=new Date(+y,+mo-1,1).toLocaleDateString('es-CO',{month:'long',year:'numeric'});return`<option value="${m}" ${cur===m?'selected':''}>${lbl.charAt(0).toUpperCase()+lbl.slice(1)}</option>`;}).join('');
 }
 
+// ── Impacto de la Gestión: cuánto se recuperó de lo que ADRES intentó negar ──
+// Bruto = suma cruda de valorGlosado de TODAS las rondas (todo lo que alguna vez
+// se glosó). Neto = lo que quedó definitivamente perdido (getValoresAdresTotal).
+// Recuperado = Bruto − Neto = el valor concreto de la gestión.
+function renderImpactoGestion(recsAcum, fm){
+  const cont=document.getElementById('impacto-gestion'); if(!cont) return;
+  const conHistorial=recsAcum.filter(r=>(r.respuestasAdres||[]).length>0);
+
+  const filas=conHistorial.map(r=>{
+    const bruto=r.respuestasAdres.reduce((a,x)=>a+(x.valorGlosado||0),0);
+    const neto=window.getValoresAdresTotal(r).valorGlosado;
+    const recuperado=Math.max(0, bruto-neto);
+    // Fecha del "triunfo": la ronda más reciente con algo aprobado (la que causó
+    // la recuperación), usada para la tendencia mensual.
+    const rondasAprob=[...r.respuestasAdres].filter(x=>(x.valorAprobado||0)>0).sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const fechaTriunfo=rondasAprob.length?rondasAprob[rondasAprob.length-1].fecha:'';
+    return {factura:r.factura, bruto, neto, recuperado, fechaTriunfo};
+  });
+
+  const brutoTotal=filas.reduce((a,f)=>a+f.bruto,0);
+  const netoTotal=filas.reduce((a,f)=>a+f.neto,0);
+  const recuperadoTotal=Math.max(0, brutoTotal-netoTotal);
+  const tasaEfectividad=brutoTotal>0?Math.round(recuperadoTotal/brutoTotal*100):0;
+  const casosGanados=filas.filter(f=>f.recuperado>0);
+  const casosGanadosTotales=filas.filter(f=>f.recuperado>0 && f.neto===0); // recuperación al 100%
+
+  const ranking=[...filas].filter(f=>f.recuperado>0).sort((a,b)=>b.recuperado-a.recuperado).slice(0,10);
+
+  // Tendencia mensual: suma de recuperado agrupada por mes de la ronda que lo logró
+  const porMes={};
+  filas.filter(f=>f.recuperado>0 && f.fechaTriunfo).forEach(f=>{
+    const p=String(f.fechaTriunfo).split('/'); // dd/mm/aaaa
+    if(p.length!==3) return;
+    const clave=`${p[2]}-${p[1].padStart(2,'0')}`;
+    porMes[clave]=(porMes[clave]||0)+f.recuperado;
+  });
+  const mesesOrdenados=Object.keys(porMes).sort().slice(-12); // últimos 12 meses con datos
+  const maxMes=Math.max(1,...mesesOrdenados.map(m=>porMes[m]));
+
+  const semEfect=tasaEfectividad>=50?'🟢':tasaEfectividad>=25?'🟡':'🔴';
+
+  cont.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+      <div style="background:var(--sur2);border-radius:8px;padding:14px;text-align:center;">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;">ADRES intentó negar</div>
+        <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:#f85149;margin-top:4px;">${fm(brutoTotal)}</div>
+      </div>
+      <div style="background:var(--sur2);border-radius:8px;padding:14px;text-align:center;">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;">Recuperado por gestión</div>
+        <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--green);margin-top:4px;">${fm(recuperadoTotal)}</div>
+      </div>
+      <div style="background:var(--sur2);border-radius:8px;padding:14px;text-align:center;">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;">Quedó perdido en firme</div>
+        <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--tx);margin-top:4px;">${fm(netoTotal)}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--sur2);">
+        <span style="font-size:22px;">${semEfect}</span>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;">Tasa de efectividad de gestión</div>
+          <div style="font-size:9px;color:var(--tx3);">% de lo glosado que se logró recuperar</div>
+        </div>
+        <span style="font-family:var(--mono);font-size:18px;font-weight:700;">${tasaEfectividad}%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--sur2);">
+        <span style="font-size:22px;">🏆</span>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;">Casos con gestión exitosa</div>
+          <div style="font-size:9px;color:var(--tx3);">${casosGanadosTotales.length} recuperados al 100%</div>
+        </div>
+        <span style="font-family:var(--mono);font-size:18px;font-weight:700;">${casosGanados.length}</span>
+      </div>
+    </div>
+
+    ${mesesOrdenados.length?`
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);margin-bottom:8px;">Recuperación mensual</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:70px;">
+        ${mesesOrdenados.map(m=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;" title="${m}: ${fm(porMes[m])}">
+          <div style="width:100%;background:var(--green);border-radius:3px 3px 0 0;height:${Math.max(4,Math.round(porMes[m]/maxMes*100))}%;"></div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:4px;">
+        ${mesesOrdenados.map(m=>`<div style="flex:1;text-align:center;font-size:8px;color:var(--tx3);">${m.slice(5)}/${m.slice(2,4)}</div>`).join('')}
+      </div>
+    </div>`:''}
+
+    ${ranking.length?`
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);margin-bottom:8px;">Top ${ranking.length} mayores recuperaciones</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="border-bottom:1px solid var(--brd);">
+          <th style="text-align:left;padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">FACTURA</th>
+          <th style="text-align:right;padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">GLOSADO ORIGINAL</th>
+          <th style="text-align:right;padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">RECUPERADO</th>
+        </tr></thead>
+        <tbody>
+          ${ranking.map(f=>`<tr style="border-bottom:1px solid var(--brd);">
+            <td style="padding:5px 6px;font-family:var(--mono);">${f.factura}</td>
+            <td style="padding:5px 6px;text-align:right;font-family:var(--mono);color:var(--tx3);">${fm(f.bruto)}</td>
+            <td style="padding:5px 6px;text-align:right;font-family:var(--mono);color:var(--green);font-weight:700;">${fm(f.recuperado)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:'<div style="color:var(--tx3);font-size:11px;">Aún no hay recuperaciones registradas para mostrar en el ranking.</div>'}
+  `;
+}
+
 window.updPortafolio = function(){
   // GLOSAS_DB solo se carga al visitar la pestaña de Glosas — si aún no se ha
   // cargado en esta sesión, la traemos aquí para que "En gestión de recuperación"
@@ -8530,6 +8644,7 @@ window.updPortafolio = function(){
     kpiR('Tasa de rechazo',tasaRechazo+'%',semRech,'<5%',`${anuladas.length} anuladas del portafolio`)+
     kpiR('Cobertura de radicación',coberturaRad+'%',semCob,'>80%',`${radTotal.length} de ${total} enviadas a ADRES`)+
     kpiR('Valor en trámite ADRES',fm(tramV),tramV>0?'⏳':'🟢','Por cobrar',`${enTramite.length} reclamaciones en auditoría`);
+  if(typeof renderImpactoGestion==='function') renderImpactoGestion(recsAcum, fm);
   const barra=document.getElementById('port-barra-estados'),leyenda=document.getElementById('port-barra-leyenda');
   if(barra&&total>0){
     const estados=[{label:'Sin radicar',color:'#999899',n:sinRad.length},{label:'En trámite',color:'#00B2E2',n:enTramite.length},{label:'Pagadas',color:'#A3D55D',n:pagadas.length},{label:'Glosadas',color:'#9DB455',n:glosadas.length},{label:'Devuelta IPS',color:'#c8c6c6',n:recsAcum.filter(r=>getEstadoGestion(r)==='devuelta_ips').length},{label:'Anuladas',color:'#e0e0e0',n:anuladas.length}].filter(e=>e.n>0);
