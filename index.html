@@ -729,6 +729,9 @@ select option{background:var(--sur2);}
           <button onclick="corregirValorReclamadoGlobal()" class="btn bs" style="font-size:11px;margin-left:8px;border-color:#2e7d32;color:#2e7d32;" title="Recalcular el valor reclamado de TODAS las cuentas (ambas IPS) con la fórmula correcta">
             🔧 Corregir valor reclamado (ambas IPS)
           </button>
+          <button onclick="reFijarValorOriginal()" class="btn bs" style="font-size:11px;margin-left:8px;border-color:#c00;color:#c00;" title="Forzar el valor original de la factura con la 1ª ronda ACTUAL del historial (para cuentas que quedaron mal fijadas)">
+            🔴 Re-fijar valor original
+          </button>
         </div>
 
         <div id="valor-inicial-resultado" style="margin-bottom:14px;"></div>
@@ -7370,26 +7373,28 @@ window.getRespuestaAdres = (r) => {
   return null;
 };
 
-// Valores ADRES REALES = suma de valorAprobado/valorGlosado de TODAS las rondas
-// registradas en respuestasAdres[] (una reclamación puede tener varias radicaciones/
-// respuestas ADRES a lo largo del tiempo). Si no hay array, se usa el singular como
-// respaldo (compatibilidad con datos antiguos o cargados manualmente).
+// Valores ADRES REALES: valorAprobado = suma de TODAS las rondas registradas en
+// respuestasAdres[] (una reclamación puede tener varias radicaciones/respuestas
+// ADRES a lo largo del tiempo — lo aprobado siempre queda en firme y se acumula).
 // valorPendiente = suma de valorReclamado SOLO de las rondas cuyo estado sigue
-// 'en_tramite' — esto replica exactamente el filtro fila-por-fila que se hace en el
-// Excel de ADRES, y es robusto sin importar cuántas rondas (2, 3, 5...) tenga la cuenta.
+// 'en_tramite' — replica el filtro fila-por-fila del Excel de ADRES.
+// valorGlosado = NETO, no suma bruta: Valor Original − Aprobado − Pendiente. Así,
+// si la MISMA plata se glosó en una ronda y luego se recuperó (se aprobó) en una
+// ronda posterior, ya no cuenta como pérdida permanente — se reconoce la gestión
+// que sí la recuperó. Solo queda como "glosado" lo que de verdad se perdió para
+// siempre (no está aprobado ni sigue en disputa activa).
 window.getValoresAdresTotal = (r) => {
   if(!r) return {valorAprobado:0, valorGlosado:0, valorPendiente:0, tieneHistorial:false};
   if(r.respuestasAdres?.length){
-    return {
-      valorAprobado: r.respuestasAdres.reduce((a,x)=>a+(x.valorAprobado||0),0),
-      valorGlosado:  r.respuestasAdres.reduce((a,x)=>a+(x.valorGlosado||0),0),
-      valorPendiente: r.respuestasAdres.filter(x=>x.estado==='en_tramite').reduce((a,x)=>a+(x.valorReclamado||0),0),
-      tieneHistorial: true,
-    };
+    const valorAprobado = r.respuestasAdres.reduce((a,x)=>a+(x.valorAprobado||0),0);
+    const valorPendiente = r.respuestasAdres.filter(x=>x.estado==='en_tramite').reduce((a,x)=>a+(x.valorReclamado||0),0);
+    const valorOriginal = r.furips1?.valorOriginalFactura || parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
+    const valorGlosado = Math.max(0, valorOriginal - valorAprobado - valorPendiente);
+    return { valorAprobado, valorGlosado, valorPendiente, tieneHistorial: true };
   }
   return {
     valorAprobado: r.respuestaAdres?.valorAprobado||0,
-    valorGlosado:  r.respuestaAdres?.valorGlosado||0,
+    valorGlosado:  0, // sin historial de rondas — nada resuelto todavía, nada glosado en firme
     valorPendiente: 0, // sin historial de rondas sincronizado — el caller debe usar fallback (valor reclamado completo)
     tieneHistorial: false,
   };
@@ -8966,27 +8971,20 @@ window.exportarTrazabilidad=function(){
   const val=r=>parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const pareceFecha=v=>/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(String(v||'').trim());
   let radicadosSospechosos=0;
-  let glosadasEnCero=0;
 
   const filas = usar.map(r=>{
     // Empieza con la ÚLTIMA radicación (más reciente primero)
     const rondas=[...(r.respuestasAdres||[])].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
-    const totAprobado=rondas.reduce((a,x)=>a+(x.valorAprobado||0),0);
-    // Solo se descuenta el GLOSADO YA ACEPTADO (valorAceptado de la ronda) — lo no
-    // aceptado sigue siendo dinero recuperable mientras se disputa, así que NO se resta.
-    const totGlosado =rondas.reduce((a,x)=>a+(x.valorGlosado||0),0);
-    const totAceptadoGlosas=rondas.reduce((a,x)=>a+(x.valorAceptado||0),0);
+    // Misma fuente única de verdad que usa el Portafolio: Glosado es NETO (lo que
+    // quedó definitivamente perdido), no una suma bruta de rondas.
+    const v=window.getValoresAdresTotal(r);
     const reclamado=val(r);
-    const valorPorRecuperar=Math.max(0, reclamado - totAprobado - totAceptadoGlosas);
+    const valorPorRecuperar=v.valorPendiente; // = reclamado − aprobado − glosado, por construcción
     if(pareceFecha(r.radicado?.numero)) radicadosSospechosos++;
-    // Alerta: factura glosada (tiene valor glosado) que aún así sale en $0 por
-    // recuperar — señal de que algo no cuadra en ESA cuenta puntual (revisar a mano).
-    const sospechosaGlosadaEnCero = totGlosado>0 && valorPorRecuperar===0;
-    if(sospechosaGlosadaEnCero) glosadasEnCero++;
     return {
       factura:r.factura||'', ips:IPS_NOMBRES?.[r.codHab]||r.codHab||'',
       radicadoActual:r.radicado?.numero||'', valReclamado:reclamado, valorPorRecuperar,
-      rondas, totAprobado, totGlosado, sospechosaGlosadaEnCero,
+      rondas, totAprobado:v.valorAprobado, totGlosado:v.valorGlosado,
     };
   });
   filas.sort((a,b)=>a.factura.localeCompare(b.factura));
@@ -9062,15 +9060,6 @@ window.exportarTrazabilidad=function(){
     if(ws[addr]) ws[addr].s={ font:{bold:true} };
   }
 
-  // Resaltar en rojo la celda "Valor Total por Recuperar" de las facturas
-  // glosadas que igual salen en $0 — para que salten a la vista sin tener que
-  // revisar fila por fila a mano.
-  filas.forEach((f,i)=>{
-    if(!f.sospechosaGlosadaEnCero) return;
-    const addr=XLSX.utils.encode_cell({r:i+1,c:1}); // columna B = Valor Total por Recuperar
-    if(ws[addr]) ws[addr].s={ fill:{patternType:'solid',fgColor:{rgb:'FFF8CBAD'}}, font:{bold:true,color:{rgb:'FFC00000'}} };
-  });
-
   const lastCol=XLSX.utils.encode_col(header.length-1);
   ws['!autofilter']={ref:`A1:${lastCol}${rows.length+1}`};
   ws['!freeze']={xSplit:COLS_FIJAS,ySplit:1}; // congela Factura/Por Recuperar/IPS/Radicado/Reclamado + encabezado
@@ -9081,8 +9070,7 @@ window.exportarTrazabilidad=function(){
   XLSX.writeFile(wb,`Trazabilidad_ADRES_${nombreIPS}_${fecha}.xlsx`,{cellStyles:true});
   let msg=`✔ Trazabilidad exportada · ${filas.length} facturas, hasta ${maxRondas} rondas`;
   if(radicadosSospechosos>0) msg+=` · ⚠️ ${radicadosSospechosos} con "N° Radicado" que parece fecha (revisa el formato de esa columna en el Excel de ADRES)`;
-  if(glosadasEnCero>0) msg+=` · 🔴 ${glosadasEnCero} glosadas con $0 por recuperar (resaltadas en rojo, revisar)`;
-  toast(msg, (radicadosSospechosos>0||glosadasEnCero>0)?'w':'ok');
+  toast(msg, radicadosSospechosos>0?'w':'ok');
 };
 
 // Event listeners
@@ -9257,7 +9245,7 @@ async function leerExcelADRES(file){
   // Mapear índices de columnas clave
   const cols = {
     factura:     findCol(headers, ['numero de factura','num factura','factura']),
-    numRad:      findCol(headers, ['numero de radicacion','numero radicacion','radicacion']),
+    numRad:      findCol(headers, ['numero de radicacion','numero radicacion','num radicacion','no radicacion']),
     numConsol:   findCol(headers, ['numero consolidado','consolidado']),
     fechaConsol: findCol(headers, ['fecha radicacion consolidado']),
     fechaRad:    findCol(headers, ['fecha radicacion']),
@@ -10631,6 +10619,79 @@ window.corregirValorReclamadoGlobal = async function(){
     } catch(e){ err+=lote.length; console.error('Error corrigiendo lote:',e); }
   }
   toast(`✔ ${ok} reclamaciones restauradas a su valor original${err?`, ${err} con error`:''}`, err?'w':'ok');
+  if(typeof updStats==='function') updStats();
+  if(typeof window.diagnosticoValorInicial==='function') window.diagnosticoValorInicial();
+};
+
+// ── Re-fijar valor original (forzado) ──
+// A diferencia de corregirValorReclamadoGlobal (que solo fija valorOriginalFactura
+// si NO existe todavía), esta SÍ lo sobrescribe — para cuentas donde quedó mal
+// fijado con datos viejos/duplicados antes de una resincronización limpia.
+// Se limita a la IPS activa en pantalla (no toca la otra) y pide confirmación
+// mostrando exactamente cuánto va a cambiar antes de escribir nada.
+window.reFijarValorOriginal = async function(){
+  if(USER?.rol !== 'superadmin'){ toast('Solo Super Admin puede correr esta corrección.','e'); return; }
+  if(typeof CLIENTE_ACTIVO==='undefined' || !CLIENTE_ACTIVO || CLIENTE_ACTIVO.nit==='*'){
+    toast('Selecciona primero una IPS específica (no "Todas") para usar esta herramienta.','w'); return;
+  }
+  const codHab = CLIENTE_ACTIVO.nit;
+  const ipsNom = CLIENTE_ACTIVO.razon || codHab;
+  const src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(typeof RECS!=='undefined'?RECS:[]);
+  const recsIPS = src.filter(r=>r.codHab===codHab);
+  if(!recsIPS.length){ toast('No hay reclamaciones cargadas para esta IPS.','w'); return; }
+
+  const cambios=[];
+  recsIPS.forEach(rec=>{
+    const rondas=[...(rec.respuestasAdres||[])].sort((a,b)=>{
+      const fa=String(a.fecha||'').split('/').reverse().join('-');
+      const fb=String(b.fecha||'').split('/').reverse().join('-');
+      return fa.localeCompare(fb);
+    });
+    if(!rondas.length) return; // sin historial de rondas, no hay nada que re-fijar
+    const primeraRonda=rondas[0];
+    const valorOriginalNuevo = primeraRonda.valorReclamado || 0;
+    const valorOriginalActual = rec.furips1?.valorOriginalFactura || 0;
+    if(valorOriginalNuevo!==valorOriginalActual && valorOriginalNuevo>0){
+      cambios.push({rec, valorOriginalActual, valorOriginalNuevo, diferencia:valorOriginalNuevo-valorOriginalActual});
+    }
+  });
+
+  if(!cambios.length){ toast(`✔ Todas las cuentas de ${ipsNom} ya tienen el valor original correcto — nada que re-fijar.`,'ok'); return; }
+
+  const totalDif = cambios.reduce((a,c)=>a+Math.abs(c.diferencia),0);
+  const fm7 = v=>'$'+Math.round(Math.abs(v)||0).toLocaleString('es-CO');
+  const msg=`⚠️ Vas a FORZAR el valor original de ${cambios.length} reclamaciones de ${ipsNom}, con el valor de la 1ª ronda ACTUAL del historial (después de la última sincronización):\n\n`+
+    `• Suma total de diferencias: ${fm7(totalDif)}\n`+
+    `• Ej: ${cambios[0].rec.factura} → ${fm7(cambios[0].valorOriginalActual)} pasa a ${fm7(cambios[0].valorOriginalNuevo)}\n\n`+
+    `Esto SOBRESCRIBE el valor original aunque ya estuviera fijado antes — úsalo solo si acabas de resincronizar con un archivo limpio y sabes que el valor anterior estaba mal.\n\n`+
+    `¿Confirmas que quieres forzar esta corrección?`;
+  if(!confirm(msg)) return;
+
+  toast('Re-fijando...','w');
+  let ok=0, err=0;
+  const CHUNK=20;
+  for(let i=0;i<cambios.length;i+=CHUNK){
+    const lote=cambios.slice(i,i+CHUNK);
+    const batch=writeBatch(db);
+    lote.forEach(c=>{
+      batch.update(doc(db,'reclamaciones',c.rec.id), {
+        'furips1.valorOriginalFactura': c.valorOriginalNuevo,
+        'furips1.c96': c.valorOriginalNuevo,
+        'furips1.c97': c.valorOriginalNuevo,
+        actualizado: serverTimestamp(),
+      });
+    });
+    try{
+      await batch.commit();
+      lote.forEach(c=>{
+        c.rec.furips1=c.rec.furips1||{};
+        c.rec.furips1.valorOriginalFactura=c.valorOriginalNuevo;
+        c.rec.furips1.c96=c.valorOriginalNuevo; c.rec.furips1.c97=c.valorOriginalNuevo;
+      });
+      ok+=lote.length;
+    } catch(e){ err+=lote.length; console.error('Error re-fijando lote:',e); }
+  }
+  toast(`✔ ${ok} reclamaciones de ${ipsNom} re-fijadas${err?`, ${err} con error`:''}`, err?'w':'ok');
   if(typeof updStats==='function') updStats();
   if(typeof window.diagnosticoValorInicial==='function') window.diagnosticoValorInicial();
 };
