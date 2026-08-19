@@ -9119,16 +9119,16 @@ window.exportarTrazabilidad=function(){
   filas.sort((a,b)=>a.factura.localeCompare(b.factura));
 
   const maxRondas=Math.max(1, ...filas.map(f=>f.rondas.length));
-  const COLS_FIJAS=5; // Factura, Por Recuperar, IPS, Radicado, Reclamado
-  const COLS_POR_RONDA=5; // Fecha Radicación, [espacio], Estado, Valor Reclamado, Valor Aprobado, Valor Glosado — ver detalle abajo
+  const COLS_FIJAS=5; // Factura, Por Recuperar, IPS, Radicado, Valor Factura
+  const COLS_POR_RONDA=5; // Fecha Radicación, Estado, Valor Reclamado, Valor Aprobado, Valor Glosado
 
-  const header=['Factura','Valor Total por Recuperar','IPS','N° Radicado','Valor Reclamado'];
+  const header=['Factura','Valor Total por Recuperar','IPS','N° Radicado','Valor Factura'];
   for(let i=1;i<=maxRondas;i++){
     // Se quitó "N° Radicación" (redundante con N° Radicado del inicio) y
-    // "N° Consolidado" (no aporta al informe). Se agrega una columna separadora
-    // en blanco entre cada ronda para distinguirlas visualmente sin depender de
-    // colores de celda (esa librería de Excel gratuita no los guarda al exportar).
-    header.push(`Ronda ${i} - Fecha Radicación`,`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`,`· R${i} ·`);
+    // "N° Consolidado" (no aporta al informe). Sin columna separadora — las
+    // rondas se distinguen por el color de la FUENTE (texto), alternando por
+    // bloque, en vez de un color de fondo de celda.
+    header.push(`Ronda ${i} - Fecha Radicación`,`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`);
   }
   header.push('Total Aprobado','Total Glosado');
 
@@ -9136,29 +9136,28 @@ window.exportarTrazabilidad=function(){
     const row=[f.factura, fm3(f.valorPorRecuperar), f.ips, f.radicadoActual, f.valReclamado];
     for(let i=0;i<maxRondas;i++){
       const rd=f.rondas[i];
-      if(rd) row.push(rd.fecha||'', rd.estado||'', fm3(rd.valorReclamado), fm3(rd.valorAprobado), fm3(rd.valorGlosado), '');
-      else row.push('','','','','','');
+      if(rd) row.push(rd.fecha||'', rd.estado||'', fm3(rd.valorReclamado), fm3(rd.valorAprobado), fm3(rd.valorGlosado));
+      else row.push('','','','','');
     }
     row.push(fm3(f.totAprobado), fm3(f.totGlosado));
     return row;
   });
 
-  const COLS_POR_RONDA_TOTAL=6; // 5 datos + 1 separador
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
   const cols=[{wch:18},{wch:20},{wch:22},{wch:16},{wch:14}];
-  for(let i=0;i<maxRondas;i++) cols.push({wch:16},{wch:14},{wch:14},{wch:14},{wch:14},{wch:3});
+  for(let i=0;i<maxRondas;i++) cols.push({wch:16},{wch:14},{wch:14},{wch:14},{wch:14});
   cols.push({wch:14},{wch:14});
   ws['!cols']=cols;
 
   // Formato numérico con separador de miles (se ve con punto o coma según el
   // idioma de Excel del que abra el archivo) en todas las columnas de valores.
-  const COLS_VALOR=[1,4]; // Por Recuperar, Reclamado (fijas)
+  const COLS_VALOR=[1,4]; // Por Recuperar, Valor Factura (fijas)
   for(let i=0;i<maxRondas;i++){
-    const base=COLS_FIJAS+i*COLS_POR_RONDA_TOTAL;
+    const base=COLS_FIJAS+i*COLS_POR_RONDA;
     COLS_VALOR.push(base+2, base+3, base+4); // Valor Reclamado/Aprobado/Glosado de esa ronda
   }
-  const lastColBefore=COLS_FIJAS+maxRondas*COLS_POR_RONDA_TOTAL;
+  const lastColBefore=COLS_FIJAS+maxRondas*COLS_POR_RONDA;
   COLS_VALOR.push(lastColBefore, lastColBefore+1); // Total Aprobado/Glosado
   const R=rows.length;
   for(let r=1;r<=R;r++){
@@ -9168,9 +9167,31 @@ window.exportarTrazabilidad=function(){
     });
   }
 
+  // Color de FUENTE (no de celda) alternando por ronda, para distinguirlas.
+  const PALETA_FUENTE=['FF1F6FB2','FF2E7D32','FFB26A00','FFC00000','FF6A1FB2'];
+  for(let i=0;i<maxRondas;i++){
+    const color=PALETA_FUENTE[i%PALETA_FUENTE.length];
+    const base=COLS_FIJAS+i*COLS_POR_RONDA;
+    for(let r=0;r<=R;r++){ // incluye encabezado (r=0)
+      for(let c=base;c<base+COLS_POR_RONDA;c++){
+        const addr=XLSX.utils.encode_cell({r,c});
+        if(!ws[addr]) continue;
+        ws[addr].s={ font:{color:{rgb:color}, bold:r===0} };
+      }
+    }
+  }
+  for(let c=0;c<COLS_FIJAS;c++){
+    const addr=XLSX.utils.encode_cell({r:0,c});
+    if(ws[addr]) ws[addr].s={ font:{bold:true} };
+  }
+  for(let c=lastColBefore;c<header.length;c++){
+    const addr=XLSX.utils.encode_cell({r:0,c});
+    if(ws[addr]) ws[addr].s={ font:{bold:true} };
+  }
+
   const lastCol=XLSX.utils.encode_col(header.length-1);
   ws['!autofilter']={ref:`A1:${lastCol}${rows.length+1}`};
-  ws['!freeze']={xSplit:COLS_FIJAS,ySplit:1}; // congela Factura/Por Recuperar/IPS/Radicado/Reclamado + encabezado
+  ws['!freeze']={xSplit:COLS_FIJAS,ySplit:1}; // congela Factura/Por Recuperar/IPS/Radicado/Valor Factura + encabezado
   XLSX.utils.book_append_sheet(wb,ws,'Trazabilidad ADRES');
   const nombreIPS=((typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*'&&CLIENTE_ACTIVO.razon)||'Todas_las_IPS')
     .toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
