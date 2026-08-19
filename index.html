@@ -9090,8 +9090,12 @@ window.descargarPDF=async function(){
 // cambio de gestión interna), ordenado por factura y fecha. Respeta el cliente activo. ──
 window.exportarTrazabilidad=function(){
   if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); return; }
-  const usar=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'?RECS_ALL:[]);
-  if(!usar.length){ toast('No hay reclamaciones para exportar.','w'); return; }
+  const todas=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'?RECS_ALL:[]);
+  // Solo cuentas YA radicadas — la trazabilidad es sobre el historial de rondas
+  // ante ADRES, así que las que aún no se han radicado no aportan nada aquí.
+  const usar=todas.filter(r=>r.radicado?.numero);
+  const sinRadicarOmitidas=todas.length-usar.length;
+  if(!usar.length){ toast('No hay reclamaciones radicadas para exportar.','w'); return; }
   const fm3=v=>Math.round(v||0);
   const val=r=>parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const pareceFecha=v=>/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(String(v||'').trim());
@@ -9193,7 +9197,8 @@ window.exportarTrazabilidad=function(){
     .toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
   const fecha=new Date().toISOString().split('T')[0];
   XLSX.writeFile(wb,`Trazabilidad_ADRES_${nombreIPS}_${fecha}.xlsx`,{cellStyles:true});
-  let msg=`✔ Trazabilidad exportada · ${filas.length} facturas, hasta ${maxRondas} rondas`;
+  let msg=`✔ Trazabilidad exportada · ${filas.length} facturas radicadas, hasta ${maxRondas} rondas`;
+  if(sinRadicarOmitidas>0) msg+=` · ${sinRadicarOmitidas} sin radicar omitidas`;
   if(radicadosSospechosos>0) msg+=` · ⚠️ ${radicadosSospechosos} con "N° Radicado" que parece fecha (revisa el formato de esa columna en el Excel de ADRES)`;
   toast(msg, radicadosSospechosos>0?'w':'ok');
 };
