@@ -7387,19 +7387,29 @@ window.getRespuestaAdres = (r) => {
 // ronda posterior, ya no cuenta como pérdida permanente — se reconoce la gestión
 // que sí la recuperó. Solo queda como "glosado" lo que de verdad se perdió para
 // siempre (no está aprobado ni sigue en disputa activa).
+// valorReclamadoBruto = suma de valorReclamado de TODAS las rondas — cada ronda ya
+// trae el valor correcto reclamado EN ESE MOMENTO (la primera ronda el valor
+// completo, una resubmisión solo el saldo en disputa de esa ronda) — por eso sumar
+// no infla nada, es el total real de actividad reclamada. Esto es lo que se
+// muestra como "Total Reclamado" en el dashboard/informes — DISTINTO del valor
+// original fijo (c96/c97/valorOriginalFactura), que se blindó para el TXT y las
+// glosas y nunca se toca.
 window.getValoresAdresTotal = (r) => {
-  if(!r) return {valorAprobado:0, valorGlosado:0, valorPendiente:0, tieneHistorial:false};
+  if(!r) return {valorAprobado:0, valorGlosado:0, valorPendiente:0, valorReclamadoBruto:0, tieneHistorial:false};
   if(r.respuestasAdres?.length){
     const valorAprobado = r.respuestasAdres.reduce((a,x)=>a+(x.valorAprobado||0),0);
     const valorPendiente = r.respuestasAdres.filter(x=>x.estado==='en_tramite').reduce((a,x)=>a+(x.valorReclamado||0),0);
+    const valorReclamadoBruto = r.respuestasAdres.reduce((a,x)=>a+(x.valorReclamado||0),0);
     const valorOriginal = r.furips1?.valorOriginalFactura || parseInt(r.furips1?.c97||r.furips1?.c96||0)||0;
     const valorGlosado = Math.max(0, valorOriginal - valorAprobado - valorPendiente);
-    return { valorAprobado, valorGlosado, valorPendiente, tieneHistorial: true };
+    return { valorAprobado, valorGlosado, valorPendiente, valorReclamadoBruto, tieneHistorial: true };
   }
+  const valorReclamadoBruto = parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   return {
     valorAprobado: r.respuestaAdres?.valorAprobado||0,
     valorGlosado:  0, // sin historial de rondas — nada resuelto todavía, nada glosado en firme
     valorPendiente: 0, // sin historial de rondas sincronizado — el caller debe usar fallback (valor reclamado completo)
+    valorReclamadoBruto,
     tieneHistorial: false,
   };
 };
