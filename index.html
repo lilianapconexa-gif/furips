@@ -8498,7 +8498,7 @@ window.updPortafolio = function(){
   const BASE=(RECS&&RECS.length>0)?RECS:(typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0?RECS_ALL:[]);
   let recs=BASE;
   if(mesFiltro)recs=BASE.filter(r=>getMes(r)===mesFiltro);
-  const recsAcum=BASE;
+  const recsAcum=mesFiltro?recs:BASE;
   const val=r=>parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const total=recsAcum.length,totalVal=recsAcum.reduce((a,r)=>a+val(r),0);
   // NOTA: cada reclamación se clasifica en UN SOLO bucket (la cuenta es unitaria, el
