@@ -8849,7 +8849,7 @@ window.buscarFacturasTxt=()=>{
           <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">PAQUETE</th>
           <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">RADICADO</th>
           <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">ESTADO ADRES</th>
-          <th style="padding:5px 6px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--tx3);">VALOR</th>
+          <th style="padding:5px 6px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--tx3);">VALOR EN TXT</th>
         </tr>
       </thead>
       <tbody>
@@ -8857,7 +8857,7 @@ window.buscarFacturasTxt=()=>{
           const paquete=paquetePorFactura[r.factura]||'—';
           const estado=typeof getRespuestaAdres==='function'?(getRespuestaAdres(r)||'sin respuesta'):'—';
           const estCol=estado==='glosada'?'var(--red)':estado==='aprobada'||estado==='aprobada_parcial'?'var(--green)':estado==='en_tramite'?'var(--acc)':'var(--tx3)';
-          const valor=typeof getValoresAdresTotal==='function'?(r.furips1?.valorOriginalFactura||parseInt(r.furips1?.c97||r.furips1?.c96||0)||0):0;
+          const valor=typeof window.calcularValorParaTXT==='function'?window.calcularValorParaTXT(r).valorParaTXT:0;
           return `<tr style="border-bottom:1px solid var(--brd);">
             <td style="padding:5px 6px;"><input type="checkbox" checked data-factura="${r.factura}" onchange="window.onToggleFacturaTxt(this)"></td>
             <td style="padding:5px 6px;font-family:var(--mono);font-weight:600;">${r.factura}</td>
@@ -11227,37 +11227,23 @@ window.procesarValoresMasivo = async function(file){
 };
 // ══ FIN VALIDACIÓN VALOR RADICADO ══════════════════════════
 
-window.generarTXT_F1 = (rec) => {
-  if(!rec) return '';
+// Calcula el valor que debe ir en c96/c97 del TXT de FURIPS1 para una reclamación:
+// si tiene una glosa (ronda de ADRES o en el módulo de Glosas), es SOLO el valor
+// glosado que sigue en disputa (glosado − aceptado); si es radicación nueva sin
+// ninguna glosa todavía, es el valor original completo de la factura. Se usa tanto
+// para generar el TXT real como para mostrar el valor en la grilla de selección,
+// así nunca quedan desincronizados entre sí.
+window.calcularValorParaTXT = function(rec){
   const f1 = rec.furips1 || {};
   const valorOriginalFactura = parseInt(f1.c97||f1.c96||0)||0;
-
-  // Buscar la ronda glosada más reciente (donde aplicarGlosaAFurips ya dejó el
-  // desglose reconciliado: valorGlosado tal cual lo reportó ADRES, y
-  // valorAceptado + valorNoAceptado que SIEMPRE suman exactamente ese mismo
-  // valorGlosado). Esa ronda es la única fuente de verdad — no se recalcula
-  // nada a partir de los ítems crudos de glosa, para evitar el problema de que
-  // un ítem glose el total y otros ítems glosen por otras causales distintas.
   const rondas=[...(rec.respuestasAdres||[])];
   const candidatasGlosa=rondas.filter(r=>(r.valorGlosado||0)>0);
   const rondaGlosa = candidatasGlosa.length ? candidatasGlosa[candidatasGlosa.length-1] : null;
   const glosasFacturaModulo=(typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>gl.factura===rec.factura);
   const rondaGlosaExiste = !!rondaGlosa || glosasFacturaModulo.length>0;
 
-  // Valor para el TXT: c96/c97 en la BASE DE DATOS siempre son el valor ORIGINAL
-  // de la factura (fijo, nunca se toca). Pero el TXT de REPROCESO no debe llevar
-  // el valor completo de la factura menos lo aceptado — debe llevar SOLO el valor
-  // de la GLOSA que sigue en disputa (lo aprobado/girado ya no se vuelve a
-  // reclamar, y de lo glosado, lo aceptado tampoco). Esto NO se guarda en ningún
-  // lado — se calcula solo al generar el archivo.
   let valorGlosadoRonda = rondaGlosa?.valorGlosado || 0;
   let valorAceptadoRonda = rondaGlosa?.valorAceptado || 0;
-  // Respaldo: si esta factura nunca pasó por "Procesar reporte ADRES" (no hay
-  // ninguna ronda con valorGlosado registrada en el historial), no hay dónde
-  // sacar el valor glosado/aceptado a nivel de ronda — en ese caso se toma
-  // directo del módulo de Glosas. Un mismo ÍTEM puede tener 2+ glosas (causales
-  // distintas sobre el mismo valor) — para no contar dos veces la misma plata,
-  // se agrupa por ítem y se toma el MÁXIMO glosado/aceptado de ese ítem, no la suma.
   if(!rondaGlosa && glosasFacturaModulo.length){
     const porItemGlosado={}, porItemAceptado={};
     glosasFacturaModulo.forEach(gl=>{
@@ -11270,8 +11256,23 @@ window.generarTXT_F1 = (rec) => {
     valorGlosadoRonda=Object.values(porItemGlosado).reduce((a,v)=>a+v,0);
     valorAceptadoRonda=Object.values(porItemAceptado).reduce((a,v)=>a+v,0);
   }
-  // El valor a reclamar en el reproceso = lo glosado que NO se ha aceptado.
-  const valorParaTXT = Math.max(0, valorGlosadoRonda - valorAceptadoRonda);
+
+  return {
+    rondaGlosaExiste,
+    valorOriginalFactura,
+    valorGlosadoRonda,
+    valorAceptadoRonda,
+    // El valor a reclamar en el reproceso = lo glosado que NO se ha aceptado.
+    // Si no hay glosa todavía, es el valor original completo de la factura.
+    valorParaTXT: rondaGlosaExiste ? Math.max(0, valorGlosadoRonda - valorAceptadoRonda) : valorOriginalFactura,
+  };
+};
+
+window.generarTXT_F1 = (rec) => {
+  if(!rec) return '';
+  const f1 = rec.furips1 || {};
+  const calc = window.calcularValorParaTXT(rec);
+  const { rondaGlosaExiste, valorOriginalFactura, valorGlosadoRonda, valorParaTXT } = calc;
 
   const valores = window.FURIPS1_CAMPOS_ORDEN.map(campo => {
     let v = f1[campo];
