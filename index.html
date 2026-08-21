@@ -11241,30 +11241,37 @@ window.generarTXT_F1 = (rec) => {
   const rondas=[...(rec.respuestasAdres||[])];
   const candidatasGlosa=rondas.filter(r=>(r.valorGlosado||0)>0);
   const rondaGlosa = candidatasGlosa.length ? candidatasGlosa[candidatasGlosa.length-1] : null;
+  const glosasFacturaModulo=(typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>gl.factura===rec.factura);
+  const rondaGlosaExiste = !!rondaGlosa || glosasFacturaModulo.length>0;
 
   // Valor para el TXT: c96/c97 en la BASE DE DATOS siempre son el valor ORIGINAL
-  // de la factura (fijo, nunca se toca). El TXT que se genera para reenviar debe
-  // reflejar lo que sigue en disputa: original − valorAceptado (lo aceptado se
-  // concede, ya no se reclama; lo no aceptado se sigue reclamando).
-  // Esto NO se guarda en ningún lado — se calcula solo al generar el archivo.
+  // de la factura (fijo, nunca se toca). Pero el TXT de REPROCESO no debe llevar
+  // el valor completo de la factura menos lo aceptado — debe llevar SOLO el valor
+  // de la GLOSA que sigue en disputa (lo aprobado/girado ya no se vuelve a
+  // reclamar, y de lo glosado, lo aceptado tampoco). Esto NO se guarda en ningún
+  // lado — se calcula solo al generar el archivo.
+  let valorGlosadoRonda = rondaGlosa?.valorGlosado || 0;
   let valorAceptadoRonda = rondaGlosa?.valorAceptado || 0;
   // Respaldo: si esta factura nunca pasó por "Procesar reporte ADRES" (no hay
   // ninguna ronda con valorGlosado registrada en el historial), no hay dónde
-  // anotar lo aceptado a nivel de ronda — en ese caso se toma directo del
-  // módulo de Glosas. Un mismo ÍTEM puede tener 2+ glosas (causales distintas
-  // sobre el mismo valor) — para no descontar dos veces la misma plata, se
-  // agrupa por ítem y se toma el MÁXIMO aplicado/aceptado de ese ítem, no la suma.
-  if(!valorAceptadoRonda){
-    const glosasFactura=(typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>gl.factura===rec.factura);
-    const porItemAceptado={};
-    glosasFactura.forEach(gl=>{
+  // sacar el valor glosado/aceptado a nivel de ronda — en ese caso se toma
+  // directo del módulo de Glosas. Un mismo ÍTEM puede tener 2+ glosas (causales
+  // distintas sobre el mismo valor) — para no contar dos veces la misma plata,
+  // se agrupa por ítem y se toma el MÁXIMO glosado/aceptado de ese ítem, no la suma.
+  if(!rondaGlosa && glosasFacturaModulo.length){
+    const porItemGlosado={}, porItemAceptado={};
+    glosasFacturaModulo.forEach(gl=>{
       const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
-      const monto=gl.montoAplicadoFurips!=null?gl.montoAplicadoFurips:(parseInt(gl.vrAceptado)||0);
-      if(!porItemAceptado[key] || monto>porItemAceptado[key]) porItemAceptado[key]=monto;
+      const vGlo=parseInt(gl.vrGlosado)||0;
+      const vAcep=gl.montoAplicadoFurips!=null?gl.montoAplicadoFurips:(parseInt(gl.vrAceptado)||0);
+      if(!porItemGlosado[key] || vGlo>porItemGlosado[key]) porItemGlosado[key]=vGlo;
+      if(!porItemAceptado[key] || vAcep>porItemAceptado[key]) porItemAceptado[key]=vAcep;
     });
+    valorGlosadoRonda=Object.values(porItemGlosado).reduce((a,v)=>a+v,0);
     valorAceptadoRonda=Object.values(porItemAceptado).reduce((a,v)=>a+v,0);
   }
-  const valorParaTXT = Math.max(0, valorOriginalFactura - valorAceptadoRonda);
+  // El valor a reclamar en el reproceso = lo glosado que NO se ha aceptado.
+  const valorParaTXT = Math.max(0, valorGlosadoRonda - valorAceptadoRonda);
 
   const valores = window.FURIPS1_CAMPOS_ORDEN.map(campo => {
     let v = f1[campo];
@@ -11272,9 +11279,9 @@ window.generarTXT_F1 = (rec) => {
     if(campo === 'c2' && (!v || v === '') && rec.factura) v = rec.factura;
     if(campo === 'c3' && (!v || v === '') && rec.consec)  v = rec.consec;
     if(campo === 'c4' && (!v || v === '') && rec.codHab)  v = rec.codHab;
-    // c96/c97 (Valor Facturado/Reclamado Méd-Qx): en el TXT va el valor AJUSTADO
-    // (original − aceptado), no el valor original guardado en BD.
-    if(campo === 'c96' || campo === 'c97') v = valorParaTXT;
+    // c96/c97 (Valor Facturado/Reclamado Méd-Qx): en el TXT de reproceso va el
+    // valor de la glosa aún en disputa, no el valor original guardado en BD.
+    if((campo === 'c96' || campo === 'c97') && rondaGlosaExiste) v = valorParaTXT;
     if(F1_FECHAS.has(campo))    return txtCleanFecha(v);
     if(F1_NUMERICOS.has(campo)) return txtCleanNum(v);
     // Padding con ceros a la izquierda (ej: número de póliza)
@@ -11290,24 +11297,10 @@ window.generarTXT_F1 = (rec) => {
   // importar si ya se contestó la glosa. En radicación nueva (sin ninguna glosa
   // todavía) se deja el formato original de 101 columnas intacto.
   //  Campo 1: Número de radicación individual actual de la reclamación.
-  //  Campo 2: 0 = glosa total · 1 = glosa parcial — se toma directo de la ronda
-  //  (valorGlosado de la ronda vs. valor original de la factura); si no hay ronda
-  //  (factura sin sincronizar con ADRES todavía), se toma del módulo de Glosas,
-  //  igual deduplicado por ítem (máximo, no suma) por el mismo motivo de arriba.
-  const glosasFacturaFlag=(typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>gl.factura===rec.factura);
-  const esReproceso = !!rondaGlosa || glosasFacturaFlag.length>0;
-  if(esReproceso){
+  //  Campo 2: 0 = glosa total · 1 = glosa parcial — se toma directo del mismo
+  //  valorGlosadoRonda ya calculado arriba (con su respaldo del módulo de Glosas).
+  if(rondaGlosaExiste){
     const radicadoIndividual = txtCleanValue(rec.radicado?.numero || '');
-    let valorGlosadoRonda = rondaGlosa?.valorGlosado||0;
-    if(!rondaGlosa){
-      const porItemGlosado={};
-      glosasFacturaFlag.forEach(gl=>{
-        const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
-        const v=parseInt(gl.vrGlosado)||0;
-        if(!porItemGlosado[key] || v>porItemGlosado[key]) porItemGlosado[key]=v;
-      });
-      valorGlosadoRonda=Object.values(porItemGlosado).reduce((a,v)=>a+v,0);
-    }
     const esTotal = valorOriginalFactura>0 && valorGlosadoRonda>=valorOriginalFactura;
     const flagGlosa = esTotal ? '0' : '1';
     return [radicadoIndividual, flagGlosa, ...valores].join(',');
