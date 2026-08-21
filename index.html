@@ -741,7 +741,12 @@ select option{background:var(--sur2);}
           </button>
         </div>
 
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+          <input id="buscar-rondas-input" placeholder="Ver rondas de una factura (ej: FECR81683)" style="flex:1;max-width:300px;padding:6px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);font-size:12px;" onkeydown="if(event.key==='Enter') window.verRondasFactura(document.getElementById('buscar-rondas-input').value.trim())">
+          <button class="btn bs" style="font-size:11px;" onclick="window.verRondasFactura(document.getElementById('buscar-rondas-input').value.trim())">🔍 Ver rondas</button>
+        </div>
         <div id="valor-inicial-resultado" style="margin-bottom:14px;"></div>
+        <div id="rondas-detalle-factura" style="margin-bottom:14px;"></div>
 
         <!-- Progress -->
         <div id="adres-progress" style="display:none;background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:14px;">
@@ -11005,7 +11010,6 @@ window.diagnosticoValorInicial = function(){
           </tbody>
         </table>
       </div>`}
-      <div id="rondas-detalle-factura" style="margin-top:14px;"></div>
     </div>`;
   toast(`Diagnóstico listo: ${correctas.length} de ${conHistorial.length} coinciden con la fórmula · ${conCambio.length} necesitan revisión${duplicadosSospechosos.length?` (${duplicadosSospechosos.length} parecen duplicadas)`:''}`, conCambio.length?'w':'ok');
 };
