@@ -9388,8 +9388,10 @@ function mapearEstadoADRES(desc, estadoRec, valorAprobado, valorGlosado){
   const vA = parseFloat(String(valorAprobado||'0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
   const vG = parseFloat(String(valorGlosado||'0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
 
-  // Girado = ya se pagó el dinero
-  if(eR.includes('girado')) return 'aprobada';
+  // Girado = ya se pagó la parte aprobada — pero si ADEMÁS hay algo glosado en esta
+  // misma fila, sigue siendo aprobada PARCIAL (lo girado no cubre toda la reclamación),
+  // no se puede ignorar el valor glosado solo porque ya se pagó lo demás.
+  if(eR.includes('girado')) return vG > 0 ? 'aprobada_parcial' : 'aprobada';
 
   // En trámite = la descripción de ADRES lo dice explícitamente. Esto tiene PRIORIDAD
   // sobre los valores numéricos: una fila puede traer un valor glosado preliminar/
@@ -9453,28 +9455,35 @@ async function leerExcelADRES(file){
     .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
     .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/[^a-z0-9 ]/g,'').trim();
 
-  const findCol = (headers, keywords) => {
+  const findCol = (headers, keywords, excluir=new Set()) => {
     const kws = keywords.map(norm);
-    return headers.findIndex(h => kws.some(k => norm(h).includes(k)));
+    return headers.findIndex((h,i) => !excluir.has(i) && kws.some(k => norm(h).includes(k)));
   };
 
-  // Mapear índices de columnas clave
-  const cols = {
-    factura:     findCol(headers, ['numero de factura','num factura','factura']),
-    numRad:      findCol(headers, ['numero de radicacion','numero radicacion','num radicacion','no radicacion']),
-    numConsol:   findCol(headers, ['numero consolidado','consolidado']),
-    fechaConsol: findCol(headers, ['fecha radicacion consolidado']),
-    fechaRad:    findCol(headers, ['fecha radicacion']),
-    descApro:    findCol(headers, ['descripcion tipo aprobacion','tipo aprobacion','aprobacion']),
-    estadoRec:   findCol(headers, ['estado reclamacion','estado recl']),
-    valorRec:    findCol(headers, ['valor reclamado']),
-    valorApro:   findCol(headers, ['valor aprobado']),
-    valorGlo:    findCol(headers, ['valor glosado']),
-    fechaDev:    findCol(headers, ['fecha devolucion','devolucion']),
-    paquete:     findCol(headers, ['paquete']),
-    codHab:      findCol(headers, ['codigo habilitacion','habilitacion']),
-    nit:         findCol(headers, ['nit']),
-  };
+  // Mapear índices de columnas clave. Orden importa: primero las combinaciones MÁS
+  // ESPECÍFICAS/largas (ej. "Fecha Radicación Consolidado"), excluyéndolas después
+  // de las búsquedas más genéricas (ej. "Fecha Radicación", "Consolidado") — así una
+  // columna como "Fecha Radicación Consolidado" (que contiene ambas palabras) no se
+  // cuela por error como si fuera "Fecha Radicación" o "N° Consolidado" sueltos.
+  const usadas = new Set();
+  const marcar = idx => { if(idx>=0) usadas.add(idx); return idx; };
+
+  const factura = marcar(findCol(headers, ['numero de factura','num factura','factura']));
+  const numRad = marcar(findCol(headers, ['numero de radicacion','numero radicacion','num radicacion','no radicacion'], usadas));
+  const fechaConsol = marcar(findCol(headers, ['fecha radicacion consolidado','fecha consolidado'], usadas));
+  const numConsol = marcar(findCol(headers, ['numero consolidado','num consolidado','no consolidado'], usadas));
+  const fechaRad = marcar(findCol(headers, ['fecha radicacion','fecha de radicacion'], usadas));
+  const descApro = marcar(findCol(headers, ['descripcion tipo aprobacion','tipo aprobacion','descripcion aprobacion'], usadas));
+  const estadoRec = marcar(findCol(headers, ['estado reclamacion','estado recl'], usadas));
+  const valorRec = marcar(findCol(headers, ['valor reclamado'], usadas));
+  const valorApro = marcar(findCol(headers, ['valor aprobado'], usadas));
+  const valorGlo = marcar(findCol(headers, ['valor glosado'], usadas));
+  const fechaDev = marcar(findCol(headers, ['fecha devolucion'], usadas));
+  const paquete = marcar(findCol(headers, ['paquete'], usadas));
+  const codHab = marcar(findCol(headers, ['codigo habilitacion','habilitacion'], usadas));
+  const nit = marcar(findCol(headers, ['nit'], usadas));
+
+  const cols = { factura, numRad, numConsol, fechaConsol, fechaRad, descApro, estadoRec, valorRec, valorApro, valorGlo, fechaDev, paquete, codHab, nit };
 
   console.log('[ADRES] Columnas detectadas:', cols);
 
