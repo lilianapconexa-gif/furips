@@ -7415,17 +7415,22 @@ window.getRespuestaAdres = (r) => {
     if(v === 'en_revision') return null;
     return v;
   };
-  // PRIORIDAD 1: singular con fuenteADRES=true — contiene estado Y valores correctos
-  if(r.respuestaAdres?.fuenteADRES && r.respuestaAdres?.estado)
-    return norm(r.respuestaAdres.estado);
-  // PRIORIDAD 2: singular sin sync ADRES (radicaciones manuales)
-  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado);
-  // PRIORIDAD 3: array (solo para trazabilidad, no para dashboard)
+  // PRIORIDAD 1: arreglo de rondas (respuestasAdres[]) — es la fuente de verdad
+  // real, la que se reconstruye completa en cada sincronización. El campo
+  // singular (respuestaAdres.estado) puede quedar desactualizado si no se
+  // vuelve a escribir en el mismo momento, así que ya no manda primero.
   if(r.respuestasAdres?.length){
-    const sorted=[...r.respuestasAdres].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+    const sorted=[...r.respuestasAdres].sort((a,b)=>{
+      const fa=String(a.fecha||'').split('/').reverse().join('-');
+      const fb=String(b.fecha||'').split('/').reverse().join('-');
+      return fa.localeCompare(fb);
+    });
     const ultima=sorted[sorted.length-1];
     if(ultima?.estado) return norm(ultima.estado);
   }
+  // PRIORIDAD 2: singular — respaldo para cuentas sin arreglo de rondas
+  // (radicaciones manuales antiguas, o antes de la primera sincronización).
+  if(r.respuestaAdres?.estado) return norm(r.respuestaAdres.estado);
   // Modelo viejo: derivar desde radicado.estado
   const old = r.radicado?.estado;
   if(!old) return null;
