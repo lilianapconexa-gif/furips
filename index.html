@@ -4529,8 +4529,13 @@ window.procesarGlosasExcel = (file) => {
 
       const headers=aoa[headerRow].map(c=>String(c||'').trim());
 
-      // Mapear índices de columnas por nombre
-      const fi=(terms)=>headers.findIndex(h=>terms.some(t=>h.includes(t)));
+      // Normaliza texto para comparar columnas sin que importen mayúsculas/acentos/
+      // espacios extra — antes una diferencia mínima (ej. "Descripción  Glosa " con
+      // doble espacio) hacía que no encontrara la columna aunque el nombre fuera
+      // básicamente el mismo.
+      const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+      const headersNorm = headers.map(norm);
+      const fi=(terms)=>headersNorm.findIndex(h=>terms.some(t=>h.includes(norm(t))));
       const idx={
         codHab:   fi(['Código Habilitación','Habilitacion']),
         radicado: fi(['Radicaci','Radicacion']),
@@ -4918,6 +4923,14 @@ async function registrarHistorialGlosa(gl){
   } catch(e){ console.error('No se pudo registrar en historial de la reclamación:', e); }
 }
 
+// Devuelve true si TODAS las glosas de una factura ya tienen una decisión
+// (ninguna sigue 'pendiente') — la nota crédito es por factura completa, no
+// por ítem, así que solo debe generarse/actualizarse cuando esto se cumple.
+function facturaGlosasCompleta(factura){
+  const items=GLOSAS_DB.filter(g=>g.factura===factura);
+  return items.length>0 && items.every(g=>g.respuesta && g.respuesta!=='pendiente');
+}
+
 window.updGlosaRespuesta = async (gloId, campo, valor) => {
   const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
   if(campo==='tipo'){
@@ -4935,8 +4948,10 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
       updGloKpis();
       registrarHistorialGlosa(gl); // no bloqueante — la UI no espera esto
       if((valor==='aceptada'||valor==='parcial') && (gl.vrAceptado||0)>0){
-        window.generarNotaCredito(gl.factura, gl.codHab); // no bloqueante
-        window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante
+        window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante — se aplica por ítem, en tiempo real
+      }
+      if(facturaGlosasCompleta(gl.factura)){
+        window.generarNotaCredito(gl.factura, gl.codHab); // no bloqueante — solo cuando la factura queda completa
       }
     } catch(e){ toast('Error guardando: '+e.message,'e'); }
     return;
@@ -4954,8 +4969,10 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
     });
     updGloKpis();
     if(campo==='vrAceptado' && (gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (gl.vrAceptado||0)>0){
-      window.generarNotaCredito(gl.factura, gl.codHab); // no bloqueante
-      window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante
+      window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante — se aplica por ítem, en tiempo real
+    }
+    if(campo==='vrAceptado' && facturaGlosasCompleta(gl.factura)){
+      window.generarNotaCredito(gl.factura, gl.codHab); // no bloqueante — solo cuando la factura queda completa
     }
   } catch(e){ toast('Error guardando: '+e.message,'e'); }
 };
