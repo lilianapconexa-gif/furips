@@ -4840,36 +4840,37 @@ window.mostrarRespRapidas=(gloId)=>{
 window.calcGlosaValores=(gloId)=>{
   const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
   const tipo=gl.respuesta||'pendiente';
-  const va=g('va-'+gloId), vna=g('vna-'+gloId); if(!va||!vna) return;
+  const va=g('va-'+gloId), vna=g('vna-'+gloId);
   const vrG=parseInt(gl.vrGlosado)||0;
 
   if(tipo==='aceptada'){
-    // Se acepta: valor aceptado = total, no aceptado = 0, ambos bloqueados
-    va.value=vrG;  va.readOnly=true;  va.style.opacity='.5';  va.style.background='var(--sur2)';
-    vna.value=0;   vna.readOnly=true; vna.style.opacity='.5'; vna.style.background='var(--sur2)';
+    // Se acepta: valor aceptado = total, no aceptado = 0
     gl.vrAceptado=vrG; gl.vrNoAceptado=0;
+    if(va&&vna){ va.value=vrG; va.readOnly=true; va.style.opacity='.5'; va.style.background='var(--sur2)';
+                 vna.value=0;  vna.readOnly=true; vna.style.opacity='.5'; vna.style.background='var(--sur2)'; }
 
   } else if(tipo==='no_aceptada'){
-    // No se acepta: no aceptado = total, aceptado = 0, ambos bloqueados
-    va.value=0;    va.readOnly=true;  va.style.opacity='.5';  va.style.background='var(--sur2)';
-    vna.value=vrG; vna.readOnly=true; vna.style.opacity='.5'; vna.style.background='var(--sur2)';
+    // No se acepta: no aceptado = total, aceptado = 0
     gl.vrAceptado=0; gl.vrNoAceptado=vrG;
+    if(va&&vna){ va.value=0;    va.readOnly=true;  va.style.opacity='.5';  va.style.background='var(--sur2)';
+                 vna.value=vrG; vna.readOnly=true; vna.style.opacity='.5'; vna.style.background='var(--sur2)'; }
 
   } else if(tipo==='parcial'){
-    // Parcial: ambos editables, se calculan entre sí
-    va.readOnly=false;  va.style.opacity='1';  va.style.background='var(--sur2)';
-    vna.readOnly=false; vna.style.opacity='1'; vna.style.background='var(--sur2)';
-    // Si aún no tienen valor, inicializar
-    if(!parseInt(va.value) && !parseInt(vna.value)){
-      va.value=0; vna.value=vrG;
+    // Parcial: si aún no tienen valor, inicializar (todo como no aceptado por defecto)
+    if(!parseInt(gl.vrAceptado) && !parseInt(gl.vrNoAceptado)){
       gl.vrAceptado=0; gl.vrNoAceptado=vrG;
+    }
+    if(va&&vna){
+      va.readOnly=false;  va.style.opacity='1';  va.style.background='var(--sur2)';
+      vna.readOnly=false; vna.style.opacity='1'; vna.style.background='var(--sur2)';
+      va.value=gl.vrAceptado||0; vna.value=gl.vrNoAceptado||0;
     }
 
   } else {
-    // Pendiente: limpiar y bloquear
-    va.value=0;    va.readOnly=true;  va.style.opacity='.4';  va.style.background='var(--sur2)';
-    vna.value=vrG; vna.readOnly=true; vna.style.opacity='.4'; vna.style.background='var(--sur2)';
+    // Pendiente: limpiar
     gl.vrAceptado=0; gl.vrNoAceptado=0;
+    if(va&&vna){ va.value=0;    va.readOnly=true;  va.style.opacity='.4';  va.style.background='var(--sur2)';
+                 vna.value=vrG; vna.readOnly=true; vna.style.opacity='.4'; vna.style.background='var(--sur2)'; }
   }
 };
 
@@ -5363,13 +5364,17 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     // (0 si no hubo match con ningún ítem). Esto es lo único que cuenta como
     // "aceptado" para la ronda — así FURIPS1 y FURIPS2 SIEMPRE cuadran entre sí,
     // porque ambos se derivan del mismo monto realmente aplicado.
+    // La comparación se normaliza (sin acentos/mayúsculas/espacios extra) para que
+    // diferencias mínimas de formato entre el Excel de glosas y FURIPS2 no generen
+    // falsos "sin coincidencia".
+    const normTxt = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
     pendientesAplicar.forEach(gl=>{
       const vAceptado=parseInt(gl.vrAceptado)||0;
-      const codBuscado=(gl.codElemento||'').trim();
-      const descBuscada=(gl.descElemento||'').trim().toUpperCase();
+      const codBuscado=normTxt(gl.codElemento);
+      const descBuscada=normTxt(gl.descElemento);
       const idx=furips2.findIndex((it,i)=>!indicesQuitar.has(i) &&
-        ((codBuscado && (it.codigo||'').trim()===codBuscado) ||
-         (descBuscada && (it.descripcion||'').trim().toUpperCase()===descBuscada))
+        ((codBuscado && normTxt(it.codigo)===codBuscado) ||
+         (descBuscada && normTxt(it.descripcion)===descBuscada))
       );
       if(idx===-1){ sinMatch.push(gl); gl._montoAplicado=0; return; }
       if(gl.respuesta==='aceptada'){
