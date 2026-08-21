@@ -8822,12 +8822,44 @@ window.buscarFacturasTxt=()=>{
   TXT_FACTURAS_SEL=new Set(recs.map(r=>r.factura)); // todas seleccionadas por defecto
   const wrap=g('tx-facturas-wrap'), lista=g('tx-facturas-lista'), count=g('tx-facturas-count');
   if(count) count.textContent=`${recs.length} facturas encontradas`;
-  if(lista) lista.innerHTML=recs.map(r=>`
-    <label style="display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:12px;cursor:pointer;">
-      <input type="checkbox" checked data-factura="${r.factura}" onchange="window.onToggleFacturaTxt(this)">
-      <span style="font-family:var(--mono);font-weight:600;">${r.factura}</span>
-      <span style="color:var(--tx3);font-size:11px;">Consec: ${r.consec||'—'}</span>
-    </label>`).join('');
+
+  // Paquete: se busca en GLOSAS_DB por factura (ahí es donde vive ese dato).
+  const paquetePorFactura={};
+  (typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).forEach(gl=>{
+    if(gl.paquete && !paquetePorFactura[gl.factura]) paquetePorFactura[gl.factura]=gl.paquete;
+  });
+
+  if(lista) lista.innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--brd);">
+          <th style="padding:5px 6px;width:26px;"></th>
+          <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">FACTURA</th>
+          <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">CONSEC</th>
+          <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">PAQUETE</th>
+          <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">RADICADO</th>
+          <th style="padding:5px 6px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);">ESTADO ADRES</th>
+          <th style="padding:5px 6px;text-align:right;font-family:var(--mono);font-size:9px;color:var(--tx3);">VALOR</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${recs.map(r=>{
+          const paquete=paquetePorFactura[r.factura]||'—';
+          const estado=typeof getRespuestaAdres==='function'?(getRespuestaAdres(r)||'sin respuesta'):'—';
+          const estCol=estado==='glosada'?'var(--red)':estado==='aprobada'||estado==='aprobada_parcial'?'var(--green)':estado==='en_tramite'?'var(--acc)':'var(--tx3)';
+          const valor=typeof getValoresAdresTotal==='function'?(r.furips1?.valorOriginalFactura||parseInt(r.furips1?.c97||r.furips1?.c96||0)||0):0;
+          return `<tr style="border-bottom:1px solid var(--brd);">
+            <td style="padding:5px 6px;"><input type="checkbox" checked data-factura="${r.factura}" onchange="window.onToggleFacturaTxt(this)"></td>
+            <td style="padding:5px 6px;font-family:var(--mono);font-weight:600;">${r.factura}</td>
+            <td style="padding:5px 6px;font-family:var(--mono);color:var(--tx3);">${r.consec||'—'}</td>
+            <td style="padding:5px 6px;font-family:var(--mono);color:var(--acc);">${paquete}</td>
+            <td style="padding:5px 6px;font-family:var(--mono);color:var(--tx3);">${r.radicado?.numero||'—'}</td>
+            <td style="padding:5px 6px;"><span style="font-size:10px;color:${estCol};font-weight:600;">${estado}</span></td>
+            <td style="padding:5px 6px;text-align:right;font-family:var(--mono);">${fmt$(valor)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
   if(wrap) wrap.classList.remove('hidden');
   toast(`${recs.length} facturas — todas seleccionadas por defecto`,'ok');
 };
