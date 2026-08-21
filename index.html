@@ -5230,23 +5230,49 @@ function htmlRespuesta(fac, rad, doc, items){
 }
 
 // ── DESCARGAR PDF DE UNA FACTURA ──
+// Descarga directa de un documento HTML completo (como los que arma htmlRespuesta/
+// htmlNotaCredito) como archivo PDF, con nombre de archivo específico — sin diálogo
+// de impresión, va directo a la carpeta de Descargas del navegador.
+async function descargarHtmlComoPDF(htmlCompleto, nombreArchivo){
+  if(typeof html2pdf==='undefined'){
+    toast('Cargando librería PDF...','w');
+    setTimeout(()=>descargarHtmlComoPDF(htmlCompleto, nombreArchivo), 1200);
+    return;
+  }
+  // Extraer solo el <body> del documento completo (html2pdf trabaja sobre un
+  // elemento del DOM, no sobre un string de HTML con <html>/<head>/<body>).
+  const bodyMatch = htmlCompleto.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  const bodyHtml = bodyMatch ? bodyMatch[1] : htmlCompleto;
+  const styleMatch = htmlCompleto.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const styleCss = styleMatch ? styleMatch[1] : '';
+
+  const contenedor = document.createElement('div');
+  contenedor.style.position='fixed';
+  contenedor.style.left='-9999px';
+  contenedor.style.top='0';
+  contenedor.style.width='800px';
+  contenedor.style.background='#fff';
+  contenedor.innerHTML = `<style>${styleCss}</style>${bodyHtml}`;
+  document.body.appendChild(contenedor);
+
+  const opt={margin:[8,8,8,8],filename:nombreArchivo,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
+  try{
+    await html2pdf().set(opt).from(contenedor).save();
+    toast(`✔ Descargado: ${nombreArchivo}`,'ok');
+  } catch(e){
+    toast('Error generando PDF: '+e.message,'e');
+  } finally {
+    document.body.removeChild(contenedor);
+  }
+}
+
 window.expGlosaPDF=(fac,rad,doc)=>{
   const pf=agruparGlosFiltered();
   const key=Object.keys(pf).find(k=>k.startsWith(fac+'|||'));
   if(!key){ toast('Factura no encontrada.','w'); return; }
   const items=pf[key];
   const html=htmlRespuesta(fac,rad,doc,items);
-  // Abrir en ventana nueva y disparar impresión
-  const win=window.open('','_blank','width=900,height=700');
-  if(!win){ toast('Activa las ventanas emergentes para descargar el PDF.','w'); return; }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(()=>{
-    win.print();
-    // El usuario guarda como PDF con nombre sugerido
-  },600);
-  toast(`📄 Se abrió la ventana de impresión. Guarda como PDF con nombre: rta_${fac}`, 'ok');
+  descargarHtmlComoPDF(html, `RTA_${fac}.pdf`);
 };
 
 // ── NOTA CRÉDITO automática por factura ──
@@ -5499,13 +5525,7 @@ window.generarNotaCredito = async function(factura, codHab){
     }
 
     const html=htmlNotaCredito(numero, factura, codHab, itemsAceptados, valorTotal, fecha);
-    const win=window.open('','_blank','width=900,height=700');
-    if(!win){ toast(`✔ ${numero} generada/actualizada por ${fmt$(valorTotal)}. Actívalos pop-ups para verla.`,'ok'); return; }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(()=>win.print(),600);
-    toast(`✔ Nota crédito ${numero} · ${fmt$(valorTotal)} · guarda como PDF`,'ok');
+    await descargarHtmlComoPDF(html, `NC_${factura}.pdf`);
   } catch(e){
     console.error('Error generando nota crédito:',e);
     toast('Error generando nota crédito: '+e.message,'e');
