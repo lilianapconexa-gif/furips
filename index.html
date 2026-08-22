@@ -2204,10 +2204,17 @@ select option{background:var(--sur2);}
             </div>
             <div id="tx-facturas-lista" style="max-height:220px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;padding:8px;background:var(--sur2);"></div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-            <button class="btn bp" onclick="expTxt('FURIPS1')">⬇ FURIPS 1 .txt</button>
-            <button class="btn bb" onclick="expTxt('FURIPS2')">⬇ FURIPS 2 .txt</button>
-            <button class="btn bs" onclick="prevTxt()">👁 Previsualizar</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;align-items:center;">
+            <span style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase;">Actual (con ajuste de glosa):</span>
+            <button class="btn bp" onclick="expTxt('FURIPS1','actual')">⬇ FURIPS 1 .txt</button>
+            <button class="btn bb" onclick="expTxt('FURIPS2','actual')">⬇ FURIPS 2 .txt</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+            <span style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase;">Original (sin ajustar):</span>
+            <button class="btn bs" onclick="expTxt('FURIPS1','original')">⬇ FURIPS 1 .txt</button>
+            <button class="btn bs" onclick="expTxt('FURIPS2','original')">⬇ FURIPS 2 .txt</button>
+            <span style="width:1px;height:20px;background:var(--brd);margin:0 4px;"></span>
+            <button class="btn bs" onclick="prevTxt()">👁 Previsualizar (actual)</button>
           </div>
           <div id="prev-w" class="hidden">
             <div style="font-family:var(--mono);font-size:11px;color:var(--tx2);margin-bottom:4px;">▶ FURIPS 1</div>
@@ -8898,20 +8905,21 @@ function recsTxtSeleccionados(){
 }
 
 // Genera y descarga el plano FURIPS1 o FURIPS2 para el filtro/selección actual.
-window.expTxt=(tipo)=>{
+window.expTxt=(tipo, modo='actual')=>{
   const recs=recsTxtSeleccionados(); if(!recs) return;
   const fec=g('tx-fec')?.value || new Date().toISOString().split('T')[0];
   const p=fec.split('-'); const ddmmaaaa=p.length===3?`${p[2]}${p[1]}${p[0]}`:fec.replace(/-/g,'');
   const cod=(g('tx-cod')?.value||'').trim().replace(/[^a-zA-Z0-9]/g,'');
+  const sufijo=modo==='original'?'_ORIGINAL':'';
   if(tipo==='FURIPS1'){
-    const contenido=recs.map(r=>generarTXT_F1(r)).join('\n');
-    descargarComoArchivo(contenido, `FURIPS1${cod}${ddmmaaaa}.txt`, 'text/plain;charset=utf-8');
-    toast(`✔ FURIPS 1 generado — ${recs.length} reclamaciones`,'ok');
+    const contenido=recs.map(r=>generarTXT_F1(r,modo)).join('\n');
+    descargarComoArchivo(contenido, `FURIPS1${cod}${ddmmaaaa}${sufijo}.txt`, 'text/plain;charset=utf-8');
+    toast(`✔ FURIPS 1 (${modo}) generado — ${recs.length} reclamaciones`,'ok');
   } else {
     const lineas=[];
-    recs.forEach(r=>{ const t=generarTXT_F2(r); if(t) lineas.push(t); });
-    descargarComoArchivo(lineas.join('\n'), `FURIPS2${cod}${ddmmaaaa}.txt`, 'text/plain;charset=utf-8');
-    toast(`✔ FURIPS 2 generado — ${recs.length} reclamaciones`,'ok');
+    recs.forEach(r=>{ const t=generarTXT_F2(r,modo); if(t) lineas.push(t); });
+    descargarComoArchivo(lineas.join('\n'), `FURIPS2${cod}${ddmmaaaa}${sufijo}.txt`, 'text/plain;charset=utf-8');
+    toast(`✔ FURIPS 2 (${modo}) generado — ${recs.length} reclamaciones`,'ok');
   }
 };
 
@@ -11268,9 +11276,32 @@ window.calcularValorParaTXT = function(rec){
   };
 };
 
-window.generarTXT_F1 = (rec) => {
+// modo: 'actual' (por defecto) = con el ajuste de glosa aplicado, listo para
+// reenviar. 'original' = como salió la primera vez, sin ningún ajuste — siempre
+// el valor completo de la factura, sin las 2 columnas extra de reproceso.
+window.generarTXT_F1 = (rec, modo='actual') => {
   if(!rec) return '';
   const f1 = rec.furips1 || {};
+
+  if(modo==='original'){
+    const valorOriginal = parseInt(f1.valorOriginalFactura||f1.c97||f1.c96||0)||0;
+    const valores = window.FURIPS1_CAMPOS_ORDEN.map(campo => {
+      let v = f1[campo];
+      if(campo === 'c2' && (!v || v === '') && rec.factura) v = rec.factura;
+      if(campo === 'c3' && (!v || v === '') && rec.consec)  v = rec.consec;
+      if(campo === 'c4' && (!v || v === '') && rec.codHab)  v = rec.codHab;
+      if(campo === 'c96' || campo === 'c97') v = valorOriginal;
+      if(F1_FECHAS.has(campo))    return txtCleanFecha(v);
+      if(F1_NUMERICOS.has(campo)) return txtCleanNum(v);
+      if(F1_PAD_ZEROS[campo] && v){
+        const clean = String(v).trim().replace(/,/g,'');
+        if(clean) return clean.padStart(F1_PAD_ZEROS[campo], '0');
+      }
+      return txtCleanValue(v);
+    });
+    return valores.join(','); // el original nunca lleva las 2 columnas de reproceso
+  }
+
   const calc = window.calcularValorParaTXT(rec);
   const { rondaGlosaExiste, valorOriginalFactura, valorGlosadoRonda, valorParaTXT } = calc;
 
@@ -11313,9 +11344,12 @@ window.generarTXT_F1 = (rec) => {
 // Una línea por cada ítem del furips2.
 // Campos: C1 Factura, C2 Consec, C3 Tipo, C4 Código, C5 Descripción,
 //         C6 Cantidad, C7 Vr.Unitario, C8 Total Facturado, C9 Total Reclamado
-window.generarTXT_F2 = (rec) => {
+// modo: 'actual' (por defecto) = FURIPS2 con los ítems ya quitados/reducidos por
+// glosas aceptadas. 'original' = el detalle completo tal como estaba antes de
+// cualquier glosa (respaldo en furips2Original).
+window.generarTXT_F2 = (rec, modo='actual') => {
   if(!rec) return '';
-  const items = rec.furips2 || [];
+  const items = modo==='original' ? (rec.furips2Original || rec.furips2 || []) : (rec.furips2 || []);
   if(!items.length) return '';
   return items.map(item => {
     const factura = txtCleanValue(item.factura || rec.factura || '');
