@@ -5259,22 +5259,23 @@ async function descargarHtmlComoPDF(htmlCompleto, nombreArchivo){
   const styleMatch = htmlCompleto.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   const styleCss = styleMatch ? styleMatch[1] : '';
 
+  // Se muestra VISIBLE (no oculto) mientras se genera — ocultarlo con opacidad
+  // o posicionarlo fuera de pantalla hacía que se capturara en blanco en algunos
+  // navegadores. Con un overlay real, la captura queda garantizada, igual que
+  // ya funciona en el botón de PDF del Portafolio.
+  const overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
   const contenedor = document.createElement('div');
-  contenedor.style.position='fixed';
-  contenedor.style.left='0';
-  contenedor.style.top='0';
-  contenedor.style.width='800px';
-  contenedor.style.background='#fff';
-  contenedor.style.opacity='0.01'; // casi invisible pero DENTRO del viewport — fuera de pantalla (left:-9999px) hace que html2canvas capture en blanco
-  contenedor.style.pointerEvents='none';
-  contenedor.style.zIndex='-1';
+  contenedor.style.cssText='width:800px;max-width:92vw;max-height:88vh;overflow:auto;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.4);';
   contenedor.innerHTML = `<style>${styleCss}</style>${bodyHtml}`;
-  document.body.appendChild(contenedor);
+  overlay.appendChild(contenedor);
+  document.body.appendChild(overlay);
 
-  // Esperar un tick a que el navegador termine de pintar el contenedor antes de
-  // capturarlo — si se captura en el mismo instante en que se inserta, a veces
-  // sale en blanco.
-  await new Promise(r=>setTimeout(r,50));
+  // Esperar a que las imágenes (logos) terminen de decodificar/pintar antes de
+  // capturar — si se captura antes de que carguen, salen espacios en blanco.
+  const imgs=[...contenedor.querySelectorAll('img')];
+  await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=res;img.onerror=res;})));
+  await new Promise(r=>setTimeout(r,150));
 
   const opt={margin:[8,8,8,8],filename:nombreArchivo,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
   try{
@@ -5283,7 +5284,7 @@ async function descargarHtmlComoPDF(htmlCompleto, nombreArchivo){
   } catch(e){
     toast('Error generando PDF: '+e.message,'e');
   } finally {
-    document.body.removeChild(contenedor);
+    document.body.removeChild(overlay);
   }
 }
 
