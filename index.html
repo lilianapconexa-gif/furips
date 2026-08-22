@@ -2006,6 +2006,7 @@ select option{background:var(--sur2);}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
           <div></div>
           <div style="display:flex;gap:8px;">
+            <button onclick="window.reintentarAjusteFurips2()" style="background:transparent;border:1px solid #2e7d32;color:#2e7d32;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Reintentar ajuste FURIPS2</button>
             <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
             <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
           </div>
@@ -5260,14 +5261,22 @@ async function descargarHtmlComoPDF(htmlCompleto, nombreArchivo){
 
   const contenedor = document.createElement('div');
   contenedor.style.position='fixed';
-  contenedor.style.left='-9999px';
+  contenedor.style.left='0';
   contenedor.style.top='0';
   contenedor.style.width='800px';
   contenedor.style.background='#fff';
+  contenedor.style.opacity='0.01'; // casi invisible pero DENTRO del viewport — fuera de pantalla (left:-9999px) hace que html2canvas capture en blanco
+  contenedor.style.pointerEvents='none';
+  contenedor.style.zIndex='-1';
   contenedor.innerHTML = `<style>${styleCss}</style>${bodyHtml}`;
   document.body.appendChild(contenedor);
 
-  const opt={margin:[8,8,8,8],filename:nombreArchivo,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
+  // Esperar un tick a que el navegador termine de pintar el contenedor antes de
+  // capturarlo — si se captura en el mismo instante en que se inserta, a veces
+  // sale en blanco.
+  await new Promise(r=>setTimeout(r,50));
+
+  const opt={margin:[8,8,8,8],filename:nombreArchivo,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
   try{
     await html2pdf().set(opt).from(contenedor).save();
     toast(`✔ Descargado: ${nombreArchivo}`,'ok');
@@ -5387,6 +5396,33 @@ function htmlNotaCredito(numero, factura, codHab, itemsAceptados, valorTotal, fe
 // aceptados quedan solo con el valor no aceptado. Cada glosa se marca `aplicadoFurips`
 // para no restar dos veces si se vuelve a disparar (por ejemplo al ajustar el valor
 // aceptado de una glosa ya procesada).
+// ── Reintentar ajuste FURIPS2 ──
+// Recorre todas las glosas de la IPS activa buscando facturas con algo aceptado
+// que todavía no se aplicó de verdad a FURIPS2 (por ejemplo, porque en su momento
+// FURIPS2 estaba vacío y quedó marcado "sin coincidencia"). Útil después de
+// importar retroactivamente el detalle de FURIPS2 de un paquete.
+window.reintentarAjusteFurips2 = async function(){
+  await loadGlosas();
+  const src=window.glosasFiltradasCliente();
+  const facturasConPendiente=new Set(
+    src.filter(gl=>(gl.respuesta==='aceptada'||gl.respuesta==='parcial') &&
+                    (parseInt(gl.vrAceptado)||0)>0 &&
+                    (!gl.aplicadoFurips || (gl.montoAplicadoFurips||0)===0))
+       .map(gl=>gl.factura)
+  );
+  if(!facturasConPendiente.size){ toast('No hay glosas pendientes de aplicar a FURIPS2.','ok'); return; }
+
+  toast(`Reintentando ${facturasConPendiente.size} factura(s)...`,'w');
+  let ok=0;
+  for(const factura of facturasConPendiente){
+    const gl=src.find(x=>x.factura===factura);
+    await window.aplicarGlosaAFurips(factura, gl?.codHab);
+    ok++;
+  }
+  await loadGlosas();
+  toast(`✔ Reintento completado — ${ok} factura(s) revisadas`,'ok');
+};
+
 window.aplicarGlosaAFurips = async function(factura, codHab){
   try{
     const qRec=query(collection(db,'reclamaciones'), where('factura','==',factura));
@@ -5395,8 +5431,14 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     const recDoc=snapRec.docs[0];
     const rec=recDoc.data();
 
+    // Reintentar TODAS las que aún no tienen plata realmente aplicada — incluye
+    // tanto las nunca procesadas (aplicadoFurips=false) como las que se intentaron
+    // antes pero no encontraron coincidencia en FURIPS2 (quedaron marcadas
+    // aplicadoFurips=true con montoAplicadoFurips=0, ej. cuando FURIPS2 todavía
+    // estaba vacío) — ahora que puede haber datos nuevos, vale la pena reintentar.
     const pendientesAplicar=GLOSAS_DB.filter(gl=>
-      gl.factura===factura && !gl.aplicadoFurips &&
+      gl.factura===factura &&
+      (!gl.aplicadoFurips || (gl.montoAplicadoFurips||0)===0) &&
       (gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (parseInt(gl.vrAceptado)||0)>0
     );
     if(!pendientesAplicar.length) return;
