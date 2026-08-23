@@ -4588,13 +4588,13 @@ window.procesarGlosasExcel = (file) => {
         const fac=String(row[idx.factura]||'').trim();
         if(!fac) return;
 
-        // Preferir Descripción Anotación sobre Descripción Glosa (ambas existen en formato ADRES)
-        let descGlosa='';
-        if(idx.anotacion>=0) descGlosa=String(row[idx.anotacion]||'').trim();
-        if(!descGlosa && idx.descGlosa>=0) descGlosa=String(row[idx.descGlosa]||'').trim();
-        
+        // Descripción Glosa y Anotación son DOS columnas distintas — se guardan
+        // por separado (antes se mezclaban en un solo campo y la anotación se perdía).
+        const descGlosa = idx.descGlosa>=0 ? String(row[idx.descGlosa]||'').trim() : '';
+        const anotacion = idx.anotacion>=0 ? String(row[idx.anotacion]||'').trim() : '';
+
         const vrG=parseFloat(String(row[idx.vrGlosado>=0?idx.vrGlosado:0]||'0').replace(/[^\d.]/g,''))||0;
-        if(!descGlosa && !vrG) return; // saltar filas sin glosa
+        if(!descGlosa && !anotacion && !vrG) return; // saltar filas sin glosa
 
         GLOSAS_PREVIEW.push({
           idx:i,
@@ -4607,6 +4607,7 @@ window.procesarGlosasExcel = (file) => {
           descElemento:String(row[idx.descElem>=0?idx.descElem:0]||'').trim(),
           tipoElemento:String(row[idx.tipoElem>=0?idx.tipoElem:0]||'').trim(),
           descGlosa:   descGlosa,
+          anotacion:   anotacion,
           vrGlosado:   Math.round(vrG),
           codHab:      idx.codHab>=0?String(row[idx.codHab]||'').trim():gv('glo-ips-sel'),
           periodo:     gv('glo-periodo'),
@@ -4762,32 +4763,31 @@ window.renderGlosasResp = function(){
             if(!grupos[key]) grupos[key]=[];
             grupos[key].push(gl);
           });
-          return Object.values(grupos).map(glosasItem=>{
+          return Object.values(grupos).map((glosasItem,gIdx)=>{
             const primero=glosasItem[0];
             const repetido=glosasItem.length>1;
             const totGloItem=glosasItem.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+            // Paleta de colores para el título del ítem, rotando por grupo — así se ve
+            // claro dónde termina un ítem y empieza el siguiente, siempre (no solo
+            // cuando se repite).
+            const PALETA_ITEM=['#d32f2f','#1565c0','#2e7d32','#6a1fb2','#b26a00','#c00060'];
+            const colorItem=PALETA_ITEM[gIdx%PALETA_ITEM.length];
             return `
             <div style="border-top:1px solid var(--brd);">
-              ${repetido?`
-              <div style="padding:8px 16px;background:rgba(245,124,0,.06);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div style="padding:8px 16px;background:${colorItem}14;border-left:4px solid ${colorItem};display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 ${primero.tipoElemento?`<span style="font-size:9px;background:var(--sur2);color:var(--tx2);padding:2px 7px;border-radius:3px;font-family:var(--mono);">${primero.tipoElemento}</span>`:''}
-                ${primero.codElemento?`<span style="font-size:10px;background:var(--sur2);color:var(--acc);padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:600;">${primero.codElemento}</span>`:''}
-                <span style="font-size:11px;color:var(--tx);font-weight:600;">${primero.descElemento||''}</span>
-                <span style="font-size:10px;background:var(--warn);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">↻ ${glosasItem.length} causales sobre este ítem</span>
-                <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--red);">Total glosado: ${fmt$(totGloItem)}</span>
-              </div>`:''}
+                ${primero.codElemento?`<span style="font-size:10px;background:var(--sur2);color:${colorItem};padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:700;">${primero.codElemento}</span>`:''}
+                <span style="font-size:11px;color:${colorItem};font-weight:700;">${primero.descElemento||'(sin descripción)'}</span>
+                ${repetido?`<span style="font-size:10px;background:var(--warn);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">↻ ${glosasItem.length} causales sobre este ítem</span>`:''}
+                <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--red);font-weight:700;">${fmt$(totGloItem)}</span>
+              </div>
               ${glosasItem.map((gl)=>{
           const est=gl.respuesta||'pendiente';
           const estCol=window.colorDecisionEstado(est);
+          const pistas=[...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]);
           return `
           <div style="padding:14px 16px;${repetido?'padding-left:28px;border-top:1px dashed var(--brd);':''}${est!=='pendiente'?'opacity:.85':''}">
-            ${!repetido?`<!-- Info del elemento -->
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-              ${gl.tipoElemento?`<span style="font-size:9px;background:var(--sur2);color:var(--tx2);padding:2px 7px;border-radius:3px;font-family:var(--mono);">${gl.tipoElemento}</span>`:''}
-              ${gl.codElemento?`<span style="font-size:10px;background:var(--sur2);color:var(--acc);padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:600;">${gl.codElemento}</span>`:''}
-              ${gl.descElemento?`<span style="font-size:11px;color:var(--tx);">${gl.descElemento}</span>`:''}
-              <span style="margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(gl.vrGlosado)}</span>
-            </div>`:`<div style="text-align:right;margin-bottom:6px;"><span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(gl.vrGlosado)}</span></div>`}
+            ${pistas.length?`<div style="font-size:10px;color:var(--acc);font-weight:600;margin-bottom:6px;">💡 ${pistas.join(' · ')}</div>`:''}
             <!-- Texto de la glosa y anotación -->
             <div style="display:grid;grid-template-columns:${gl.anotacion?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px;">
               <div style="font-size:12px;padding:8px 12px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 5px 5px 0;">
