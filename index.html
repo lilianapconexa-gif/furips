@@ -4751,24 +4751,53 @@ window.renderGlosasResp = function(){
         </div>
       </div>
 
-      <!-- Glosas de esta factura (expandible) -->
+      <!-- Glosas de esta factura (expandible), AGRUPADAS por ítem — así las causales
+           repetidas sobre el mismo ítem quedan juntas, y se ve de un vistazo si hay
+           que responderlas de forma consistente. -->
       <div id="fac-${fac.replace(/[^a-z0-9]/gi,'')}-${rad}">
-        ${items.map((gl)=>{
+        ${(()=>{
+          const grupos={};
+          items.forEach(gl=>{
+            const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
+            if(!grupos[key]) grupos[key]=[];
+            grupos[key].push(gl);
+          });
+          return Object.values(grupos).map(glosasItem=>{
+            const primero=glosasItem[0];
+            const repetido=glosasItem.length>1;
+            const totGloItem=glosasItem.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+            return `
+            <div style="border-top:1px solid var(--brd);">
+              ${repetido?`
+              <div style="padding:8px 16px;background:rgba(245,124,0,.06);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                ${primero.tipoElemento?`<span style="font-size:9px;background:var(--sur2);color:var(--tx2);padding:2px 7px;border-radius:3px;font-family:var(--mono);">${primero.tipoElemento}</span>`:''}
+                ${primero.codElemento?`<span style="font-size:10px;background:var(--sur2);color:var(--acc);padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:600;">${primero.codElemento}</span>`:''}
+                <span style="font-size:11px;color:var(--tx);font-weight:600;">${primero.descElemento||''}</span>
+                <span style="font-size:10px;background:var(--warn);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">↻ ${glosasItem.length} causales sobre este ítem</span>
+                <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--red);">Total glosado: ${fmt$(totGloItem)}</span>
+              </div>`:''}
+              ${glosasItem.map((gl)=>{
           const est=gl.respuesta||'pendiente';
           const estCol=window.colorDecisionEstado(est);
           return `
-          <div style="padding:14px 16px;border-top:1px solid var(--brd);${est!=='pendiente'?'opacity:.85':''}">
-            <!-- Info del elemento -->
+          <div style="padding:14px 16px;${repetido?'padding-left:28px;border-top:1px dashed var(--brd);':''}${est!=='pendiente'?'opacity:.85':''}">
+            ${!repetido?`<!-- Info del elemento -->
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
               ${gl.tipoElemento?`<span style="font-size:9px;background:var(--sur2);color:var(--tx2);padding:2px 7px;border-radius:3px;font-family:var(--mono);">${gl.tipoElemento}</span>`:''}
               ${gl.codElemento?`<span style="font-size:10px;background:var(--sur2);color:var(--acc);padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:600;">${gl.codElemento}</span>`:''}
               ${gl.descElemento?`<span style="font-size:11px;color:var(--tx);">${gl.descElemento}</span>`:''}
               <span style="margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(gl.vrGlosado)}</span>
-            </div>
-            <!-- Texto de la glosa -->
-            <div style="font-size:12px;margin-bottom:12px;padding:8px 12px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 5px 5px 0;">
-              <span style="font-size:10px;font-weight:700;color:var(--red);font-family:var(--mono);">GLOSA ADRES:</span>
-              <span style="color:var(--tx);margin-left:6px;">${gl.descGlosa}</span>
+            </div>`:`<div style="text-align:right;margin-bottom:6px;"><span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(gl.vrGlosado)}</span></div>`}
+            <!-- Texto de la glosa y anotación -->
+            <div style="display:grid;grid-template-columns:${gl.anotacion?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px;">
+              <div style="font-size:12px;padding:8px 12px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 5px 5px 0;">
+                <span style="font-size:10px;font-weight:700;color:var(--red);font-family:var(--mono);">DESCRIPCIÓN GLOSA:</span>
+                <span style="color:var(--tx);margin-left:6px;">${gl.descGlosa||'—'}</span>
+              </div>
+              ${gl.anotacion?`<div style="font-size:12px;padding:8px 12px;background:rgba(0,178,226,.04);border-left:3px solid var(--acc);border-radius:0 5px 5px 0;">
+                <span style="font-size:10px;font-weight:700;color:var(--acc);font-family:var(--mono);">ANOTACIÓN:</span>
+                <span style="color:var(--tx);margin-left:6px;">${gl.anotacion}</span>
+              </div>`:''}
             </div>
             <!-- Respuesta -->
             <div style="display:grid;grid-template-columns:200px 1fr 100px 100px;gap:8px;align-items:start;">
@@ -4812,7 +4841,10 @@ window.renderGlosasResp = function(){
               </div>
             </div>
           </div>`;
-        }).join('')}
+              }).join('')}
+            </div>`;
+          }).join('');
+        })()}
       </div>
     </div>`;
   }).join('');
@@ -5550,10 +5582,12 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     });
 
     Object.values(grupos).forEach(glosasDelItem=>{
+      const codManual=normTxt(glosasDelItem[0].codElementoManual);
       const codBuscado=normTxt(glosasDelItem[0].codElemento);
       const descBuscada=normTxt(glosasDelItem[0].descElemento);
       const idx=furips2.findIndex((it,i)=>!indicesQuitar.has(i) &&
-        ((codBuscado && normTxt(it.codigo)===codBuscado) ||
+        ((codManual && normTxt(it.codigo)===codManual) ||
+         (codBuscado && normTxt(it.codigo)===codBuscado) ||
          (descBuscada && normTxt(it.descripcion)===descBuscada))
       );
       const esAceptadaTotal=glosasDelItem.some(gl=>gl.respuesta==='aceptada');
@@ -11223,6 +11257,7 @@ window.verCuadreFurips = function(factura){
   const cont = document.getElementById('cuadre-furips-factura');
   if(!cont) return;
   if(!rec){ cont.innerHTML=`<div style="color:var(--red);font-size:12px;">No se encontró la factura "${factura}".</div>`; return; }
+  window._CUADRE_FURIPS_FACTURA_ACTUAL = factura; // para que el emparejamiento manual sepa qué refrescar
   const fm5 = v=>'$'+Math.round(v||0).toLocaleString('es-CO');
   const normTxt = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 
@@ -11243,7 +11278,7 @@ window.verCuadreFurips = function(factura){
         <div><div style="font-size:9px;color:var(--tx3);">¿Cuadra?</div><div style="font-size:15px;">${cuadra?'✅':'❌'}</div></div>
         <div><div style="font-size:9px;color:var(--tx3);">Ítems en FURIPS2</div><div style="font-family:var(--mono);font-size:15px;font-weight:700;">${furips2.length}</div></div>
       </div>
-      <div style="font-size:10px;color:var(--tx3);margin-bottom:6px;">Comparación glosa por glosa contra FURIPS2 (código/descripción normalizados):</div>
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:6px;">Comparación glosa por glosa contra FURIPS2 (código/descripción normalizados). Si no encuentra coincidencia, puedes emparejarla a mano con el selector:</div>
       <table style="width:100%;border-collapse:collapse;font-size:10px;">
         <thead><tr style="border-bottom:1px solid var(--brd);">
           <th style="padding:4px 6px;text-align:left;">Código glosa</th>
@@ -11251,27 +11286,98 @@ window.verCuadreFurips = function(factura){
           <th style="padding:4px 6px;text-align:left;">Respuesta</th>
           <th style="padding:4px 6px;text-align:right;">VR Aceptado</th>
           <th style="padding:4px 6px;text-align:center;">¿Match en FURIPS2?</th>
-          <th style="padding:4px 6px;text-align:left;">Item FURIPS2 encontrado</th>
+          <th style="padding:4px 6px;text-align:left;">Item FURIPS2 / Emparejar manualmente</th>
         </tr></thead>
         <tbody>
           ${glosasFactura.map(gl=>{
             const codBuscado=normTxt(gl.codElemento), descBuscada=normTxt(gl.descElemento);
-            const match=furips2.find(it=>(codBuscado && normTxt(it.codigo)===codBuscado)||(descBuscada && normTxt(it.descripcion)===descBuscada));
+            const codManual=normTxt(gl.codElementoManual);
+            const match=furips2.find(it=>
+              (codManual && normTxt(it.codigo)===codManual) ||
+              (codBuscado && normTxt(it.codigo)===codBuscado)||
+              (descBuscada && normTxt(it.descripcion)===descBuscada)
+            );
             const original = rec.furips2Original||[];
             const matchPorCodOriginal = original.find(it=>codBuscado && normTxt(it.codigo)===codBuscado);
+            // Pista: el texto de la causal (Descripción/Anotación) suele traer entre
+            // paréntesis el nombre real del ítem según el físico/magnético — se
+            // extrae para ayudar a elegir bien en el selector, sin adivinar.
+            const pistas = [...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]);
+            const pistaHtml = pistas.length ? `<div style="color:var(--acc);font-weight:600;margin-bottom:5px;">💡 ${pistas.join(' · ')}</div>` : '';
+            const selectorHtml = match ? `${match.codigo||'(sin código)'} — ${fm5(match.totalRec)}` : `
+              <select style="font-size:9px;padding:2px 4px;border-radius:4px;border:1px solid var(--brd);background:var(--sur);color:var(--tx);max-width:220px;" onchange="window.emparejarGlosaManual('${gl.id}', this.value)">
+                <option value="">— elegir ítem de FURIPS2 —</option>
+                ${furips2.map((it,i)=>`<option value="${i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${fm5(it.totalRec)}</option>`).join('')}
+              </select>`;
+            // Fila adicional (solo para las que NO tienen coincidencia) con el texto
+            // completo de la causal y la anotación — guía para el analista de glosas,
+            // sin recortar nada.
+            const filaReferencia = (!match && (gl.descGlosa||gl.anotacion)) ? `
+              <tr style="border-top:none;background:rgba(248,81,73,.04);">
+                <td></td>
+                <td colspan="5" style="padding:2px 6px 8px;">
+                  ${pistaHtml}
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+                    ${gl.descGlosa?`<div style="background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:6px 8px;"><div style="font-size:8px;color:var(--tx3);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Descripción Glosa</div><div style="font-size:9px;">${gl.descGlosa}</div></div>`:''}
+                    ${gl.anotacion?`<div style="background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:6px 8px;"><div style="font-size:8px;color:var(--tx3);font-weight:700;text-transform:uppercase;margin-bottom:2px;">Anotación</div><div style="font-size:9px;">${gl.anotacion}</div></div>`:''}
+                  </div>
+                  ${selectorHtml}
+                </td>
+              </tr>` : '';
             return `<tr style="border-top:1px solid var(--brd);${match?'':'background:rgba(248,81,73,.08);'}">
               <td style="padding:4px 6px;font-family:var(--mono);">${gl.codElemento||'—'}</td>
               <td style="padding:4px 6px;">${(gl.descElemento||'—').slice(0,40)}</td>
               <td style="padding:4px 6px;">${gl.respuesta||'pendiente'}</td>
               <td style="padding:4px 6px;text-align:right;font-family:var(--mono);">${fm5(gl.vrAceptado)}</td>
-              <td style="padding:4px 6px;text-align:center;">${match?'✅':(matchPorCodOriginal?'⚠️ solo en original':'❌')}</td>
-              <td style="padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">${match?(match.codigo+' — '+fm5(match.totalRec)):'—'}</td>
-            </tr>`;
+              <td style="padding:4px 6px;text-align:center;">${match?(gl.codElementoManual?'🔧 corregido':'✅'):(matchPorCodOriginal?'⚠️ solo en original':'❌')}</td>
+              <td style="padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">${match?selectorHtml:'ver abajo ↓'}</td>
+            </tr>${filaReferencia}`;
           }).join('')}
         </tbody>
       </table>
-      <div style="font-size:10px;color:var(--tx3);margin-top:8px;">❌ = el código/descripción de esa glosa no coincide con NINGÚN ítem actual de FURIPS2 (por eso no se pudo quitar). ⚠️ = sí existía en el respaldo original pero ya no está en el FURIPS2 actual (probablemente ya se quitó antes).</div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:8px;">❌ = sin coincidencia automática — revisa la Descripción Glosa y Anotación completas debajo de cada fila, y usa el selector para emparejarla (esto CORRIGE el código mal digitado en FURIPS2). ✅ = coincidencia automática. 🔧 corregido = ya se le arregló el código. ⚠️ = existía en el respaldo original pero ya no está en el FURIPS2 actual.</div>
     </div>`;
+};
+
+// Corrige el código del ítem de FURIPS2 (el que se digitó mal desde el origen —
+// precisamente por eso ADRES lo glosó) con el código que trae la glosa, y guarda
+// el emparejamiento en la glosa. El respaldo `furips2Original` NO se toca — sigue
+// mostrando la factura tal como se radicó la primera vez, error incluido, para
+// que quede el historial real. Solo el FURIPS2 "activo" (el que se usa para
+// reprocesos de aquí en adelante) queda con el código corregido.
+window.emparejarGlosaManual = async function(gloId, indiceItem){
+  if(indiceItem==='' || indiceItem==null) return;
+  const idx = parseInt(indiceItem);
+  const gl=GLOSAS_DB.find(x=>x.id===gloId);
+  if(!gl) return;
+  try{
+    const qRec=query(collection(db,'reclamaciones'), where('factura','==',gl.factura));
+    const snapRec=await getDocs(qRec);
+    if(snapRec.empty){ toast('No se encontró la reclamación.','e'); return; }
+    const recDoc=snapRec.docs[0];
+    const rec=recDoc.data();
+    const furips2=[...(rec.furips2||[])];
+    if(!furips2[idx]){ toast('Ítem no encontrado.','e'); return; }
+
+    const codigoCorregido = gl.codElemento || furips2[idx].codigo;
+    furips2[idx] = { ...furips2[idx], codigo: codigoCorregido };
+
+    await updateDoc(doc(db,'reclamaciones',recDoc.id), { furips2, actualizado: serverTimestamp() });
+    await updateDoc(doc(db,'glosas',gloId), {
+      codElementoManual: codigoCorregido, actualizado: serverTimestamp(),
+      aplicadoFurips:false, montoAplicadoFurips:0, // forzar reintento con el código ya corregido
+    });
+    gl.codElementoManual=codigoCorregido; gl.aplicadoFurips=false; gl.montoAplicadoFurips=0;
+
+    // Reintentar el ajuste ya con el código corregido (debería quedar match ✅ directo)
+    if((gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (parseInt(gl.vrAceptado)||0)>0){
+      await window.aplicarGlosaAFurips(gl.factura, gl.codHab);
+    }
+    toast(`✔ Código corregido a "${codigoCorregido}" — se reintentó el ajuste`,'ok');
+    if(window._CUADRE_FURIPS_FACTURA_ACTUAL) window.verCuadreFurips(window._CUADRE_FURIPS_FACTURA_ACTUAL);
+  } catch(e){
+    toast('Error corrigiendo código: '+e.message,'e');
+  }
 };
 
 window.diagnosticoADRES = async function(){
