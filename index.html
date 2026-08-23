@@ -744,9 +744,11 @@ select option{background:var(--sur2);}
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
           <input id="buscar-rondas-input" placeholder="Ver rondas de una factura (ej: FECR81683)" style="flex:1;max-width:300px;padding:6px 10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);font-size:12px;" onkeydown="if(event.key==='Enter') window.verRondasFactura(document.getElementById('buscar-rondas-input').value.trim())">
           <button class="btn bs" style="font-size:11px;" onclick="window.verRondasFactura(document.getElementById('buscar-rondas-input').value.trim())">🔍 Ver rondas</button>
+          <button class="btn bs" style="font-size:11px;border-color:#2e7d32;color:#2e7d32;" onclick="window.verCuadreFurips(document.getElementById('buscar-rondas-input').value.trim())">🧾 Cuadre FURIPS1 vs FURIPS2</button>
         </div>
         <div id="valor-inicial-resultado" style="margin-bottom:14px;"></div>
         <div id="rondas-detalle-factura" style="margin-bottom:14px;"></div>
+        <div id="cuadre-furips-factura" style="margin-bottom:14px;"></div>
 
         <!-- Progress -->
         <div id="adres-progress" style="display:none;background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:14px;">
@@ -5170,7 +5172,12 @@ window.verResumenGlosas = () => {
 };
 
 // ── GENERAR HTML DE RESPUESTA (reutilizado en PDF y preview) ──
-function htmlRespuesta(fac, rad, doc, items){
+// ── PDF de "Respuesta a Glosa" — generado con texto real (jsPDF + autoTable),
+// no como captura de imagen, para que nunca se corte por ancho de página. ──
+// Versión en HTML (para el PDF MASIVO, que usa el diálogo de impresión del
+// navegador — método distinto al de descarga individual, y que sí funciona bien
+// sin recortes porque el navegador maneja la paginación de forma nativa).
+function htmlRespuesta(fac, rad, docId, items){
   const codHab=items[0]?.codHab||'';
   const info=IPS_INFO_MEMBRETE[codHab]||{};
   const ipsNom=info.nombre||IPS_NOM_GLO[codHab]||codHab||'';
@@ -5205,7 +5212,8 @@ function htmlRespuesta(fac, rad, doc, items){
     body{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:32px;}
     h2{font-size:16px;margin-bottom:2px;} h3{font-size:13px;color:#555;margin-bottom:16px;}
     .info{margin-bottom:6px;} .info strong{display:inline-block;min-width:100px;}
-    table{width:100%;border-collapse:collapse;margin-top:14px;}
+    table{width:100%;border-collapse:collapse;margin-top:14px;table-layout:fixed;}
+    td,th{word-wrap:break-word;overflow-wrap:break-word;}
     th{background:#00B2E2;color:#fff;padding:7px 8px;text-align:left;font-size:10px;font-family:monospace;}
     tfoot td{background:#f5f5f5;font-weight:700;border-top:2px solid #00B2E2;}
     .footer{margin-top:24px;font-size:10px;color:#888;border-top:1px solid #eee;padding-top:8px;text-align:center;}
@@ -5221,7 +5229,7 @@ function htmlRespuesta(fac, rad, doc, items){
     <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Señores ADRES — Ciudad</div>
     <div class="info"><strong>Factura:</strong> ${fac}</div>
     <div class="info"><strong>Radicado:</strong> ${rad}</div>
-    <div class="info"><strong>Documento:</strong> ${doc}</div>
+    <div class="info"><strong>Documento:</strong> ${docId}</div>
     <div class="info"><strong>IPS:</strong> ${ipsNom}</div>
   </div>
   <table>
@@ -5242,162 +5250,191 @@ function htmlRespuesta(fac, rad, doc, items){
   </body></html>`;
 }
 
-// ── DESCARGAR PDF DE UNA FACTURA ──
-// Descarga directa de un documento HTML completo (como los que arma htmlRespuesta/
-// htmlNotaCredito) como archivo PDF, con nombre de archivo específico — sin diálogo
-// de impresión, va directo a la carpeta de Descargas del navegador.
-async function descargarHtmlComoPDF(htmlCompleto, nombreArchivo){
-  if(typeof html2pdf==='undefined'){
-    toast('Cargando librería PDF...','w');
-    setTimeout(()=>descargarHtmlComoPDF(htmlCompleto, nombreArchivo), 1200);
-    return;
+function generarPDFRespuesta(fac, rad, docId, items){
+  const codHab=items[0]?.codHab||'';
+  const info=IPS_INFO_MEMBRETE[codHab]||{};
+  const ipsNom=info.nombre||IPS_NOM_GLO[codHab]||codHab||'';
+  const fh=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  const tGlo=items.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
+  const tAc=items.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
+  const tNoAc=items.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = 15;
+
+  if(info.logoBase64){
+    try{ doc.addImage(`data:image/jpeg;base64,${info.logoBase64}`, 'JPEG', 14, y, 60, 15); } catch(e){}
+  } else {
+    doc.setFontSize(12); doc.setFont(undefined,'bold');
+    doc.text(info.nombre||ipsNom, 14, y+4);
+    doc.setFontSize(8); doc.setFont(undefined,'normal');
+    let yy=y+9;
+    if(info.nit){ doc.text(`NIT: ${info.nit}`, 14, yy); yy+=4; }
+    if(info.direccion){ doc.text(info.direccion, 14, yy); yy+=4; }
+    if(info.telefono){ doc.text(`Telf: ${info.telefono}`, 14, yy); yy+=4; }
+    if(info.ciudad){ doc.setFont(undefined,'bold'); doc.text(info.ciudad, 14, yy); }
   }
-  // Extraer solo el <body> del documento completo (html2pdf trabaja sobre un
-  // elemento del DOM, no sobre un string de HTML con <html>/<head>/<body>).
-  const bodyMatch = htmlCompleto.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  const bodyHtml = bodyMatch ? bodyMatch[1] : htmlCompleto;
-  const styleMatch = htmlCompleto.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  const styleCss = styleMatch ? styleMatch[1] : '';
+  doc.setFontSize(12); doc.setFont(undefined,'bold');
+  doc.text('RESPUESTA A GLOSAS ADRES', pageW-14, y+5, {align:'right'});
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  doc.text(fh, pageW-14, y+10, {align:'right'});
 
-  // Se muestra VISIBLE (no oculto) mientras se genera — ocultarlo con opacidad
-  // o posicionarlo fuera de pantalla hacía que se capturara en blanco en algunos
-  // navegadores. Con un overlay real, la captura queda garantizada, igual que
-  // ya funciona en el botón de PDF del Portafolio.
-  // IMPORTANTE: el contenedor que se CAPTURA para el PDF (`contenedor`) siempre
-  // tiene el mismo ancho fijo (800px), sin importar el tamaño de pantalla — si se
-  // le pone un max-width en vw, en pantallas angostas el contenido se desborda y
-  // sale cortado en el PDF. El límite de tamaño en pantalla va en un envoltorio
-  // aparte (`viewport`) que solo controla la vista previa, con scroll, sin afectar
-  // lo que realmente se captura.
-  const overlay = document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
-  const viewport = document.createElement('div');
-  viewport.style.cssText='max-width:92vw;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.4);';
-  const contenedor = document.createElement('div');
-  contenedor.style.cssText='width:800px;background:#fff;';
-  contenedor.innerHTML = `<style>${styleCss}</style>${bodyHtml}`;
-  viewport.appendChild(contenedor);
-  overlay.appendChild(viewport);
-  document.body.appendChild(overlay);
+  y += 22;
+  doc.setDrawColor(0,178,226); doc.setLineWidth(0.8);
+  doc.line(14, y, pageW-14, y);
+  y += 8;
 
-  // Esperar a que las imágenes (logos) terminen de decodificar/pintar antes de
-  // capturar — si se captura antes de que carguen, salen espacios en blanco.
-  const imgs=[...contenedor.querySelectorAll('img')];
-  await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=res;img.onerror=res;})));
-  await new Promise(r=>setTimeout(r,150));
+  doc.setFontSize(11); doc.setFont(undefined,'bold');
+  doc.text('Señores ADRES — Ciudad', 14, y);
+  y += 6;
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  doc.text(`Factura: ${fac}`, 14, y); y+=5;
+  doc.text(`Radicado: ${rad}`, 14, y); y+=5;
+  doc.text(`Documento: ${docId}`, 14, y); y+=5;
+  doc.text(`IPS: ${ipsNom}`, 14, y); y+=6;
 
-  const opt={margin:[8,8,8,8],filename:nombreArchivo,image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
-  try{
-    await html2pdf().set(opt).from(contenedor).save();
-    toast(`✔ Descargado: ${nombreArchivo}`,'ok');
-  } catch(e){
-    toast('Error generando PDF: '+e.message,'e');
-  } finally {
-    document.body.removeChild(overlay);
-  }
+  const rows = items.map(gl=>[
+    gl.codElemento||'', gl.descElemento||'', gl.descGlosa||'',
+    fmt$(parseInt(gl.vrGlosado)||0), gl.textoResp||'',
+    fmt$(parseInt(gl.vrAceptado)||0), fmt$(parseInt(gl.vrNoAceptado)||0),
+  ]);
+
+  doc.autoTable({
+    startY: y,
+    head: [['CÓDIGO','DESCRIPCIÓN DEL ÍTEM','DESCRIPCIÓN GLOSA','VR GLOSADO','RESPUESTA DE GLOSA','VR ACEPTADO','VR NO ACEPTADO']],
+    body: rows,
+    foot: [['TOTALES','','', fmt$(tGlo), '', fmt$(tAc), fmt$(tNoAc)]],
+    styles:{fontSize:7, cellPadding:1.8, overflow:'linebreak', valign:'top'},
+    headStyles:{fillColor:[0,178,226], textColor:255, fontSize:7},
+    footStyles:{fillColor:[245,245,245], textColor:[0,0,0], fontStyle:'bold', fontSize:7},
+    columnStyles:{
+      0:{cellWidth:18}, 1:{cellWidth:33}, 2:{cellWidth:44}, 3:{cellWidth:18,halign:'right'},
+      4:{cellWidth:33}, 5:{cellWidth:18,halign:'right'}, 6:{cellWidth:18,halign:'right'},
+    },
+    margin:{left:14,right:14},
+  });
+
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFontSize(8); doc.setTextColor(150);
+  doc.text(fh, pageW/2, pageH-10, {align:'center'});
+
+  doc.save(`RTA_${fac}.pdf`);
+  toast(`✔ Descargado: RTA_${fac}.pdf`,'ok');
 }
 
-window.expGlosaPDF=(fac,rad,doc)=>{
+window.expGlosaPDF=(fac,rad,docId)=>{
   const pf=agruparGlosFiltered();
   const key=Object.keys(pf).find(k=>k.startsWith(fac+'|||'));
   if(!key){ toast('Factura no encontrada.','w'); return; }
   const items=pf[key];
-  const html=htmlRespuesta(fac,rad,doc,items);
-  descargarHtmlComoPDF(html, `RTA_${fac}.pdf`);
+  if(typeof window.jspdf==='undefined'){ toast('Cargando librería PDF...','w'); setTimeout(()=>window.expGlosaPDF(fac,rad,docId),1000); return; }
+  generarPDFRespuesta(fac,rad,docId,items);
 };
 
 // ── NOTA CRÉDITO automática por factura ──
 // Cada vez que una glosa se marca aceptada/parcial con valor aceptado > 0, se genera
 // (o actualiza, si ya existe una para esa factura) la nota crédito con el TOTAL
 // aceptado acumulado de esa factura hasta el momento, y se abre lista para imprimir/PDF.
-function htmlNotaCredito(numero, factura, codHab, itemsAceptados, valorTotal, fecha){
+// ── PDF de Nota Crédito — texto real (jsPDF + autoTable), no captura de imagen ──
+function generarPDFNotaCredito(numero, factura, codHab, itemsAceptados, valorTotal, fecha){
   const info=IPS_INFO_MEMBRETE[codHab]||{};
   const fh=new Date(fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
   const montoLetras=numeroALetrasPesos(valorTotal);
 
-  const filas=itemsAceptados.map(gl=>`
-    <tr>
-      <td style="border:1px solid #000;padding:5px 8px;font-size:11px;">${gl.descElemento||''}</td>
-      <td style="border:1px solid #000;padding:5px 8px;font-size:11px;">${gl.descGlosa||'MAYOR VALOR COBRADO'}</td>
-      <td style="border:1px solid #000;padding:5px 8px;text-align:right;font-size:11px;">${fmt$(parseInt(gl.vrAceptado)||0)}</td>
-    </tr>`).join('');
-  // Filas vacías de relleno, igual que la plantilla física (para que quede igual de alto)
-  const filasVacias=Array.from({length:Math.max(0,14-itemsAceptados.length)}).map(()=>`
-    <tr><td style="border:1px solid #000;padding:5px 8px;">&nbsp;</td><td style="border:1px solid #000;padding:5px 8px;"></td><td style="border:1px solid #000;padding:5px 8px;"></td></tr>`).join('');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
+  const pageW = doc.internal.pageSize.getWidth();
+  const marginL = 14, marginR = 14, contentW = pageW - marginL - marginR;
+  let y = 14;
 
-  const encabezadoIPS = info.logoBase64
-    ? `<img src="data:image/jpeg;base64,${info.logoBase64}" style="max-height:70px;">`
-    : `<div>
-        <div style="font-weight:800;font-size:15px;">${info.nombre||''}</div>
-        <div style="font-size:11px;">NIT: ${info.nit||''}</div>
-        <div style="font-size:11px;">${info.direccion||''}</div>
-        <div style="font-size:11px;">Telf: ${info.telefono||''}</div>
-        <div style="font-size:11px;font-weight:700;">${info.ciudad||''}</div>
-      </div>`;
+  // Encabezado: logo IPS a la izquierda, caja "NOTA CREDITO." a la derecha
+  if(info.logoBase64){
+    try{ doc.addImage(`data:image/jpeg;base64,${info.logoBase64}`, 'JPEG', marginL, y, 55, 14); } catch(e){}
+  } else {
+    doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text(info.nombre||'', marginL, y+4);
+    doc.setFontSize(8); doc.setFont(undefined,'normal');
+    let yy=y+8;
+    if(info.nit){ doc.text(`NIT: ${info.nit}`, marginL, yy); yy+=3.5; }
+    if(info.direccion){ doc.text(info.direccion, marginL, yy); yy+=3.5; }
+    if(info.telefono){ doc.text(`Telf: ${info.telefono}`, marginL, yy); yy+=3.5; }
+    if(info.ciudad){ doc.setFont(undefined,'bold'); doc.text(info.ciudad, marginL, yy); }
+  }
+  const cajaW=60, cajaH=15, cajaX=pageW-marginR-cajaW;
+  doc.setDrawColor(0); doc.setLineWidth(0.3);
+  doc.rect(cajaX, y, cajaW, cajaH);
+  doc.setFontSize(13); doc.setFont(undefined,'bold');
+  doc.text('NOTA CREDITO.', cajaX+cajaW/2, y+cajaH/2+1.5, {align:'center'});
 
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-  <style>
-    body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:28px;}
-    table{width:100%;border-collapse:collapse;}
-    td,th{border:1px solid #000;}
-  </style></head><body>
+  y += 22;
 
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
-    ${encabezadoIPS}
-    <div style="border:1px solid #000;padding:10px 22px;text-align:center;">
-      <div style="font-weight:800;font-size:16px;letter-spacing:1px;">NOTA CREDITO.</div>
-    </div>
-  </div>
+  // Tabla señor(es) / NIT / Fecha + Detalle/Factura
+  doc.autoTable({
+    startY: y,
+    body: [
+      [{content:'señor(es)',styles:{fontStyle:'normal',fontSize:8}}, {content:'NIT',styles:{fontSize:8}}, {content:'Fecha',styles:{fontSize:8}}],
+      ['ADRES', '901037916-1', fh],
+      [{content:'Detalle',styles:{fontSize:8}}, {content:`Factura\n${factura}`, colSpan:2}],
+    ],
+    theme:'grid',
+    styles:{fontSize:9, cellPadding:1.8, lineColor:[0,0,0], lineWidth:0.2, textColor:[0,0,0]},
+    margin:{left:marginL,right:marginR},
+    tableWidth: contentW,
+  });
+  y = doc.lastAutoTable.finalY;
 
-  <table style="margin-bottom:0;">
-    <tr>
-      <td style="padding:5px 8px;font-size:11px;width:40%;">señor(es)</td>
-      <td style="padding:5px 8px;font-size:11px;width:30%;">NIT</td>
-      <td style="padding:5px 8px;font-size:11px;width:30%;">Fecha</td>
-    </tr>
-    <tr>
-      <td style="padding:5px 8px;font-size:12px;">ADRES</td>
-      <td style="padding:5px 8px;font-size:12px;">901037916-1</td>
-      <td style="padding:5px 8px;font-size:12px;">${fh}</td>
-    </tr>
-    <tr>
-      <td style="padding:5px 8px;font-size:11px;" rowspan="1">Detalle</td>
-      <td colspan="2" style="padding:5px 8px;font-size:12px;">Factura<br>${factura}</td>
-    </tr>
-  </table>
+  // Tabla CONCEPTO / CAUSA / VALOR
+  const filas = itemsAceptados.map(gl=>[
+    gl.descElemento||'', gl.descGlosa||'MAYOR VALOR COBRADO', fmt$(parseInt(gl.vrAceptado)||0),
+  ]);
+  const filasVacias = Math.max(0, 10-itemsAceptados.length);
+  for(let i=0;i<filasVacias;i++) filas.push(['','','']);
+  filas.push([{content:'TOTAL', colSpan:2, styles:{halign:'right', fontStyle:'bold'}}, {content:'$ '+valorTotal.toLocaleString('es-CO'), styles:{fontStyle:'bold'}}]);
 
-  <table style="margin-top:-1px;">
-    <tr>
-      <th style="padding:6px 8px;font-size:11px;">CONCEPTO</th>
-      <th style="padding:6px 8px;font-size:11px;">CAUSA</th>
-      <th style="padding:6px 8px;font-size:11px;">VALOR</th>
-    </tr>
-    ${filas}
-    ${filasVacias}
-    <tr>
-      <td colspan="2" style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">TOTAL</td>
-      <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">$ ${valorTotal.toLocaleString('es-CO')}</td>
-    </tr>
-  </table>
-  <div style="font-size:11px;font-weight:700;margin:6px 0 16px;">${montoLetras}</div>
+  doc.autoTable({
+    startY: y,
+    head: [['CONCEPTO','CAUSA','VALOR']],
+    body: filas,
+    theme:'grid',
+    styles:{fontSize:8, cellPadding:2, lineColor:[0,0,0], lineWidth:0.2, textColor:[0,0,0], minCellHeight:6},
+    headStyles:{fillColor:[255,255,255], textColor:[0,0,0], fontStyle:'bold', halign:'center'},
+    columnStyles:{2:{halign:'right', cellWidth:30}},
+    margin:{left:marginL,right:marginR},
+    tableWidth: contentW,
+  });
+  y = doc.lastAutoTable.finalY + 5;
 
-  <table style="margin-bottom:0;">
-    <tr><td style="padding:6px 8px;font-size:11px;font-weight:700;">OBSERVACIONES</td></tr>
-    <tr><td style="padding:18px 8px;font-size:11px;">&nbsp;</td></tr>
-  </table>
+  doc.setFontSize(9); doc.setFont(undefined,'bold');
+  doc.text(montoLetras, marginL, y);
+  y += 8;
 
-  <table style="margin-top:-1px;">
-    <tr>
-      <td style="padding:26px 8px 6px;width:50%;font-size:11px;">Vo.Bo. Responsable</td>
-      <td style="padding:6px 8px;width:50%;text-align:center;font-size:11px;">
-        <div style="border-top:1px solid #000;margin:18px 20px 4px;"></div>
-        ELABORADO POR
-      </td>
-    </tr>
-  </table>
+  // OBSERVACIONES
+  doc.autoTable({
+    startY: y,
+    body: [[{content:'OBSERVACIONES', styles:{fontStyle:'bold'}}], ['']],
+    theme:'grid',
+    styles:{fontSize:8, cellPadding:2, lineColor:[0,0,0], lineWidth:0.2, minCellHeight:10, textColor:[0,0,0]},
+    margin:{left:marginL,right:marginR},
+    tableWidth: contentW,
+  });
+  y = doc.lastAutoTable.finalY;
 
-  </body></html>`;
+  // Vo.Bo. / ELABORADO POR
+  doc.autoTable({
+    startY: y,
+    body: [['Vo.Bo. Responsable', 'ELABORADO POR']],
+    theme:'grid',
+    styles:{fontSize:8, cellPadding:{top:12,bottom:3,left:2,right:2}, lineColor:[0,0,0], lineWidth:0.2, minCellHeight:16, textColor:[0,0,0]},
+    columnStyles:{1:{halign:'center'}},
+    margin:{left:marginL,right:marginR},
+    tableWidth: contentW,
+  });
+
+  doc.save(`NC_${factura}.pdf`);
 }
+
 
 
 // ── Ajuste automático de FURIPS1/FURIPS2 al aceptar una glosa ──
@@ -5642,8 +5679,9 @@ window.generarNotaCredito = async function(factura, codHab){
       ncId=ref.id;
     }
 
-    const html=htmlNotaCredito(numero, factura, codHab, itemsAceptados, valorTotal, fecha);
-    await descargarHtmlComoPDF(html, `NC_${factura}.pdf`);
+    if(typeof window.jspdf==='undefined'){ toast('Cargando librería PDF...','w'); setTimeout(()=>window.generarNotaCredito(factura,codHab),1000); return; }
+    generarPDFNotaCredito(numero, factura, codHab, itemsAceptados, valorTotal, fecha);
+    toast(`✔ Descargado: NC_${factura}.pdf`,'ok');
   } catch(e){
     console.error('Error generando nota crédito:',e);
     toast('Error generando nota crédito: '+e.message,'e');
@@ -11173,6 +11211,69 @@ window.verRondasFactura = function(factura){
     </div>`;
 };
 
+
+// ── Cuadre FURIPS1 vs FURIPS2 de una factura puntual ──
+// Muestra el valor que saldría en el TXT de FURIPS1, la suma de lo que saldría
+// en FURIPS2 (con los ítems ya ajustados), y si cuadran entre sí. Además compara
+// cada glosa contra los ítems de FURIPS2 para ver exactamente cuáles SÍ
+// encontraron coincidencia y cuáles no — para depurar sin adivinar.
+window.verCuadreFurips = function(factura){
+  const src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
+  const rec = src.find(r=>r.factura===factura);
+  const cont = document.getElementById('cuadre-furips-factura');
+  if(!cont) return;
+  if(!rec){ cont.innerHTML=`<div style="color:var(--red);font-size:12px;">No se encontró la factura "${factura}".</div>`; return; }
+  const fm5 = v=>'$'+Math.round(v||0).toLocaleString('es-CO');
+  const normTxt = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+
+  const calc = window.calcularValorParaTXT ? window.calcularValorParaTXT(rec) : null;
+  const valorF1 = calc ? calc.valorParaTXT : 0;
+  const furips2 = rec.furips2 || [];
+  const valorF2 = furips2.reduce((a,it)=>a+(parseFloat(it.totalRec)||0),0);
+  const cuadra = Math.abs(valorF1-valorF2) < 1;
+
+  const glosasFactura = (typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]).filter(gl=>gl.factura===factura);
+
+  cont.innerHTML = `
+    <div style="border:1px solid ${cuadra?'var(--green)':'var(--red)'};border-radius:8px;padding:12px;background:var(--sur2);">
+      <div style="font-weight:700;font-size:12px;margin-bottom:10px;">🧾 Cuadre FURIPS1 vs FURIPS2 — ${factura}</div>
+      <div style="display:flex;gap:16px;margin-bottom:12px;">
+        <div><div style="font-size:9px;color:var(--tx3);">FURIPS1 (valor en TXT)</div><div style="font-family:var(--mono);font-size:15px;font-weight:700;">${fm5(valorF1)}</div></div>
+        <div><div style="font-size:9px;color:var(--tx3);">FURIPS2 (suma de ítems)</div><div style="font-family:var(--mono);font-size:15px;font-weight:700;">${fm5(valorF2)}</div></div>
+        <div><div style="font-size:9px;color:var(--tx3);">¿Cuadra?</div><div style="font-size:15px;">${cuadra?'✅':'❌'}</div></div>
+        <div><div style="font-size:9px;color:var(--tx3);">Ítems en FURIPS2</div><div style="font-family:var(--mono);font-size:15px;font-weight:700;">${furips2.length}</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:6px;">Comparación glosa por glosa contra FURIPS2 (código/descripción normalizados):</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <thead><tr style="border-bottom:1px solid var(--brd);">
+          <th style="padding:4px 6px;text-align:left;">Código glosa</th>
+          <th style="padding:4px 6px;text-align:left;">Descripción glosa</th>
+          <th style="padding:4px 6px;text-align:left;">Respuesta</th>
+          <th style="padding:4px 6px;text-align:right;">VR Aceptado</th>
+          <th style="padding:4px 6px;text-align:center;">¿Match en FURIPS2?</th>
+          <th style="padding:4px 6px;text-align:left;">Item FURIPS2 encontrado</th>
+        </tr></thead>
+        <tbody>
+          ${glosasFactura.map(gl=>{
+            const codBuscado=normTxt(gl.codElemento), descBuscada=normTxt(gl.descElemento);
+            const match=furips2.find(it=>(codBuscado && normTxt(it.codigo)===codBuscado)||(descBuscada && normTxt(it.descripcion)===descBuscada));
+            const original = rec.furips2Original||[];
+            const matchPorCodOriginal = original.find(it=>codBuscado && normTxt(it.codigo)===codBuscado);
+            return `<tr style="border-top:1px solid var(--brd);${match?'':'background:rgba(248,81,73,.08);'}">
+              <td style="padding:4px 6px;font-family:var(--mono);">${gl.codElemento||'—'}</td>
+              <td style="padding:4px 6px;">${(gl.descElemento||'—').slice(0,40)}</td>
+              <td style="padding:4px 6px;">${gl.respuesta||'pendiente'}</td>
+              <td style="padding:4px 6px;text-align:right;font-family:var(--mono);">${fm5(gl.vrAceptado)}</td>
+              <td style="padding:4px 6px;text-align:center;">${match?'✅':(matchPorCodOriginal?'⚠️ solo en original':'❌')}</td>
+              <td style="padding:4px 6px;font-family:var(--mono);font-size:9px;color:var(--tx3);">${match?(match.codigo+' — '+fm5(match.totalRec)):'—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <div style="font-size:10px;color:var(--tx3);margin-top:8px;">❌ = el código/descripción de esa glosa no coincide con NINGÚN ítem actual de FURIPS2 (por eso no se pudo quitar). ⚠️ = sí existía en el respaldo original pero ya no está en el FURIPS2 actual (probablemente ya se quitó antes).</div>
+    </div>`;
+};
+
 window.diagnosticoADRES = async function(){
   if(USER?.rol !== 'superadmin') return;
   const src = window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]);
@@ -13286,5 +13387,7 @@ window.guardarFechasEvento = async () => {
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </body>
 </html>
