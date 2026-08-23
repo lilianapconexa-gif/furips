@@ -5263,12 +5263,21 @@ async function descargarHtmlComoPDF(htmlCompleto, nombreArchivo){
   // o posicionarlo fuera de pantalla hacía que se capturara en blanco en algunos
   // navegadores. Con un overlay real, la captura queda garantizada, igual que
   // ya funciona en el botón de PDF del Portafolio.
+  // IMPORTANTE: el contenedor que se CAPTURA para el PDF (`contenedor`) siempre
+  // tiene el mismo ancho fijo (800px), sin importar el tamaño de pantalla — si se
+  // le pone un max-width en vw, en pantallas angostas el contenido se desborda y
+  // sale cortado en el PDF. El límite de tamaño en pantalla va en un envoltorio
+  // aparte (`viewport`) que solo controla la vista previa, con scroll, sin afectar
+  // lo que realmente se captura.
   const overlay = document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+  const viewport = document.createElement('div');
+  viewport.style.cssText='max-width:92vw;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.4);';
   const contenedor = document.createElement('div');
-  contenedor.style.cssText='width:800px;max-width:92vw;max-height:88vh;overflow:auto;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.4);';
+  contenedor.style.cssText='width:800px;background:#fff;';
   contenedor.innerHTML = `<style>${styleCss}</style>${bodyHtml}`;
-  overlay.appendChild(contenedor);
+  viewport.appendChild(contenedor);
+  overlay.appendChild(viewport);
   document.body.appendChild(overlay);
 
   // Esperar a que las imágenes (logos) terminen de decodificar/pintar antes de
@@ -5405,13 +5414,17 @@ function htmlNotaCredito(numero, factura, codHab, itemsAceptados, valorTotal, fe
 window.reintentarAjusteFurips2 = async function(){
   await loadGlosas();
   const src=window.glosasFiltradasCliente();
-  const facturasConPendiente=new Set(
-    src.filter(gl=>(gl.respuesta==='aceptada'||gl.respuesta==='parcial') &&
+  const facturasConPendiente=new Set([
+    ...src.filter(gl=>(gl.respuesta==='aceptada'||gl.respuesta==='parcial') &&
                     (parseInt(gl.vrAceptado)||0)>0 &&
                     (!gl.aplicadoFurips || (gl.montoAplicadoFurips||0)===0))
-       .map(gl=>gl.factura)
-  );
-  if(!facturasConPendiente.size){ toast('No hay glosas pendientes de aplicar a FURIPS2.','ok'); return; }
+       .map(gl=>gl.factura),
+    // Ítems pagados (sin causal) todavía no procesados — también deben pasar
+    // por el ajuste, aunque no tengan ninguna glosa en disputa.
+    ...src.filter(gl=>!gl.pagadoAplicado && !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim())
+       .map(gl=>gl.factura),
+  ]);
+  if(!facturasConPendiente.size){ toast('No hay glosas ni ítems pagados pendientes de aplicar a FURIPS2.','ok'); return; }
 
   toast(`Reintentando ${facturasConPendiente.size} factura(s)...`,'w');
   let ok=0;
@@ -5432,6 +5445,16 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     const recDoc=snapRec.docs[0];
     const rec=recDoc.data();
 
+    // Ítems PAGADOS: filas del Excel de Glosas para esta factura SIN causal/motivo
+    // (en blanco) — representan lo que ADRES ya aprobó y pagó, no algo en disputa.
+    // Se quitan de FURIPS2 automáticamente, sin depender de que se respondan en el
+    // módulo de Glosas (no hay nada que "aceptar", ya están resueltos). Esto se
+    // procesa SIEMPRE primero, antes de mirar lo aceptado en las glosas en disputa.
+    const itemsPagados=GLOSAS_DB.filter(gl=>
+      gl.factura===factura && !gl.pagadoAplicado &&
+      !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim()
+    );
+
     // Reintentar TODAS las que aún no tienen plata realmente aplicada — incluye
     // tanto las nunca procesadas (aplicadoFurips=false) como las que se intentaron
     // antes pero no encontraron coincidencia en FURIPS2 (quedaron marcadas
@@ -5442,7 +5465,7 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
       (!gl.aplicadoFurips || (gl.montoAplicadoFurips||0)===0) &&
       (gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (parseInt(gl.vrAceptado)||0)>0
     );
-    if(!pendientesAplicar.length) return;
+    if(!pendientesAplicar.length && !itemsPagados.length) return;
 
     const furips2=[...(rec.furips2||[])];
     // Respaldo del FURIPS2 original — se guarda UNA SOLA VEZ, antes de tocar nada,
@@ -5455,6 +5478,19 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     const sinMatch=[];
     let totalAceptadoEsteAjuste=0;
 
+    const normTxt0 = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    let itemsPagadosQuitados=0;
+    itemsPagados.forEach(gl=>{
+      const codBuscado=normTxt0(gl.codElemento);
+      const descBuscada=normTxt0(gl.descElemento);
+      const idx=furips2.findIndex((it,i)=>!indicesQuitar.has(i) &&
+        ((codBuscado && normTxt0(it.codigo)===codBuscado) ||
+         (descBuscada && normTxt0(it.descripcion)===descBuscada))
+      );
+      if(idx>-1){ indicesQuitar.add(idx); itemsPagadosQuitados++; }
+      gl._pagadoAplicado=true; // se marca igual, encuentre o no coincidencia — ya se intentó
+    });
+
     // montoAplicado por glosa = lo que REALMENTE se pudo quitar/reducir en FURIPS2
     // (0 si no hubo match con ningún ítem). Esto es lo único que cuenta como
     // "aceptado" para la ronda — así FURIPS1 y FURIPS2 SIEMPRE cuadran entre sí,
@@ -5462,27 +5498,49 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     // La comparación se normaliza (sin acentos/mayúsculas/espacios extra) para que
     // diferencias mínimas de formato entre el Excel de glosas y FURIPS2 no generen
     // falsos "sin coincidencia".
-    const normTxt = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    const normTxt = normTxt0;
+
+    // Un mismo ÍTEM puede tener varias glosas (causales distintas sobre el mismo
+    // valor) — se agrupan por ítem ANTES de tocar FURIPS2, así el ítem solo se
+    // quita/reduce UNA VEZ (con el máximo aceptado del grupo), sin importar
+    // cuántas glosas separadas lo mencionen. Si cualquiera de las glosas del
+    // grupo es "aceptada" (total), el ítem se quita completo.
+    const grupos={};
     pendientesAplicar.forEach(gl=>{
-      const vAceptado=parseInt(gl.vrAceptado)||0;
-      const codBuscado=normTxt(gl.codElemento);
-      const descBuscada=normTxt(gl.descElemento);
+      const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
+      if(!grupos[key]) grupos[key]=[];
+      grupos[key].push(gl);
+    });
+
+    Object.values(grupos).forEach(glosasDelItem=>{
+      const codBuscado=normTxt(glosasDelItem[0].codElemento);
+      const descBuscada=normTxt(glosasDelItem[0].descElemento);
       const idx=furips2.findIndex((it,i)=>!indicesQuitar.has(i) &&
         ((codBuscado && normTxt(it.codigo)===codBuscado) ||
          (descBuscada && normTxt(it.descripcion)===descBuscada))
       );
-      if(idx===-1){ sinMatch.push(gl); gl._montoAplicado=0; return; }
-      if(gl.respuesta==='aceptada'){
+      const esAceptadaTotal=glosasDelItem.some(gl=>gl.respuesta==='aceptada');
+      const maxAceptado=Math.max(0, ...glosasDelItem.map(gl=>parseInt(gl.vrAceptado)||0));
+
+      if(idx===-1){
+        glosasDelItem.forEach(gl=>{ sinMatch.push(gl); gl._montoAplicado=0; });
+        return;
+      }
+      if(esAceptadaTotal){
         indicesQuitar.add(idx);
-      } else { // parcial: dejar solo el valor NO aceptado en ese ítem
+      } else { // parcial: dejar solo el valor NO aceptado en ese ítem (una sola vez)
         const item=furips2[idx];
         const totalRecActual=parseFloat(item.totalRec)||0;
-        item.totalRec=Math.max(0, totalRecActual-vAceptado);
+        item.totalRec=Math.max(0, totalRecActual-maxAceptado);
       }
-      gl._montoAplicado=vAceptado;
-      totalAceptadoEsteAjuste+=vAceptado;
+      // Solo la PRIMERA glosa del grupo se lleva el monto aplicado (para las
+      // sumas de FURIPS1/ronda) — las demás quedan en 0 para no contar la misma
+      // plata varias veces, pero igual quedan marcadas como procesadas.
+      glosasDelItem.forEach((gl,i)=>{
+        gl._montoAplicado = i===0 ? maxAceptado : 0;
+        totalAceptadoEsteAjuste += (i===0 ? maxAceptado : 0);
+      });
     });
-
     const furips2Final=furips2.filter((_,i)=>!indicesQuitar.has(i));
 
     // ── Dejar el desglose en la RONDA existente (sin agregar valor nuevo) ──
@@ -5528,15 +5586,20 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
         montoAplicadoFurips: gl._montoAplicado||0,
       });
     });
+    itemsPagados.forEach(gl=>{
+      batch.update(doc(db,'glosas',gl.id), { pagadoAplicado:true, pagadoAplicado_fecha:serverTimestamp() });
+    });
     await batch.commit();
 
     // Reflejar en memoria para que la UI no muestre datos viejos hasta el próximo reload
     pendientesAplicar.forEach(gl=>{ gl.aplicadoFurips=true; gl.montoAplicadoFurips=gl._montoAplicado||0; });
+    itemsPagados.forEach(gl=>{ gl.pagadoAplicado=true; });
     if(rondaActualizada) rec.respuestasAdres=rondas;
     if(necesitaBackupFurips2) rec.furips2Original=furips2Original;
 
     let msg=`✔ FURIPS2 ajustado — ${fmt$(totalAceptadoEsteAjuste)} aceptado`;
-    if(indicesQuitar.size) msg+=` · ${indicesQuitar.size} ítem(s) quitados de FURIPS2`;
+    if(itemsPagadosQuitados) msg+=` · ${itemsPagadosQuitados} ítem(s) pagados quitados`;
+    if(indicesQuitar.size) msg+=` · ${indicesQuitar.size} ítem(s) quitados en total de FURIPS2`;
     if(!rondaActualizada) msg+=` · ⚠️ no se encontró la ronda ADRES para anotar el desglose`;
     if(sinMatch.length) msg+=` · ⚠️ ${sinMatch.length} sin coincidencia en FURIPS2 (revisar manualmente)`;
     toast(msg, sinMatch.length?'w':'ok');
