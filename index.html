@@ -4847,7 +4847,8 @@ window.renderGlosasResp = function(){
     const pct=items.length?Math.round(respondidas/items.length*100):0;
     const ipsNom=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—';
     const _recFactura = _srcRecs.find(r=>r.factura===fac);
-    const _furips2Factura = _recFactura?.furips2 || [];
+    const _furips2Factura = _recFactura?.furips2 || []; // activo — para saber si YA está resuelto
+    const _furips2ParaSelector = (_recFactura?.furips2Original && _recFactura.furips2Original.length) ? _recFactura.furips2Original : _furips2Factura; // TODOS los ítems originales, para elegir
 
     return `
     <div style="background:var(--sur);border:1px solid ${pend===0?'rgba(0,178,226,.3)':'var(--brd)'};border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
@@ -4918,13 +4919,19 @@ window.renderGlosasResp = function(){
           );
           const pistas = (!_match) ? [...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]) : [];
           const _fm5=v=>'$'+Math.round(v||0).toLocaleString('es-CO');
-          const selectorCorreccion = (!_match && _furips2Factura.length) ? `
-            <div style="margin-bottom:8px;">
-              <span style="font-size:10px;color:var(--red);font-weight:700;">⚠️ Este código no coincide con ningún ítem de FURIPS2 — elige el correcto:</span>
-              <select style="width:100%;margin-top:3px;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);" onchange="window.emparejarGlosaManual('${gl.id}', this.value)">
+          const selectorCorreccion = (!_match && _furips2ParaSelector.length) ? `
+            <div style="margin-bottom:8px;padding:8px;background:rgba(211,47,47,.05);border-radius:6px;">
+              <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:4px;">⚠️ Este código no coincide con ningún ítem de FURIPS2 — corrígelo:</div>
+              <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">1. ¿Cuál ítem de FURIPS2 tiene el código mal?</div>
+              <select id="selitem-${gl.id}" style="width:100%;margin-bottom:6px;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
                 <option value="">— elegir ítem de FURIPS2 —</option>
-                ${_furips2Factura.map((it,i)=>`<option value="${i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${_fm5(it.totalRec)}</option>`).join('')}
+                ${_furips2ParaSelector.map((it,_i)=>`<option value="${_i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${_fm5(it.totalRec)}</option>`).join('')}
               </select>
+              <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">2. Código SOAT correcto (según manual SOAT, no del magnético):</div>
+              <div style="display:flex;gap:6px;">
+                <input id="soatcod-${gl.id}" placeholder="Ej: 878201" style="flex:1;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
+                <button type="button" onclick="window.emparejarGlosaManual('${gl.id}', document.getElementById('selitem-${gl.id}').value, document.getElementById('soatcod-${gl.id}').value)" style="font-size:10px;padding:4px 10px;border-radius:5px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-weight:600;cursor:pointer;">Guardar</button>
+              </div>
             </div>` : '';
           return `
           <div style="padding:14px 16px;${repetido?'padding-left:28px;border-top:1px dashed var(--brd);':''}${est!=='pendiente'?'opacity:.85':''}">
@@ -11406,6 +11413,7 @@ window.verCuadreFurips = function(factura){
   const calc = window.calcularValorParaTXT ? window.calcularValorParaTXT(rec) : null;
   const valorF1 = calc ? calc.valorParaTXT : 0;
   const furips2 = rec.furips2 || [];
+  const furips2ParaSelector = (rec.furips2Original && rec.furips2Original.length) ? rec.furips2Original : furips2;
   const valorF2 = furips2.reduce((a,it)=>a+(parseFloat(it.totalRec)||0),0);
   const cuadra = Math.abs(valorF1-valorF2) < 1;
 
@@ -11447,10 +11455,16 @@ window.verCuadreFurips = function(factura){
             const pistas = [...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]);
             const pistaHtml = pistas.length ? `<div style="color:var(--acc);font-weight:600;margin-bottom:5px;">💡 ${pistas.join(' · ')}</div>` : '';
             const selectorHtml = match ? `${match.codigo||'(sin código)'} — ${fm5(match.totalRec)}` : `
-              <select style="font-size:9px;padding:2px 4px;border-radius:4px;border:1px solid var(--brd);background:var(--sur);color:var(--tx);max-width:220px;" onchange="window.emparejarGlosaManual('${gl.id}', this.value)">
+              <div style="margin-bottom:3px;font-size:9px;color:var(--tx3);">1. ¿Cuál ítem tiene el código mal?</div>
+              <select id="selitem-${gl.id}" style="width:100%;font-size:9px;padding:3px 4px;border-radius:4px;border:1px solid var(--brd);background:var(--sur);color:var(--tx);max-width:220px;margin-bottom:5px;">
                 <option value="">— elegir ítem de FURIPS2 —</option>
-                ${furips2.map((it,i)=>`<option value="${i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${fm5(it.totalRec)}</option>`).join('')}
-              </select>`;
+                ${furips2ParaSelector.map((it,_i)=>`<option value="${_i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${fm5(it.totalRec)}</option>`).join('')}
+              </select>
+              <div style="margin-bottom:3px;font-size:9px;color:var(--tx3);">2. Código SOAT correcto:</div>
+              <div style="display:flex;gap:4px;">
+                <input id="soatcod-${gl.id}" placeholder="Ej: 878201" style="flex:1;font-size:9px;padding:3px 4px;border-radius:4px;border:1px solid var(--brd);background:var(--sur);color:var(--tx);max-width:120px;">
+                <button type="button" onclick="window.emparejarGlosaManual('${gl.id}', document.getElementById('selitem-${gl.id}').value, document.getElementById('soatcod-${gl.id}').value)" style="font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-weight:600;cursor:pointer;">Guardar</button>
+              </div>`;
             // Fila adicional (solo para las que NO tienen coincidencia) con el texto
             // completo de la causal y la anotación — guía para el analista de glosas,
             // sin recortar nada.
@@ -11487,9 +11501,10 @@ window.verCuadreFurips = function(factura){
 // mostrando la factura tal como se radicó la primera vez, error incluido, para
 // que quede el historial real. Solo el FURIPS2 "activo" (el que se usa para
 // reprocesos de aquí en adelante) queda con el código corregido.
-window.emparejarGlosaManual = async function(gloId, indiceItem){
-  if(indiceItem==='' || indiceItem==null) return;
-  const idx = parseInt(indiceItem);
+window.emparejarGlosaManual = async function(gloId, indiceOriginal, codigoSoatManual){
+  if(indiceOriginal==='' || indiceOriginal==null) return;
+  const codigoCorregido = (codigoSoatManual||'').trim();
+  if(!codigoCorregido){ toast('Escribe el código SOAT correcto antes de guardar.','w'); return; }
   const gl=GLOSAS_DB.find(x=>x.id===gloId);
   if(!gl) return;
   try{
@@ -11499,9 +11514,27 @@ window.emparejarGlosaManual = async function(gloId, indiceItem){
     const recDoc=snapRec.docs[0];
     const rec=recDoc.data();
     const furips2=[...(rec.furips2||[])];
-    if(!furips2[idx]){ toast('Ítem no encontrado.','e'); return; }
+    const original = (rec.furips2Original && rec.furips2Original.length) ? rec.furips2Original : furips2;
+    const itemElegido = original[parseInt(indiceOriginal)];
+    if(!itemElegido){ toast('Selecciona primero cuál ítem tiene el código mal.','w'); return; }
 
-    const codigoCorregido = gl.codElemento || furips2[idx].codigo;
+    // El "consec" es el mismo para TODOS los ítems de una factura (es el
+    // consecutivo de la factura, no del ítem), así que no sirve para identificar
+    // un ítem puntual. En su lugar se busca en el FURIPS2 ACTIVO por una
+    // combinación de cantidad + valor unitario + total facturado + total
+    // reclamado — esos sí distinguen cada ítem entre sí, incluso si el código
+    // está mal (que es justo el problema que se está corrigiendo).
+    const clave = it => `${it.cantidad}|${it.vrUnitario}|${it.totalFact}|${it.totalRec}`;
+    const idx = furips2.findIndex(it=>clave(it)===clave(itemElegido));
+    if(idx===-1){
+      toast('Ese ítem ya no está en el FURIPS2 activo (probablemente ya se quitó antes por otra glosa aceptada) — no hay nada que corregir ahí.','w');
+      return;
+    }
+
+    // El código correcto se toma del campo que el analista escribió a mano
+    // (consultado en el manual SOAT según lo que dice la anotación) — NO del
+    // código que trae la glosa ni de ningún ítem ya existente en el magnético,
+    // porque justamente ese es el error que se está corrigiendo.
     furips2[idx] = { ...furips2[idx], codigo: codigoCorregido };
 
     await updateDoc(doc(db,'reclamaciones',recDoc.id), { furips2, actualizado: serverTimestamp() });
