@@ -4836,6 +4836,9 @@ window.renderGlosasResp = function(){
     return;
   }
 
+  const _normTxtGlo = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  const _srcRecs = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(typeof RECS!=='undefined'?RECS:[]);
+
   lista.innerHTML=facturasFiltradas.map(([key,items])=>{
     const [fac,rad,doc]=key.split('|||');
     const totGlo=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
@@ -4843,6 +4846,8 @@ window.renderGlosasResp = function(){
     const respondidas=items.length-pend;
     const pct=items.length?Math.round(respondidas/items.length*100):0;
     const ipsNom=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—';
+    const _recFactura = _srcRecs.find(r=>r.factura===fac);
+    const _furips2Factura = _recFactura?.furips2 || [];
 
     return `
     <div style="background:var(--sur);border:1px solid ${pend===0?'rgba(0,178,226,.3)':'var(--brd)'};border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
@@ -4901,10 +4906,30 @@ window.renderGlosasResp = function(){
               ${glosasItem.map((gl)=>{
           const est=gl.respuesta||'pendiente';
           const estCol=window.colorDecisionEstado(est);
-          const pistas=[...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]);
+          // Solo se muestra la pista/selector si el código de este ítem NO tiene
+          // coincidencia real en FURIPS2 — así no sale ruido en las glosas que ya
+          // están bien emparejadas.
+          const _codBuscado=_normTxtGlo(gl.codElemento), _descBuscada=_normTxtGlo(gl.descElemento);
+          const _codManual=_normTxtGlo(gl.codElementoManual);
+          const _match=_furips2Factura.find(it=>
+            (_codManual && _normTxtGlo(it.codigo)===_codManual) ||
+            (_codBuscado && _normTxtGlo(it.codigo)===_codBuscado) ||
+            (_descBuscada && _normTxtGlo(it.descripcion)===_descBuscada)
+          );
+          const pistas = (!_match) ? [...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]) : [];
+          const _fm5=v=>'$'+Math.round(v||0).toLocaleString('es-CO');
+          const selectorCorreccion = (!_match && _furips2Factura.length) ? `
+            <div style="margin-bottom:8px;">
+              <span style="font-size:10px;color:var(--red);font-weight:700;">⚠️ Este código no coincide con ningún ítem de FURIPS2 — elige el correcto:</span>
+              <select style="width:100%;margin-top:3px;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);" onchange="window.emparejarGlosaManual('${gl.id}', this.value)">
+                <option value="">— elegir ítem de FURIPS2 —</option>
+                ${_furips2Factura.map((it,i)=>`<option value="${i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${_fm5(it.totalRec)}</option>`).join('')}
+              </select>
+            </div>` : '';
           return `
           <div style="padding:14px 16px;${repetido?'padding-left:28px;border-top:1px dashed var(--brd);':''}${est!=='pendiente'?'opacity:.85':''}">
             ${pistas.length?`<div style="font-size:12px;font-weight:700;color:#7a4d00;background:#fff3cd;border:1px solid #ffe08a;border-radius:6px;padding:6px 10px;margin-bottom:8px;">💡 PISTA: <span style="font-weight:800;">${pistas.join(' · ')}</span></div>`:''}
+            ${selectorCorreccion}
             <!-- Texto de la glosa y anotación -->
             <div style="display:grid;grid-template-columns:${gl.anotacion?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px;">
               <div style="font-size:12px;padding:8px 12px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 5px 5px 0;">
@@ -11486,12 +11511,20 @@ window.emparejarGlosaManual = async function(gloId, indiceItem){
     });
     gl.codElementoManual=codigoCorregido; gl.aplicadoFurips=false; gl.montoAplicadoFurips=0;
 
+    // Reflejar el furips2 corregido en memoria (ambas listas) para que la pantalla
+    // de Responder Glosas ya no muestre el selector de corrección sin recargar.
+    [(typeof RECS_ALL!=='undefined'?RECS_ALL:[]), (typeof RECS!=='undefined'?RECS:[])].forEach(lista=>{
+      const r=lista.find(x=>x.factura===gl.factura);
+      if(r) r.furips2=furips2;
+    });
+
     // Reintentar el ajuste ya con el código corregido (debería quedar match ✅ directo)
     if((gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (parseInt(gl.vrAceptado)||0)>0){
       await window.aplicarGlosaAFurips(gl.factura, gl.codHab);
     }
     toast(`✔ Código corregido a "${codigoCorregido}" — se reintentó el ajuste`,'ok');
     if(window._CUADRE_FURIPS_FACTURA_ACTUAL) window.verCuadreFurips(window._CUADRE_FURIPS_FACTURA_ACTUAL);
+    if(typeof window.renderGlosasResp==='function' && !document.getElementById('gtab-resp-body')?.classList.contains('hidden')) window.renderGlosasResp();
   } catch(e){
     toast('Error corrigiendo código: '+e.message,'e');
   }
