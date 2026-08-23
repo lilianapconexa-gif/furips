@@ -4736,9 +4736,16 @@ window.procesarGlosasExcel = (file) => {
         // por separado (antes se mezclaban en un solo campo y la anotación se perdía).
         const descGlosa = idx.descGlosa>=0 ? String(row[idx.descGlosa]||'').trim() : '';
         const anotacion = idx.anotacion>=0 ? String(row[idx.anotacion]||'').trim() : '';
+        const codElemPrev  = String(row[idx.codElem>=0?idx.codElem:0]||'').trim();
+        const descElemPrev = String(row[idx.descElem>=0?idx.descElem:0]||'').trim();
 
         const vrG=parseFloat(String(row[idx.vrGlosado>=0?idx.vrGlosado:0]||'0').replace(/[^\d.]/g,''))||0;
-        if(!descGlosa && !anotacion && !vrG) return; // saltar filas sin glosa
+        // Solo se salta la fila si está REALMENTE vacía (ni ítem, ni causal, ni
+        // valor) — una fila SIN causal/anotación pero CON ítem identificado
+        // (código o descripción) es un ítem PAGADO (ya lo reconoció ADRES, sin
+        // glosa), y hay que importarla igual: el sistema la usa para quitarla
+        // automáticamente de FURIPS2 más adelante.
+        if(!descGlosa && !anotacion && !vrG && !codElemPrev && !descElemPrev) return; // fila totalmente vacía
 
         GLOSAS_PREVIEW.push({
           idx:i,
