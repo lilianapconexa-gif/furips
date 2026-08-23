@@ -2007,7 +2007,9 @@ select option{background:var(--sur2);}
         <!-- KPIs -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
           <div></div>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="file" id="anot-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.actualizarAnotacionesExcel(this.files[0])">
+            <button onclick="document.getElementById('anot-excel-input').click()" style="background:transparent;border:1px solid #1565c0;color:#1565c0;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">💡 Actualizar anotaciones (Excel)</button>
             <button onclick="window.reintentarAjusteFurips2()" style="background:transparent;border:1px solid #2e7d32;color:#2e7d32;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Reintentar ajuste FURIPS2</button>
             <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
             <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
@@ -4391,6 +4393,121 @@ window.renderGlosasPorPaquete = function(){
 // usando el timestamp real de creación en Firestore) y lo borra por completo, previa
 // confirmación mostrando exactamente qué se va a eliminar. Avisa si alguna de esas
 // glosas ya tiene respuesta registrada, para no borrar trabajo hecho sin advertirlo.
+
+// ── Actualizar anotaciones desde Excel (sin tocar respuestas ya dadas) ──
+// Lee el mismo Excel de glosas de siempre y actualiza SOLO el campo `anotacion`
+// de las glosas que ya existen en el sistema (emparejadas por factura + código/
+// descripción del ítem + causal), sin tocar respuesta/vrAceptado/vrNoAceptado de
+// lo que ya se contestó. Útil para rellenar retroactivamente la anotación en
+// glosas cargadas antes de que el sistema la guardara por separado.
+window.actualizarAnotacionesExcel = (file) => {
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(()=>window.actualizarAnotacionesExcel(file),1500); return; }
+  const reader=new FileReader();
+  reader.onload=async (e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      let headerRow=-1;
+      for(let i=0;i<Math.min(aoa.length,10);i++){
+        const row=aoa[i].map(c=>String(c||'').trim());
+        if(row.some(c=>c==='Número Factura'||c==='FACTURA'||c.includes('Num Factura'))){
+          headerRow=i; break;
+        }
+      }
+      if(headerRow===-1){ toast('No se encontró la fila de encabezados. Verifica que sea el archivo correcto.','w'); return; }
+
+      const headers=aoa[headerRow].map(c=>String(c||'').trim());
+      const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+      const headersNorm = headers.map(norm);
+      const fi=(terms)=>headersNorm.findIndex(h=>terms.some(t=>h.includes(norm(t))));
+      const idx={
+        factura:  fi(['Factura','FACTURA']),
+        codElem:  fi(['Cod Elemento','CÓDIGO','Codigo Elemento']),
+        descElem: fi(['Descripción Elemento','Descripcion Elemento','DESCRIPCIÓN DEL']),
+        descGlosa:fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA']),
+        anotacion:fi(['Anotación','Anotacion']),
+        paquete:  fi(['Paquete']),
+        consolidado: fi(['Consolidado']),
+      };
+      if(idx.anotacion<0){ toast('Este Excel no trae columna de Anotación — nada que actualizar.','w'); return; }
+      if(idx.factura<0){ toast('No se encontró la columna de Factura en el Excel.','w'); return; }
+
+      // Rellenar celdas combinadas hacia abajo, igual que en la carga normal
+      const dataRows=aoa.slice(headerRow+1).map(r=>[...r]);
+      const colsRellenar=[idx.paquete,idx.consolidado,idx.factura].filter(c=>c>=0);
+      const ultimoValor={};
+      dataRows.forEach(row=>{
+        colsRellenar.forEach(c=>{
+          const v=String(row[c]??'').trim();
+          if(v) ultimoValor[c]=v;
+          else if(ultimoValor[c]!==undefined) row[c]=ultimoValor[c];
+        });
+      });
+
+      const filasExcel=dataRows.map(row=>({
+        factura: String(row[idx.factura]||'').trim(),
+        codElemento: idx.codElem>=0?String(row[idx.codElem]||'').trim():'',
+        descElemento: idx.descElem>=0?String(row[idx.descElem]||'').trim():'',
+        descGlosa: idx.descGlosa>=0?String(row[idx.descGlosa]||'').trim():'',
+        anotacion: String(row[idx.anotacion]||'').trim(),
+      })).filter(r=>r.factura && r.anotacion);
+
+      if(!filasExcel.length){ toast('No se encontraron filas con anotación en el Excel.','w'); return; }
+
+      toast(`Emparejando ${filasExcel.length} filas con las glosas ya cargadas...`,'w');
+
+      // Emparejar cada fila del Excel con la glosa correspondiente en GLOSAS_DB,
+      // por factura + código/descripción del ítem + descripción de la causal
+      // (necesario para distinguir entre varias causales del mismo ítem).
+      let actualizadas=0, sinMatch=0, yaIguales=0;
+      const usadas=new Set(); // evitar emparejar la misma glosa dos veces
+      const batchOps=[];
+      filasExcel.forEach(fila=>{
+        const candidatos=GLOSAS_DB.filter(gl=>gl.factura===fila.factura && !usadas.has(gl.id));
+        const norm2=s=>norm(s);
+        let match=candidatos.find(gl=>
+          (fila.codElemento && norm2(gl.codElemento)===norm2(fila.codElemento) && norm2(gl.descGlosa)===norm2(fila.descGlosa)) ||
+          (fila.descElemento && norm2(gl.descElemento)===norm2(fila.descElemento) && norm2(gl.descGlosa)===norm2(fila.descGlosa))
+        );
+        if(!match){
+          // Respaldo: emparejar solo por código/descripción del ítem si la causal no coincide exacto
+          match=candidatos.find(gl=>
+            (fila.codElemento && norm2(gl.codElemento)===norm2(fila.codElemento)) ||
+            (fila.descElemento && norm2(gl.descElemento)===norm2(fila.descElemento))
+          );
+        }
+        if(!match){ sinMatch++; return; }
+        usadas.add(match.id);
+        if(match.anotacion===fila.anotacion){ yaIguales++; return; }
+        batchOps.push({id:match.id, anotacion:fila.anotacion});
+        match.anotacion=fila.anotacion; // reflejar en memoria ya mismo
+      });
+
+      // Guardar en Firestore por lotes
+      const CHUNK=400;
+      for(let i=0;i<batchOps.length;i+=CHUNK){
+        const lote=batchOps.slice(i,i+CHUNK);
+        const batch=writeBatch(db);
+        lote.forEach(op=>batch.update(doc(db,'glosas',op.id),{anotacion:op.anotacion, actualizado:serverTimestamp()}));
+        await batch.commit();
+        actualizadas+=lote.length;
+      }
+
+      toast(`✔ ${actualizadas} anotaciones actualizadas · ${yaIguales} ya estaban iguales · ${sinMatch} sin coincidencia`, sinMatch>0?'w':'ok');
+      if(typeof window.renderGlosasResp==='function') window.renderGlosasResp();
+      document.getElementById('anot-excel-input').value='';
+    } catch(err){
+      console.error(err);
+      toast('Error procesando el Excel: '+err.message,'e');
+    }
+  };
+  reader.readAsBinaryString(file);
+};
+
+
 window.deshacerUltimaCarga = async function(){
   await loadGlosas(); // refrescar antes de decidir, por si hay cambios recientes de otra sesión
   if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
@@ -4787,7 +4904,7 @@ window.renderGlosasResp = function(){
           const pistas=[...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]);
           return `
           <div style="padding:14px 16px;${repetido?'padding-left:28px;border-top:1px dashed var(--brd);':''}${est!=='pendiente'?'opacity:.85':''}">
-            ${pistas.length?`<div style="font-size:10px;color:var(--acc);font-weight:600;margin-bottom:6px;">💡 ${pistas.join(' · ')}</div>`:''}
+            ${pistas.length?`<div style="font-size:12px;font-weight:700;color:#7a4d00;background:#fff3cd;border:1px solid #ffe08a;border-radius:6px;padding:6px 10px;margin-bottom:8px;">💡 PISTA: <span style="font-weight:800;">${pistas.join(' · ')}</span></div>`:''}
             <!-- Texto de la glosa y anotación -->
             <div style="display:grid;grid-template-columns:${gl.anotacion?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px;">
               <div style="font-size:12px;padding:8px 12px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 5px 5px 0;">
