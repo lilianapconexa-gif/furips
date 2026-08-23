@@ -4895,6 +4895,38 @@ window.renderGlosasResp = function(){
             // cuando se repite).
             const PALETA_ITEM=['#d32f2f','#1565c0','#2e7d32','#6a1fb2','#b26a00','#c00060'];
             const colorItem=PALETA_ITEM[gIdx%PALETA_ITEM.length];
+
+            // Match/corrección se calcula UNA VEZ por ítem (no por cada causal) —
+            // todas las causales del mismo ítem comparten el mismo código/descripción,
+            // así que solo hace falta corregirlo una vez. Además, si CUALQUIERA de
+            // las causales de este ítem ya está "aceptada", el ítem completo se va a
+            // quitar de FURIPS2 sin importar el código de las demás causales — así
+            // que ya no tiene sentido pedir la corrección.
+            const _codBuscadoItem=_normTxtGlo(primero.codElemento), _descBuscadaItem=_normTxtGlo(primero.descElemento);
+            const _codManualItem=_normTxtGlo(primero.codElementoManual);
+            const _matchItem=_furips2Factura.find(it=>
+              (_codManualItem && _normTxtGlo(it.codigo)===_codManualItem) ||
+              (_codBuscadoItem && _normTxtGlo(it.codigo)===_codBuscadoItem) ||
+              (_descBuscadaItem && _normTxtGlo(it.descripcion)===_descBuscadaItem)
+            );
+            const _algunaAceptada=glosasItem.some(g=>g.respuesta==='aceptada');
+            const _fm5=v=>'$'+Math.round(v||0).toLocaleString('es-CO');
+            const pistasItem = (!_matchItem && !_algunaAceptada) ? [...glosasItem.map(g=>String(g.descGlosa||'')+' '+String(g.anotacion||'')).join(' ').matchAll(/\(([^)]+)\)/g)].map(m=>m[1]) : [];
+            const selectorCorreccionItem = (!_matchItem && !_algunaAceptada && _furips2ParaSelector.length) ? `
+              <div style="margin:8px 16px;padding:8px;background:rgba(211,47,47,.05);border-radius:6px;">
+                <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:4px;">⚠️ Este código no coincide con ningún ítem de FURIPS2 — corrígelo:</div>
+                <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">1. ¿Cuál ítem de FURIPS2 tiene el código mal?</div>
+                <select id="selitem-${primero.id}" style="width:100%;margin-bottom:6px;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
+                  <option value="">— elegir ítem de FURIPS2 —</option>
+                  ${_furips2ParaSelector.map((it,_i)=>`<option value="${_i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${_fm5(it.totalRec)}</option>`).join('')}
+                </select>
+                <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">2. Código SOAT correcto (según manual SOAT, no del magnético):</div>
+                <div style="display:flex;gap:6px;">
+                  <input id="soatcod-${primero.id}" placeholder="Ej: 878201" style="flex:1;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
+                  <button type="button" onclick="window.emparejarGlosaManual('${primero.id}', document.getElementById('selitem-${primero.id}').value, document.getElementById('soatcod-${primero.id}').value)" style="font-size:10px;padding:4px 10px;border-radius:5px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-weight:600;cursor:pointer;">Guardar</button>
+                </div>
+              </div>` : '';
+
             return `
             <div style="border-top:1px solid var(--brd);">
               <div style="padding:8px 16px;background:${colorItem}14;border-left:4px solid ${colorItem};display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -4904,39 +4936,13 @@ window.renderGlosasResp = function(){
                 ${repetido?`<span style="font-size:10px;background:var(--warn);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">↻ ${glosasItem.length} causales sobre este ítem</span>`:''}
                 <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--red);font-weight:700;">${fmt$(totGloItem)}</span>
               </div>
+              ${pistasItem.length?`<div style="margin:8px 16px 0;font-size:12px;font-weight:700;color:#7a4d00;background:#fff3cd;border:1px solid #ffe08a;border-radius:6px;padding:6px 10px;">💡 PISTA: <span style="font-weight:800;">${pistasItem.join(' · ')}</span></div>`:''}
+              ${selectorCorreccionItem}
               ${glosasItem.map((gl)=>{
           const est=gl.respuesta||'pendiente';
           const estCol=window.colorDecisionEstado(est);
-          // Solo se muestra la pista/selector si el código de este ítem NO tiene
-          // coincidencia real en FURIPS2 — así no sale ruido en las glosas que ya
-          // están bien emparejadas.
-          const _codBuscado=_normTxtGlo(gl.codElemento), _descBuscada=_normTxtGlo(gl.descElemento);
-          const _codManual=_normTxtGlo(gl.codElementoManual);
-          const _match=_furips2Factura.find(it=>
-            (_codManual && _normTxtGlo(it.codigo)===_codManual) ||
-            (_codBuscado && _normTxtGlo(it.codigo)===_codBuscado) ||
-            (_descBuscada && _normTxtGlo(it.descripcion)===_descBuscada)
-          );
-          const pistas = (!_match) ? [...(String(gl.descGlosa||'')+' '+String(gl.anotacion||'')).matchAll(/\(([^)]+)\)/g)].map(m=>m[1]) : [];
-          const _fm5=v=>'$'+Math.round(v||0).toLocaleString('es-CO');
-          const selectorCorreccion = (!_match && _furips2ParaSelector.length) ? `
-            <div style="margin-bottom:8px;padding:8px;background:rgba(211,47,47,.05);border-radius:6px;">
-              <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:4px;">⚠️ Este código no coincide con ningún ítem de FURIPS2 — corrígelo:</div>
-              <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">1. ¿Cuál ítem de FURIPS2 tiene el código mal?</div>
-              <select id="selitem-${gl.id}" style="width:100%;margin-bottom:6px;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
-                <option value="">— elegir ítem de FURIPS2 —</option>
-                ${_furips2ParaSelector.map((it,_i)=>`<option value="${_i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${_fm5(it.totalRec)}</option>`).join('')}
-              </select>
-              <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">2. Código SOAT correcto (según manual SOAT, no del magnético):</div>
-              <div style="display:flex;gap:6px;">
-                <input id="soatcod-${gl.id}" placeholder="Ej: 878201" style="flex:1;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
-                <button type="button" onclick="window.emparejarGlosaManual('${gl.id}', document.getElementById('selitem-${gl.id}').value, document.getElementById('soatcod-${gl.id}').value)" style="font-size:10px;padding:4px 10px;border-radius:5px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-weight:600;cursor:pointer;">Guardar</button>
-              </div>
-            </div>` : '';
           return `
           <div style="padding:14px 16px;${repetido?'padding-left:28px;border-top:1px dashed var(--brd);':''}${est!=='pendiente'?'opacity:.85':''}">
-            ${pistas.length?`<div style="font-size:12px;font-weight:700;color:#7a4d00;background:#fff3cd;border:1px solid #ffe08a;border-radius:6px;padding:6px 10px;margin-bottom:8px;">💡 PISTA: <span style="font-weight:800;">${pistas.join(' · ')}</span></div>`:''}
-            ${selectorCorreccion}
             <!-- Texto de la glosa y anotación -->
             <div style="display:grid;grid-template-columns:${gl.anotacion?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px;">
               <div style="font-size:12px;padding:8px 12px;background:rgba(211,47,47,.04);border-left:3px solid var(--red);border-radius:0 5px 5px 0;">
