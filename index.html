@@ -4910,19 +4910,24 @@ window.renderGlosasResp = function(){
             // (ej. el mismo código equivocado repetido en 2 líneas de FURIPS2),
             // lo cual antes se tomaba como "ya está bien" por error.
             const pistasItem = (!_algunaAceptada) ? [...glosasItem.map(g=>String(g.descGlosa||'')+' '+String(g.anotacion||'')).join(' ').matchAll(/\(([^)]+)\)/g)].map(m=>m[1]) : [];
+            // Ordenar el desplegable por cercanía de valor al total glosado de este
+            // ítem — así el candidato más probable aparece primero, en vez de tener
+            // que revisar los 18 ítems en el orden en que vinieron en el Excel.
+            const _itemsConIndice = _furips2ParaSelector.map((it,_i)=>({it,_i,dif:Math.abs((parseFloat(it.totalRec)||0)-totGloItem)}));
+            _itemsConIndice.sort((a,b)=>a.dif-b.dif);
             const selectorCorreccionItem = (!_algunaAceptada && _furips2ParaSelector.length) ? `
-              <details style="margin:8px 16px;">
-                <summary style="cursor:pointer;font-size:10px;color:var(--red);font-weight:700;">🔧 Revisar/corregir el código de este ítem en FURIPS2 (puedes corregir más de una línea si el código está repetido y mal en ambas)</summary>
-                <div style="padding:8px;background:rgba(211,47,47,.05);border-radius:6px;margin-top:6px;">
-                  <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">1. ¿Cuál ítem de FURIPS2 tiene el código mal? (elige uno; si hay más de uno mal, repite el proceso para el siguiente)</div>
-                  <select id="selitem-${primero.id}" style="width:100%;margin-bottom:6px;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
+              <details style="margin:10px 16px;" open>
+                <summary style="cursor:pointer;font-size:13px;color:var(--red);font-weight:800;padding:6px 10px;background:rgba(211,47,47,.08);border-radius:6px;">🔧 REVISAR / CORREGIR el código de este ítem en FURIPS2 (puedes corregir más de una línea si el código está repetido y mal en ambas)</summary>
+                <div style="padding:10px;background:rgba(211,47,47,.05);border-radius:6px;margin-top:6px;">
+                  <div style="font-size:11px;color:var(--tx2);margin-bottom:4px;font-weight:600;">1. ¿Cuál ítem de FURIPS2 tiene el código mal? (ordenado por valor más parecido al glosado — ⭐ el más probable)</div>
+                  <select id="selitem-${primero.id}" style="width:100%;margin-bottom:8px;font-size:11px;padding:6px 8px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
                     <option value="">— elegir ítem de FURIPS2 —</option>
-                    ${_furips2ParaSelector.map((it,_i)=>`<option value="${_i}">${it.codigo||'(sin código)'} — ${(it.descripcion||'').slice(0,30)} — ${_fm5(it.totalRec)}</option>`).join('')}
+                    ${_itemsConIndice.map(({it,_i},pos)=>`<option value="${_i}">${pos===0?'⭐ ':''}${it.codigo||'(sin código)'} — ${(it.descripcion||'(sin descripción)').slice(0,35)} — ${_fm5(it.totalRec)}</option>`).join('')}
                   </select>
-                  <div style="font-size:9px;color:var(--tx3);margin-bottom:3px;">2. Código SOAT correcto (según manual SOAT, no del magnético):</div>
+                  <div style="font-size:11px;color:var(--tx2);margin-bottom:4px;font-weight:600;">2. Código SOAT correcto (según manual SOAT, no del magnético):</div>
                   <div style="display:flex;gap:6px;">
-                    <input id="soatcod-${primero.id}" placeholder="Ej: 878201" style="flex:1;font-size:10px;padding:4px 6px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
-                    <button type="button" onclick="window.emparejarGlosaManual('${primero.id}', document.getElementById('selitem-${primero.id}').value, document.getElementById('soatcod-${primero.id}').value)" style="font-size:10px;padding:4px 10px;border-radius:5px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-weight:600;cursor:pointer;">Guardar</button>
+                    <input id="soatcod-${primero.id}" placeholder="Ej: 878201" style="flex:1;font-size:11px;padding:6px 8px;border-radius:5px;border:1px solid var(--brd);background:var(--sur2);color:var(--tx);">
+                    <button type="button" onclick="window.emparejarGlosaManual('${primero.id}', document.getElementById('selitem-${primero.id}').value, document.getElementById('soatcod-${primero.id}').value)" style="font-size:11px;padding:6px 14px;border-radius:5px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-weight:700;cursor:pointer;">Guardar</button>
                   </div>
                 </div>
               </details>` : '';
@@ -5154,9 +5159,10 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
       if((valor==='aceptada'||valor==='parcial') && (gl.vrAceptado||0)>0){
         window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante — se aplica por ítem, en tiempo real
       }
-      if(facturaGlosasCompleta(gl.factura)){
-        window.generarNotaCredito(gl.factura, gl.codHab); // no bloqueante — solo cuando la factura queda completa
-      }
+      // La nota crédito YA NO se descarga automáticamente aquí — solo desde
+      // "Exportar Respuesta → Descargar Individual" con el botón "🧾 Nota Créd.",
+      // para no interrumpir con descargas mientras se van respondiendo varios
+      // ítems de una misma factura.
     } catch(e){ toast('Error guardando: '+e.message,'e'); }
     return;
   }
@@ -5174,9 +5180,6 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
     updGloKpis();
     if(campo==='vrAceptado' && (gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (gl.vrAceptado||0)>0){
       window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante — se aplica por ítem, en tiempo real
-    }
-    if(campo==='vrAceptado' && facturaGlosasCompleta(gl.factura)){
-      window.generarNotaCredito(gl.factura, gl.codHab); // no bloqueante — solo cuando la factura queda completa
     }
   } catch(e){ toast('Error guardando: '+e.message,'e'); }
 };
