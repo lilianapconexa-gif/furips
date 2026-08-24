@@ -4450,15 +4450,22 @@ window.actualizarAnotacionesExcel = (file) => {
       const headers=aoa[headerRow].map(c=>String(c||'').trim());
       const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
       const headersNorm = headers.map(norm);
-      const fi=(terms)=>headersNorm.findIndex(h=>terms.some(t=>h.includes(norm(t))));
+      const fi=(terms,excluir=new Set())=>headersNorm.findIndex((h,i)=>!excluir.has(i) && terms.some(t=>h.includes(norm(t))));
+      const usadasGlo=new Set();
+      const marcarGlo=idx=>{ if(idx>=0) usadasGlo.add(idx); return idx; };
+      // "Código Habilitación" se excluye ANTES de buscar "Cod Elemento" — la
+      // palabra suelta "código" es ambigua y se colaba con la columna de
+      // habilitación (arrastrando el código de la IPS como si fuera el código
+      // del ítem, ej. "157590080301" en vez del código de procedimiento real).
+      const codHabCol = marcarGlo(fi(['codigo de habilitacion','codigo habilitacion']));
       const idx={
-        factura:  fi(['Factura','FACTURA']),
-        codElem:  fi(['Cod Elemento','CÓDIGO','Codigo Elemento']),
-        descElem: fi(['Descripción Elemento','Descripcion Elemento','DESCRIPCIÓN DEL']),
-        descGlosa:fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA']),
-        anotacion:fi(['Anotación','Anotacion']),
-        paquete:  fi(['Paquete']),
-        consolidado: fi(['Consolidado']),
+        factura:  marcarGlo(fi(['Factura','FACTURA'], usadasGlo)),
+        codElem:  marcarGlo(fi(['Cod Elemento','Codigo Elemento','CÓDIGO'], usadasGlo)),
+        descElem: marcarGlo(fi(['Descripción Elemento','Descripcion Elemento','DESCRIPCIÓN DEL'], usadasGlo)),
+        descGlosa:marcarGlo(fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA'], usadasGlo)),
+        anotacion:marcarGlo(fi(['Anotación','Anotacion'], usadasGlo)),
+        paquete:  marcarGlo(fi(['Paquete'], usadasGlo)),
+        consolidado: marcarGlo(fi(['Consolidado'], usadasGlo)),
       };
       if(idx.anotacion<0){ toast('Este Excel no trae columna de Anotación — nada que actualizar.','w'); return; }
       if(idx.factura<0){ toast('No se encontró la columna de Factura en el Excel.','w'); return; }
@@ -4747,20 +4754,26 @@ window.procesarGlosasExcel = (file) => {
       // básicamente el mismo.
       const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
       const headersNorm = headers.map(norm);
-      const fi=(terms)=>headersNorm.findIndex(h=>terms.some(t=>h.includes(norm(t))));
+      const fi=(terms,excluir=new Set())=>headersNorm.findIndex((h,i)=>!excluir.has(i) && terms.some(t=>h.includes(norm(t))));
+      const usadasGlo2=new Set();
+      const marcarGlo2=idx=>{ if(idx>=0) usadasGlo2.add(idx); return idx; };
       const idx={
-        codHab:   fi(['Código Habilitación','Habilitacion']),
-        radicado: fi(['Radicaci','Radicacion']),
-        consolidado: fi(['Consolidado']),
-        paquete:  fi(['Paquete']),
-        factura:  fi(['Factura','FACTURA']),
-        docVic:   fi(['Victima','Víctima','Doc Vic']),
-        vrGlosado:fi(['Glosado']),
-        codElem:  fi(['Cod Elemento','CÓDIGO','Codigo Elemento']),
-        descElem: fi(['Descripción Elemento','Descripcion Elemento','DESCRIPCIÓN DEL']),
-        tipoElem: fi(['Tipo Elemento']),
-        descGlosa:fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA']),
-        anotacion:fi(['Anotación','Anotacion']),
+        codHab:   marcarGlo2(fi(['Código Habilitación','Habilitacion'], usadasGlo2)),
+        radicado: marcarGlo2(fi(['Radicaci','Radicacion'], usadasGlo2)),
+        consolidado: marcarGlo2(fi(['Consolidado'], usadasGlo2)),
+        paquete:  marcarGlo2(fi(['Paquete'], usadasGlo2)),
+        factura:  marcarGlo2(fi(['Factura','FACTURA'], usadasGlo2)),
+        docVic:   marcarGlo2(fi(['Victima','Víctima','Doc Vic'], usadasGlo2)),
+        vrGlosado:marcarGlo2(fi(['Glosado'], usadasGlo2)),
+        // "Cod Elemento" se busca EXCLUYENDO la columna de Código Habilitación
+        // (ya marcada arriba) — antes la palabra suelta "código" se colaba con
+        // esa columna, arrastrando el código de la IPS como si fuera el código
+        // del ítem/procedimiento.
+        codElem:  marcarGlo2(fi(['Cod Elemento','Codigo Elemento','CÓDIGO'], usadasGlo2)),
+        descElem: marcarGlo2(fi(['Descripción Elemento','Descripcion Elemento','DESCRIPCIÓN DEL'], usadasGlo2)),
+        tipoElem: marcarGlo2(fi(['Tipo Elemento'], usadasGlo2)),
+        descGlosa:marcarGlo2(fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA'], usadasGlo2)),
+        anotacion:marcarGlo2(fi(['Anotación','Anotacion'], usadasGlo2)),
       };
 
       // ADRES suele combinar celdas (merge) en las columnas de agrupación: Paquete,
