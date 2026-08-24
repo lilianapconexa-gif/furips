@@ -2010,6 +2010,8 @@ select option{background:var(--sur2);}
           <div style="display:flex;gap:8px;align-items:center;">
             <input type="file" id="anot-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.actualizarAnotacionesExcel(this.files[0])">
             <button onclick="document.getElementById('anot-excel-input').click()" style="background:transparent;border:1px solid #1565c0;color:#1565c0;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">💡 Actualizar anotaciones (Excel)</button>
+            <input type="file" id="corrcod-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.corregirCodigoElementoExcel(this.files[0])">
+            <button onclick="document.getElementById('corrcod-excel-input').click()" style="background:transparent;border:1px solid #b26a00;color:#b26a00;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔢 Corregir código de ítem (Excel)</button>
             <button onclick="window.reintentarAjusteFurips2()" style="background:transparent;border:1px solid #2e7d32;color:#2e7d32;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Reintentar ajuste FURIPS2</button>
             <button onclick="window.eliminarGlosasDuplicadas()" style="background:transparent;border:1px solid #c00060;color:#c00060;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar duplicadas exactas</button>
             <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
@@ -4428,6 +4430,124 @@ window.renderGlosasPorPaquete = function(){
 // descripción del ítem + causal), sin tocar respuesta/vrAceptado/vrNoAceptado de
 // lo que ya se contestó. Útil para rellenar retroactivamente la anotación en
 // glosas cargadas antes de que el sistema la guardara por separado.
+
+// ── Corregir código de elemento desde Excel (sin crear duplicados) ──
+// Lee el mismo Excel de glosas (ya con el mapeo de columnas corregido) y
+// actualiza SOLO el campo `codElemento` de las glosas que ya existen en el
+// sistema — emparejando por factura + descripción del ítem + causal + anotación
+// (a propósito SIN usar el código, porque ese es justo el dato que está mal y
+// que se quiere corregir). No toca respuesta/vrAceptado/vrNoAceptado.
+window.corregirCodigoElementoExcel = (file) => {
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(()=>window.corregirCodigoElementoExcel(file),1500); return; }
+  const reader=new FileReader();
+  reader.onload=async (e)=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      let headerRow=-1;
+      for(let i=0;i<Math.min(aoa.length,10);i++){
+        const row=aoa[i].map(c=>String(c||'').trim());
+        if(row.some(c=>c==='Número Factura'||c==='FACTURA'||c.includes('Num Factura'))){
+          headerRow=i; break;
+        }
+      }
+      if(headerRow===-1){ toast('No se encontró la fila de encabezados. Verifica que sea el archivo correcto.','w'); return; }
+
+      const headers=aoa[headerRow].map(c=>String(c||'').trim());
+      const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+      const headersNorm = headers.map(norm);
+      const fi=(terms,excluir=new Set())=>headersNorm.findIndex((h,i)=>!excluir.has(i) && terms.some(t=>h.includes(norm(t))));
+      const usadasCorr=new Set();
+      const marcarCorr=idx=>{ if(idx>=0) usadasCorr.add(idx); return idx; };
+      // "Código Habilitación" se excluye ANTES de buscar "Cod Elemento" — igual
+      // que en la carga normal, para no arrastrar el código de la IPS.
+      marcarCorr(fi(['codigo de habilitacion','codigo habilitacion']));
+      const idx={
+        factura:  marcarCorr(fi(['Factura','FACTURA'], usadasCorr)),
+        codElem:  marcarCorr(fi(['Cod Elemento','Codigo Elemento','CÓDIGO'], usadasCorr)),
+        descElem: marcarCorr(fi(['Descripción Elemento','Descripcion Elemento','DESCRIPCIÓN DEL'], usadasCorr)),
+        descGlosa:marcarCorr(fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA'], usadasCorr)),
+        anotacion:marcarCorr(fi(['Anotación','Anotacion'], usadasCorr)),
+        paquete:  marcarCorr(fi(['Paquete'], usadasCorr)),
+        consolidado: marcarCorr(fi(['Consolidado'], usadasCorr)),
+      };
+      if(idx.codElem<0){ toast('No se encontró la columna de código del ítem en este Excel.','w'); return; }
+      if(idx.factura<0){ toast('No se encontró la columna de Factura en el Excel.','w'); return; }
+
+      // Rellenar celdas combinadas hacia abajo, igual que en la carga normal
+      const dataRows=aoa.slice(headerRow+1).map(r=>[...r]);
+      const colsRellenar=[idx.paquete,idx.consolidado,idx.factura].filter(c=>c>=0);
+      const ultimoValor={};
+      dataRows.forEach(row=>{
+        colsRellenar.forEach(c=>{
+          const v=String(row[c]??'').trim();
+          if(v) ultimoValor[c]=v;
+          else if(ultimoValor[c]!==undefined) row[c]=ultimoValor[c];
+        });
+      });
+
+      const filasExcel=dataRows.map(row=>({
+        factura: String(row[idx.factura]||'').trim(),
+        codElemento: String(row[idx.codElem]||'').trim(),
+        descElemento: idx.descElem>=0?String(row[idx.descElem]||'').trim():'',
+        descGlosa: idx.descGlosa>=0?String(row[idx.descGlosa]||'').trim():'',
+        anotacion: idx.anotacion>=0?String(row[idx.anotacion]||'').trim():'',
+      })).filter(r=>r.factura && r.codElemento);
+
+      if(!filasExcel.length){ toast('No se encontraron filas con código de ítem en el Excel.','w'); return; }
+
+      toast(`Emparejando ${filasExcel.length} filas con las glosas ya cargadas...`,'w');
+
+      // Emparejar SIN usar el código (justo el dato que está mal) — por
+      // descripción del ítem + causal + anotación, que sí deberían coincidir.
+      let actualizadas=0, sinMatch=0, yaIguales=0;
+      const usadas=new Set();
+      const batchOps=[];
+      filasExcel.forEach(fila=>{
+        const candidatos=GLOSAS_DB.filter(gl=>gl.factura===fila.factura && !usadas.has(gl.id));
+        const norm2=s=>norm(s);
+        let match=candidatos.find(gl=>
+          norm2(gl.descElemento)===norm2(fila.descElemento) &&
+          norm2(gl.descGlosa)===norm2(fila.descGlosa) &&
+          norm2(gl.anotacion)===norm2(fila.anotacion)
+        );
+        if(!match){
+          // Respaldo: solo por descripción del ítem (si la factura tiene un único
+          // ítem con esa descripción, es suficiente para identificarlo)
+          const porDesc = candidatos.filter(gl=>fila.descElemento && norm2(gl.descElemento)===norm2(fila.descElemento));
+          if(porDesc.length===1) match=porDesc[0];
+        }
+        if(!match){ sinMatch++; return; }
+        usadas.add(match.id);
+        if(match.codElemento===fila.codElemento){ yaIguales++; return; }
+        batchOps.push({id:match.id, codElemento:fila.codElemento});
+        match.codElemento=fila.codElemento; // reflejar en memoria ya mismo
+      });
+
+      const CHUNK=400;
+      for(let i=0;i<batchOps.length;i+=CHUNK){
+        const lote=batchOps.slice(i,i+CHUNK);
+        const batch=writeBatch(db);
+        lote.forEach(op=>batch.update(doc(db,'glosas',op.id),{codElemento:op.codElemento, codElementoManual:null, aplicadoFurips:false, montoAplicadoFurips:0, pagadoAplicado:false, pagadoConMatch:false, actualizado:serverTimestamp()}));
+        await batch.commit();
+        actualizadas+=lote.length;
+      }
+
+      toast(`✔ ${actualizadas} códigos corregidos · ${yaIguales} ya estaban iguales · ${sinMatch} sin coincidencia`, sinMatch>0?'w':'ok');
+      if(typeof window.renderGlosasResp==='function') window.renderGlosasResp();
+      document.getElementById('corrcod-excel-input').value='';
+    } catch(err){
+      console.error(err);
+      toast('Error procesando el Excel: '+err.message,'e');
+    }
+  };
+  reader.readAsBinaryString(file);
+};
+
+
 window.actualizarAnotacionesExcel = (file) => {
   if(!file) return;
   if(typeof XLSX==='undefined'){ toast('Cargando librería Excel...','w'); setTimeout(()=>window.actualizarAnotacionesExcel(file),1500); return; }
