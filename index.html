@@ -5754,7 +5754,7 @@ window.reintentarAjusteFurips2 = async function(){
        .map(gl=>gl.factura),
     // Ítems pagados (sin causal) todavía no procesados — también deben pasar
     // por el ajuste, aunque no tengan ninguna glosa en disputa.
-    ...src.filter(gl=>!gl.pagadoAplicado && !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim())
+    ...src.filter(gl=>(!gl.pagadoAplicado || !gl.pagadoConMatch) && !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim())
        .map(gl=>gl.factura),
   ]);
   if(!facturasConPendiente.size){ toast('No hay glosas ni ítems pagados pendientes de aplicar a FURIPS2.','ok'); return; }
@@ -5784,7 +5784,7 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
     // módulo de Glosas (no hay nada que "aceptar", ya están resueltos). Esto se
     // procesa SIEMPRE primero, antes de mirar lo aceptado en las glosas en disputa.
     const itemsPagados=GLOSAS_DB.filter(gl=>
-      gl.factura===factura && !gl.pagadoAplicado &&
+      gl.factura===factura && (!gl.pagadoAplicado || !gl.pagadoConMatch) &&
       !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim()
     );
 
@@ -5820,8 +5820,9 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
         ((codBuscado && normTxt0(it.codigo)===codBuscado) ||
          (descBuscada && normTxt0(it.descripcion)===descBuscada))
       );
-      if(idx>-1){ indicesQuitar.add(idx); itemsPagadosQuitados++; }
-      gl._pagadoAplicado=true; // se marca igual, encuentre o no coincidencia — ya se intentó
+      if(idx>-1){ indicesQuitar.add(idx); itemsPagadosQuitados++; gl._pagadoConMatch=true; }
+      else gl._pagadoConMatch=false; // no encontró coincidencia — debe reintentarse después
+      gl._pagadoAplicado=true;
     });
 
     // montoAplicado por glosa = lo que REALMENTE se pudo quitar/reducir en FURIPS2
@@ -5922,13 +5923,13 @@ window.aplicarGlosaAFurips = async function(factura, codHab){
       });
     });
     itemsPagados.forEach(gl=>{
-      batch.update(doc(db,'glosas',gl.id), { pagadoAplicado:true, pagadoAplicado_fecha:serverTimestamp() });
+      batch.update(doc(db,'glosas',gl.id), { pagadoAplicado:true, pagadoConMatch: !!gl._pagadoConMatch, pagadoAplicado_fecha:serverTimestamp() });
     });
     await batch.commit();
 
     // Reflejar en memoria para que la UI no muestre datos viejos hasta el próximo reload
     pendientesAplicar.forEach(gl=>{ gl.aplicadoFurips=true; gl.montoAplicadoFurips=gl._montoAplicado||0; });
-    itemsPagados.forEach(gl=>{ gl.pagadoAplicado=true; });
+    itemsPagados.forEach(gl=>{ gl.pagadoAplicado=true; gl.pagadoConMatch=!!gl._pagadoConMatch; });
     if(rondaActualizada) rec.respuestasAdres=rondas;
     if(necesitaBackupFurips2) rec.furips2Original=furips2Original;
 
