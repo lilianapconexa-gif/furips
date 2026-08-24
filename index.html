@@ -4803,7 +4803,8 @@ window.restaurarFurips2Original = async function(){
   if(!confirm(`Se van a restaurar ${conDiferencia.length} factura(s) a su FURIPS2 original (deshaciendo cualquier ítem que se haya quitado/reducido antes).\n\n¿Confirmas que quieres continuar?`)) return;
 
   loader(true);
-  let ok=0, err=0;
+  let ok=0, err=0, glosasReseteadas=0;
+  await loadGlosas();
   for(const rec of conDiferencia){
     try{
       const q = query(collection(db,'reclamaciones'), where('factura','==',rec.factura));
@@ -4815,10 +4816,29 @@ window.restaurarFurips2Original = async function(){
       });
       rec.furips2 = rec.furips2Original;
       ok++;
+
+      // Resetear las marcas de "ya procesado" de todas las glosas de esta
+      // factura — si no, quedan pensando que ya se aplicaron (de antes de la
+      // restauración) y "Reintentar ajuste FURIPS2" nunca las vuelve a tocar,
+      // aunque el ítem ya esté de vuelta en FURIPS2 esperando ser procesado.
+      const glosasFactura = GLOSAS_DB.filter(gl=>gl.factura===rec.factura);
+      if(glosasFactura.length){
+        const batch=writeBatch(db);
+        glosasFactura.forEach(gl=>{
+          batch.update(doc(db,'glosas',gl.id), {
+            aplicadoFurips:false, montoAplicadoFurips:0,
+            pagadoAplicado:false, pagadoConMatch:false,
+          });
+          gl.aplicadoFurips=false; gl.montoAplicadoFurips=0;
+          gl.pagadoAplicado=false; gl.pagadoConMatch=false;
+        });
+        await batch.commit();
+        glosasReseteadas += glosasFactura.length;
+      }
     } catch(e){ err++; }
   }
   loader(false);
-  toast(`✔ ${ok} factura(s) restauradas a su FURIPS2 original${err>0?` · ${err} con error`:''}`,'ok');
+  toast(`✔ ${ok} factura(s) restauradas a su FURIPS2 original · ${glosasReseteadas} glosas listas para reintentar${err>0?` · ${err} con error`:''}`,'ok');
 };
 
 
@@ -11768,7 +11788,7 @@ window.verCuadreFurips = function(factura){
       <table style="width:100%;border-collapse:collapse;font-size:10px;">
         <thead><tr style="border-bottom:1px solid var(--brd);">
           <th style="padding:4px 6px;text-align:left;">Código glosa</th>
-          <th style="padding:4px 6px;text-align:left;">Descripción glosa</th>
+          <th style="padding:4px 6px;text-align:left;">Descripción ítem</th>
           <th style="padding:4px 6px;text-align:left;">Respuesta</th>
           <th style="padding:4px 6px;text-align:right;">VR Aceptado</th>
           <th style="padding:4px 6px;text-align:center;">¿Match en FURIPS2?</th>
@@ -11819,7 +11839,7 @@ window.verCuadreFurips = function(factura){
               </tr>` : '';
             return `<tr style="border-top:1px solid var(--brd);${match?'':'background:rgba(248,81,73,.08);'}">
               <td style="padding:4px 6px;font-family:var(--mono);">${gl.codElemento||'—'}</td>
-              <td style="padding:4px 6px;">${(gl.descElemento||'—').slice(0,40)}</td>
+              <td style="padding:4px 6px;">${(gl.descElemento||'—').slice(0,40)}${(!gl.descGlosa&&!gl.anotacion)?' <span style="background:var(--green);color:#fff;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700;">PAGADO (sin causal)</span>':''}</td>
               <td style="padding:4px 6px;">${gl.respuesta||'pendiente'}</td>
               <td style="padding:4px 6px;text-align:right;font-family:var(--mono);">${fm5(gl.vrAceptado)}</td>
               <td style="padding:4px 6px;text-align:center;">${match?(gl.codElementoManual?'🔧 corregido':'✅'):(matchPorCodOriginal?'⚠️ solo en original':'❌')}</td>
