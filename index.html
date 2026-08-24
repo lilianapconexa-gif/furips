@@ -2011,6 +2011,7 @@ select option{background:var(--sur2);}
             <input type="file" id="anot-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.actualizarAnotacionesExcel(this.files[0])">
             <button onclick="document.getElementById('anot-excel-input').click()" style="background:transparent;border:1px solid #1565c0;color:#1565c0;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">💡 Actualizar anotaciones (Excel)</button>
             <button onclick="window.reintentarAjusteFurips2()" style="background:transparent;border:1px solid #2e7d32;color:#2e7d32;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Reintentar ajuste FURIPS2</button>
+            <button onclick="window.eliminarGlosasDuplicadas()" style="background:transparent;border:1px solid #c00060;color:#c00060;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar duplicadas exactas</button>
             <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
             <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
           </div>
@@ -4535,6 +4536,57 @@ window.actualizarAnotacionesExcel = (file) => {
 };
 
 
+
+// ── Eliminar glosas duplicadas exactas ──
+// Detecta grupos de glosas EXACTAMENTE iguales (misma factura+código/descripción+
+// causal+anotación+valor glosado) y conserva UNA sola de cada grupo — prioriza
+// conservar la que ya tenga una respuesta dada (para no perder trabajo hecho),
+// y si ninguna tiene respuesta, conserva la más antigua. Borra el resto.
+window.eliminarGlosasDuplicadas = async function(){
+  await loadGlosas();
+  const src = window.glosasFiltradasCliente();
+  const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  const claveDe = g => [norm(g.factura), norm(g.codElemento), norm(g.descElemento), norm(g.descGlosa), norm(g.anotacion), Math.round(g.vrGlosado||0)].join('|||');
+
+  const grupos={};
+  src.forEach(g=>{
+    const k=claveDe(g);
+    if(!grupos[k]) grupos[k]=[];
+    grupos[k].push(g);
+  });
+
+  const duplicados=Object.values(grupos).filter(arr=>arr.length>1);
+  if(!duplicados.length){ toast('No se encontraron glosas duplicadas.','ok'); return; }
+
+  const totalABorrar = duplicados.reduce((a,arr)=>a+(arr.length-1),0);
+  const conRespuesta = duplicados.reduce((a,arr)=>a+arr.filter(g=>g.respuesta && g.respuesta!=='pendiente').length,0);
+
+  if(!confirm(`Se encontraron ${duplicados.length} grupos de glosas duplicadas (${totalABorrar} copias de más para borrar).\n\n${conRespuesta>0?`⚠️ ${conRespuesta} de esas copias ya tienen una respuesta dada — se va a CONSERVAR la respondida en cada grupo, no se pierde ese trabajo.\n\n`:''}¿Confirmas que quieres borrar las copias duplicadas?`)) return;
+
+  loader(true);
+  let borradas=0, errores=0;
+  for(const arr of duplicados){
+    // Ordenar: primero las que tienen respuesta real (para conservarlas), luego
+    // por fecha de creación (más antigua primero) como criterio de desempate.
+    const ordenado=[...arr].sort((a,b)=>{
+      const aResp = a.respuesta && a.respuesta!=='pendiente' ? 1 : 0;
+      const bResp = b.respuesta && b.respuesta!=='pendiente' ? 1 : 0;
+      if(aResp!==bResp) return bResp-aResp; // la que tiene respuesta primero
+      return 0;
+    });
+    const [conservar, ...borrar] = ordenado;
+    for(const g of borrar){
+      try{ await deleteDoc(doc(db,'glosas',g.id)); borradas++; }
+      catch(e){ errores++; }
+    }
+  }
+  loader(false);
+  toast(`✔ ${borradas} glosas duplicadas eliminadas${errores>0?` · ${errores} errores`:''}`, 'ok');
+  await loadGlosas();
+  if(typeof window.renderGlosasResp==='function') window.renderGlosasResp();
+};
+
+
 window.deshacerUltimaCarga = async function(){
   await loadGlosas(); // refrescar antes de decidir, por si hay cambios recientes de otra sesión
   if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
@@ -4804,13 +4856,32 @@ window.guardarGlosas = async () => {
   if(!GLOSAS_PREVIEW.length){ toast('No hay glosas cargadas.','w'); return; }
   if(!gv('glo-ips-sel')){ toast('Selecciona la IPS primero.','w'); return; }
   loader(true);
+
+  // Evitar duplicados al volver a cargar el mismo Excel: se compara cada fila
+  // nueva contra las glosas YA guardadas (misma factura+código/descripción+causal
+  // +anotación+valor) — si ya existe exactamente igual, se omite. Así, si el Excel
+  // trae 521 filas pero 500 ya estaban guardadas de una carga anterior, solo se
+  // guardan las 21 que realmente faltan (ej. los ítems pagados que antes se
+  // saltaban por el bug ya corregido).
+  await loadGlosas();
+  const existentes = (typeof GLOSAS_DB!=='undefined'?GLOSAS_DB:[]);
+  const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  const claveDe = g => [norm(g.factura), norm(g.codElemento), norm(g.descElemento), norm(g.descGlosa), norm(g.anotacion), Math.round(g.vrGlosado||0)].join('|||');
+  const clavesExistentes = new Set(existentes.map(claveDe));
+
+  const nuevas = GLOSAS_PREVIEW.filter(glo => !clavesExistentes.has(claveDe(glo)));
+  const omitidas = GLOSAS_PREVIEW.length - nuevas.length;
+
   let ok=0, err=0;
-  for(const glo of GLOSAS_PREVIEW){
+  for(const glo of nuevas){
     try{ await addDoc(collection(db,'glosas'),{...glo, creado:serverTimestamp()}); ok++; }
     catch(e){ err++; }
   }
   loader(false);
-  toast(`✔ ${ok} glosas guardadas${err>0?` · ${err} errores`:''}`, ok>0?'ok':'e');
+  let msg = `✔ ${ok} glosas nuevas guardadas`;
+  if(omitidas>0) msg += ` · ${omitidas} ya existían (omitidas, sin duplicar)`;
+  if(err>0) msg += ` · ${err} errores`;
+  toast(msg, ok>0||omitidas>0?'ok':'e');
   GLOSAS_PREVIEW=[];
   g('glo-preview').classList.add('hidden');
   g('glo-file').value='';
