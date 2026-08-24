@@ -2016,6 +2016,7 @@ select option{background:var(--sur2);}
             <button onclick="window.eliminarGlosasDuplicadas()" style="background:transparent;border:1px solid #c00060;color:#c00060;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar duplicadas exactas</button>
             <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
             <button onclick="window.borrarTodasLasGlosasIPS()" style="background:transparent;border:1px solid #8b0000;color:#8b0000;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">🗑️🔴 Borrar TODAS (IPS activa)</button>
+            <button onclick="window.restaurarFurips2Original()" style="background:transparent;border:1px solid #6a1fb2;color:#6a1fb2;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">♻️ Restaurar FURIPS2 original (IPS activa)</button>
             <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
           </div>
         </div>
@@ -4778,6 +4779,49 @@ window.deshacerUltimaCarga = async function(){
 // arrastrar cargas viejas sin querer) y borrarGlosasSinPaquete (solo huérfanas),
 // esta borra TODO lo que haya para la IPS activa, sin excepción. Pide doble
 // confirmación porque es irreversible y afecta todo, no solo un lote.
+
+// ── Restaurar FURIPS2 al estado original (arranque limpio) ──
+// Copia furips2Original de vuelta a furips2 (activo) para TODAS las facturas de
+// la IPS activa que tengan un respaldo guardado — usado cuando las glosas se
+// borraron/recargaron desde cero pero FURIPS2 seguía con los cambios de pruebas
+// anteriores (ya que son dos colecciones separadas y borrar glosas no resetea
+// FURIPS2 por sí solo).
+window.restaurarFurips2Original = async function(){
+  const src = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
+  const codHabActivo=(typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*')?CLIENTE_ACTIVO.nit:null;
+  const recs = codHabActivo ? src.filter(r=>r.codHab===codHabActivo) : src;
+  const conRespaldo = recs.filter(r=>r.furips2Original && r.furips2Original.length);
+  const conDiferencia = conRespaldo.filter(r=>{
+    const activo=r.furips2||[];
+    if(activo.length!==r.furips2Original.length) return true;
+    // comparación simple por si el orden/tamaño coincide pero cambió algo
+    return JSON.stringify(activo)!==JSON.stringify(r.furips2Original);
+  });
+
+  if(!conDiferencia.length){ toast('No hay facturas con FURIPS2 distinto de su respaldo original.','ok'); return; }
+
+  if(!confirm(`Se van a restaurar ${conDiferencia.length} factura(s) a su FURIPS2 original (deshaciendo cualquier ítem que se haya quitado/reducido antes).\n\n¿Confirmas que quieres continuar?`)) return;
+
+  loader(true);
+  let ok=0, err=0;
+  for(const rec of conDiferencia){
+    try{
+      const q = query(collection(db,'reclamaciones'), where('factura','==',rec.factura));
+      const snap = await getDocs(q);
+      if(snap.empty) continue;
+      await updateDoc(doc(db,'reclamaciones',snap.docs[0].id), {
+        furips2: rec.furips2Original,
+        actualizado: serverTimestamp(),
+      });
+      rec.furips2 = rec.furips2Original;
+      ok++;
+    } catch(e){ err++; }
+  }
+  loader(false);
+  toast(`✔ ${ok} factura(s) restauradas a su FURIPS2 original${err>0?` · ${err} con error`:''}`,'ok');
+};
+
+
 window.borrarTodasLasGlosasIPS = async function(){
   await loadGlosas();
   const src = window.glosasFiltradasCliente();
