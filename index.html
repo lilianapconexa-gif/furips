@@ -2015,6 +2015,7 @@ select option{background:var(--sur2);}
             <button onclick="window.reintentarAjusteFurips2()" style="background:transparent;border:1px solid #2e7d32;color:#2e7d32;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Reintentar ajuste FURIPS2</button>
             <button onclick="window.eliminarGlosasDuplicadas()" style="background:transparent;border:1px solid #c00060;color:#c00060;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar duplicadas exactas</button>
             <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
+            <button onclick="window.borrarTodasLasGlosasIPS()" style="background:transparent;border:1px solid #8b0000;color:#8b0000;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">🗑️🔴 Borrar TODAS (IPS activa)</button>
             <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
           </div>
         </div>
@@ -4771,6 +4772,48 @@ window.deshacerUltimaCarga = async function(){
 // esta busca específicamente registros sin `paquete` — típicamente basura de pruebas o
 // cargas de antes de que existiera ese campo. Se limita a la IPS activa para no tocar
 // datos de otras IPS por accidente.
+
+// ── Borrar TODAS las glosas de la IPS activa (arranque limpio) ──
+// A diferencia de deshacerUltimaCarga (que agrupa por período/fecha y puede
+// arrastrar cargas viejas sin querer) y borrarGlosasSinPaquete (solo huérfanas),
+// esta borra TODO lo que haya para la IPS activa, sin excepción. Pide doble
+// confirmación porque es irreversible y afecta todo, no solo un lote.
+window.borrarTodasLasGlosasIPS = async function(){
+  await loadGlosas();
+  const src = window.glosasFiltradasCliente();
+  if(!src.length){ toast('No hay glosas cargadas para la IPS activa.','ok'); return; }
+
+  const ipsNom = (typeof CLIENTE_ACTIVO!=='undefined'&&CLIENTE_ACTIVO&&CLIENTE_ACTIVO.nit!=='*')?(CLIENTE_ACTIVO.razon||CLIENTE_ACTIVO.nit):'(todas las IPS — ninguna seleccionada)';
+  const facturas=[...new Set(src.map(g=>g.factura))];
+  const respondidas=src.filter(g=>g.respuesta&&g.respuesta!=='pendiente');
+
+  let msg = `⚠️ Vas a borrar TODAS las glosas de: ${ipsNom}\n\n`+
+    `• ${src.length} glosas en ${facturas.length} facturas\n`;
+  if(respondidas.length>0){
+    msg += `\n🔴 ATENCIÓN: ${respondidas.length} de esas glosas YA TIENEN RESPUESTA registrada — se perderá esa gestión.\n`;
+  }
+  msg += `\nEsta acción NO se puede deshacer. ¿Confirmas que quieres borrar TODO?`;
+
+  if(!confirm(msg)) return;
+  if(respondidas.length>0){
+    if(!confirm(`Última confirmación: se perderán ${respondidas.length} respuestas ya dadas. ¿Continuar de todas formas?`)) return;
+  } else {
+    if(!confirm(`Última confirmación: se van a borrar ${src.length} glosas de ${ipsNom}. ¿Continuar?`)) return;
+  }
+
+  loader(true);
+  let ok=0, err=0;
+  for(const gl of src){
+    try{ await deleteDoc(doc(db,'glosas',gl.id)); ok++; }
+    catch(e){ err++; }
+  }
+  loader(false);
+  toast(`✔ ${ok} glosas eliminadas${err>0?` · ${err} con error`:''} — ya puedes cargar el Excel limpio.`,'ok');
+  await loadGlosas();
+  if(typeof window.renderGlosasResp==='function') window.renderGlosasResp();
+};
+
+
 window.borrarGlosasSinPaquete = async function(){
   await loadGlosas();
   const src=window.glosasFiltradasCliente();
