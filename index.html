@@ -2005,20 +2005,22 @@ select option{background:var(--sur2);}
         <div id="glosas-pendientes-panel" style="margin-bottom:16px;"></div>
 
         <!-- KPIs -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-          <div></div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="file" id="anot-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.actualizarAnotacionesExcel(this.files[0])">
-            <button onclick="document.getElementById('anot-excel-input').click()" style="background:transparent;border:1px solid #1565c0;color:#1565c0;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">💡 Actualizar anotaciones (Excel)</button>
-            <input type="file" id="corrcod-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.corregirCodigoElementoExcel(this.files[0])">
-            <button onclick="document.getElementById('corrcod-excel-input').click()" style="background:transparent;border:1px solid #b26a00;color:#b26a00;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔢 Corregir código de ítem (Excel)</button>
-            <button onclick="window.reintentarAjusteFurips2()" style="background:transparent;border:1px solid #2e7d32;color:#2e7d32;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Reintentar ajuste FURIPS2</button>
-            <button onclick="window.eliminarGlosasDuplicadas()" style="background:transparent;border:1px solid #c00060;color:#c00060;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar duplicadas exactas</button>
-            <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
-            <button onclick="window.borrarTodasLasGlosasIPS()" style="background:transparent;border:1px solid #8b0000;color:#8b0000;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">🗑️🔴 Borrar TODAS (IPS activa)</button>
-            <button onclick="window.restaurarFurips2Original()" style="background:transparent;border:1px solid #6a1fb2;color:#6a1fb2;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">♻️ Restaurar FURIPS2 original (IPS activa)</button>
-            <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
-          </div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <details id="glo-herramientas-avanzadas" class="hidden">
+            <summary style="cursor:pointer;font-size:11px;color:var(--tx3);font-weight:600;">⚙️ Herramientas avanzadas (Super Admin)</summary>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+              <input type="file" id="anot-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.actualizarAnotacionesExcel(this.files[0])">
+              <button onclick="document.getElementById('anot-excel-input').click()" style="background:transparent;border:1px solid #1565c0;color:#1565c0;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">💡 Actualizar anotaciones (Excel)</button>
+              <input type="file" id="corrcod-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="window.corregirCodigoElementoExcel(this.files[0])">
+              <button onclick="document.getElementById('corrcod-excel-input').click()" style="background:transparent;border:1px solid #b26a00;color:#b26a00;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔢 Corregir código de ítem (Excel)</button>
+              <button onclick="window.reintentarAjusteFurips2()" style="background:transparent;border:1px solid #2e7d32;color:#2e7d32;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Reintentar ajuste FURIPS2</button>
+              <button onclick="window.eliminarGlosasDuplicadas()" style="background:transparent;border:1px solid #c00060;color:#c00060;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar duplicadas exactas</button>
+              <button onclick="window.borrarGlosasSinPaquete()" style="background:transparent;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Borrar sin paquete (IPS activa)</button>
+              <button onclick="window.borrarTodasLasGlosasIPS()" style="background:transparent;border:1px solid #8b0000;color:#8b0000;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">🗑️🔴 Borrar TODAS (IPS activa)</button>
+              <button onclick="window.restaurarFurips2Original()" style="background:transparent;border:1px solid #6a1fb2;color:#6a1fb2;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">♻️ Restaurar FURIPS2 original (IPS activa)</button>
+              <button onclick="window.deshacerUltimaCarga()" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Deshacer última carga</button>
+            </div>
+          </details>
         </div>
         <div class="stats" id="glo-kpis" style="margin-bottom:16px;"></div>
 
@@ -4930,6 +4932,9 @@ window.glosasFiltradasCliente = function(){
 };
 
 function updGloKpis(){
+  const herramientasAvz = document.getElementById('glo-herramientas-avanzadas');
+  if(herramientasAvz) herramientasAvz.classList.toggle('hidden', USER?.rol !== 'superadmin');
+
   const src     = window.glosasFiltradasCliente();
   const tot     = src.length;
   const pend    = src.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
