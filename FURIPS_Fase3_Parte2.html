@@ -861,6 +861,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
     <button class="btn bs" onclick="furVerJSON()" style="font-size:12px;">🔍 Ver JSON</button>
     <button class="btn bp" onclick="guardarFUR()" style="background:var(--green);border-color:var(--green);">💾 Guardar FUR en nube</button>
     <button class="btn bs" onclick="descargarFURjson()" style="font-size:12px;">⬇ Descargar .json</button>
+    <button class="btn bs" onclick="abrirSelectorLote('fur')" style="font-size:12px;border-color:#6e40c9;color:#6e40c9;">🗂️ Generar en lote</button>
   </div>
 </div>
 <!-- ═══ FIN FUR TAB ═══ -->
@@ -906,6 +907,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="btn bp" onclick="guardarFURSER()" style="background:var(--green);border-color:var(--green);">💾 Guardar FUR SER en nube</button>
       <button class="btn bs" onclick="descargarFURSERjson()" style="font-size:12px;">⬇ Descargar .json</button>
+      <button class="btn bs" onclick="abrirSelectorLote('ser')" style="font-size:12px;border-color:#6e40c9;color:#6e40c9;">🗂️ Generar en lote</button>
       <button class="btn bs" onclick="furserVerJSON()" style="font-size:12px;">🔍 Ver JSON</button>
     </div>
     <div id="furser-alr" style="margin-top:8px;"></div>
@@ -5210,116 +5212,119 @@ function buildFURData() {
   return d;
 }
 
-// ── Construir JSON oficial FUR (nombres de campo según instructivo) ──
-function buildFURJson() {
-  const d = buildFURData();
-
-  // Helper: convierte DD/MM/AAAA → AAAA-MM-DD. Si ya viene en AAAA-MM-DD lo deja igual.
+// ── Construye la entrada de UNA factura para el JSON FUR (sin el envoltorio Datos_IPS) ──
+// Reutilizable tanto para la descarga individual como para el lote.
+function buildFURReclamacionEntry(d) {
   const toISO = v => {
     if(!v) return null;
     if(/^\d{2}\/\d{2}\/\d{4}$/.test(v)){ const [dd,mm,yy]=v.split('/'); return `${yy}-${mm}-${dd}`; }
     return v;
   };
+  return {
+    NUM_FACTURA: d.num_factura || null,
 
-  // Estructura jerárquica exacta según el ejemplo oficial FUR_900471504.json
-  const obj = [
-    {
-      Datos_IPS: {
-        NIT_PRESTADOR: d.nit || null
-      },
-      Datos_reclamacion: [
-        {
-          NUM_FACTURA: d.num_factura || null,
+    Datos_de_la_victima: {
+      Tipo_documento_identidad_victima:      d.tipo_doc_v  || null,
+      Numero_documento_identidad_victima:    d.num_doc_v   || null,
+      Tipo_de_poblacion_especial:            d.pob_especial || null,
+      Primer_nombre_victima:                 d.nomb1_v     || null,
+      Segundo_nombre_victima:                d.nomb2_v     || null,
+      Primer_apellido_victima:               d.apell1_v    || null,
+      Segundo_apellido_victima:              d.apell2_v    || null,
+      Direccion_residencia_victima:          d.dir_v       || null,
+      Codigo_municipio_residencia_victima:   d.mpio_v      || null,
+      Telefono_victima:                      d.tel_v       || null
+    },
 
-          Datos_de_la_victima: {
-            Tipo_documento_identidad_victima:      d.tipo_doc_v  || null,
-            Numero_documento_identidad_victima:    d.num_doc_v   || null,
-            Tipo_de_poblacion_especial:            d.pob_especial || null,
-            Primer_nombre_victima:                 d.nomb1_v     || null,
-            Segundo_nombre_victima:                d.nomb2_v     || null,
-            Primer_apellido_victima:               d.apell1_v    || null,
-            Segundo_apellido_victima:              d.apell2_v    || null,
-            Direccion_residencia_victima:          d.dir_v       || null,
-            Codigo_municipio_residencia_victima:   d.mpio_v      || null,
-            Telefono_victima:                      d.tel_v       || null
-          },
+    Datos_del_sitio_donde_ocurrio_el_evento: {
+      Naturaleza_del_evento:                              d.nat_evento  || null,
+      Descripcion_del_otro_evento:                        d.desc_otro   || null,
+      Condicion_victima:                                  d.cond_v      || null,
+      Fecha_de_ocurrencia_evento:                         toISO(d.fec_ocurr),
+      Zona_de_ocurrencia_evento:                          d.zona_ocurr  || null,
+      Codigo_municipio_ocurrencia_evento:                 d.mpio_ocurr  || null,
+      Direccion_de_ocurrencia_evento:                     d.dir_ocurr   || null,
+      Descripcion_corta_de_lo_ocurrido_en_el_evento:      d.desc_evento || null
+    },
 
-          Datos_del_sitio_donde_ocurrio_el_evento: {
-            Naturaleza_del_evento:                              d.nat_evento  || null,
-            Descripcion_del_otro_evento:                        d.desc_otro   || null,
-            Condicion_victima:                                  d.cond_v      || null,
-            Fecha_de_ocurrencia_evento:                         toISO(d.fec_ocurr),
-            Zona_de_ocurrencia_evento:                          d.zona_ocurr  || null,
-            Codigo_municipio_ocurrencia_evento:                 d.mpio_ocurr  || null,
-            Direccion_de_ocurrencia_evento:                     d.dir_ocurr   || null,
-            Descripcion_corta_de_lo_ocurrido_en_el_evento:      d.desc_evento || null
-          },
+    Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito: {
+      Estado_de_aseguramiento:                  d.est_aseg    || null,
+      Placa_vehiculo:                           d.placa_v     || null,
+      Tipo_de_Vehiculo:                         d.tipo_v      || null,
+      Codigo_de_la_aseguradora:                 d.cod_aseg    || null,
+      Cobro_por_agotamiento_tope_Aseguradora:   d.agot_tope   || null,
+      Numero_de_poliza_SOAT:                    d.num_poliza  || null,
+      Fecha_de_inicio_de_vigencia_de_la_poliza: toISO(d.vig_ini),
+      Fecha_final_de_vigencia_de_la_poliza:     toISO(d.vig_fin),
+      Numero_de_radicado_SIRAS:                 d.siras       || null
+    },
 
-          Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito: {
-            Estado_de_aseguramiento:                  d.est_aseg    || null,
-            Placa_vehiculo:                           d.placa_v     || null,
-            Tipo_de_Vehiculo:                         d.tipo_v      || null,
-            Codigo_de_la_aseguradora:                 d.cod_aseg    || null,
-            Cobro_por_agotamiento_tope_Aseguradora:   d.agot_tope   || null,
-            Numero_de_poliza_SOAT:                    d.num_poliza  || null,
-            Fecha_de_inicio_de_vigencia_de_la_poliza: toISO(d.vig_ini),
-            Fecha_final_de_vigencia_de_la_poliza:     toISO(d.vig_fin),
-            Numero_de_radicado_SIRAS:                 d.siras       || null
-          },
+    Datos_del_propietario_del_vehiculo: {
+      Tipo_de_documento_de_identidad_del_propietario:      d.td_prop  || null,
+      Numero_de_documento_de_identidad_del_propietario:    d.nd_prop  || null,
+      Primer_nombre_del_propietario_o_razon_social:        d.n1_prop  || null,
+      Segundo_nombre_del_propietario:                      d.n2_prop  || null,
+      Primer_apellido_del_propietario:                     d.a1_prop  || null,
+      Segundo_apellido_del_propietario:                    d.a2_prop  || null,
+      Direccion_de_residencia_del_propietario:             d.dir_prop || null,
+      Telefono_de_residencia_del_propietario:              d.tel_prop || null,
+      Codigo_del_municipio_de_residencia_del_propietario:  d.mpio_prop|| null
+    },
 
-          Datos_del_propietario_del_vehiculo: {
-            Tipo_de_documento_de_identidad_del_propietario:      d.td_prop  || null,
-            Numero_de_documento_de_identidad_del_propietario:    d.nd_prop  || null,
-            Primer_nombre_del_propietario_o_razon_social:        d.n1_prop  || null,
-            Segundo_nombre_del_propietario:                      d.n2_prop  || null,
-            Primer_apellido_del_propietario:                     d.a1_prop  || null,
-            Segundo_apellido_del_propietario:                    d.a2_prop  || null,
-            Direccion_de_residencia_del_propietario:             d.dir_prop || null,
-            Telefono_de_residencia_del_propietario:              d.tel_prop || null,
-            Codigo_del_municipio_de_residencia_del_propietario:  d.mpio_prop|| null
-          },
+    Datos_del_conductor_del_vehiculo_involucrado: {
+      Tipo_de_documento_de_identidad_del_conductor:      d.td_cond  || null,
+      Numero_de_documento_de_identidad_del_conductor:    d.nd_cond  || null,
+      Primer_nombre_del_conductor:                       d.n1_cond  || null,
+      Segundo_nombre_del_conductor:                      d.n2_cond  || null,
+      Primer_apellido_del_conductor:                     d.a1_cond  || null,
+      Segundo_apellido_del_conductor:                    d.a2_cond  || null,
+      Codigo_del_municipio_de_residencia_del_conductor:  d.mpio_cond|| null,
+      Direccion_de_residencia_del_conductor:             d.dir_cond || null,
+      Telefono_de_residencia_del_conductor:              d.tel_cond || null
+    },
 
-          Datos_del_conductor_del_vehiculo_involucrado: {
-            Tipo_de_documento_de_identidad_del_conductor:      d.td_cond  || null,
-            Numero_de_documento_de_identidad_del_conductor:    d.nd_cond  || null,
-            Primer_nombre_del_conductor:                       d.n1_cond  || null,
-            Segundo_nombre_del_conductor:                      d.n2_cond  || null,
-            Primer_apellido_del_conductor:                     d.a1_cond  || null,
-            Segundo_apellido_del_conductor:                    d.a2_cond  || null,
-            Codigo_del_municipio_de_residencia_del_conductor:  d.mpio_cond|| null,
-            Direccion_de_residencia_del_conductor:             d.dir_cond || null,
-            Telefono_de_residencia_del_conductor:              d.tel_cond || null
-          },
+    Datos_Relacionados_con_la_Atencion_de_La_Victima: {
+      Uso_material_de_osteosintesis_en_la_atencion:        d.osteosint || null,
+      Es_atencion_inicial_paciente_remitido_o_control:     d.tipo_aten || null
+    },
 
-          Datos_Relacionados_con_la_Atencion_de_La_Victima: {
-            Uso_material_de_osteosintesis_en_la_atencion:        d.osteosint || null,
-            Es_atencion_inicial_paciente_remitido_o_control:     d.tipo_aten || null
-          },
+    Datos_de_remision: {
+      Codigo_de_habilitacion_del_prestador_que_remite:     d.cod_rem     || null,
+      TIPO_de_documento_Profesional_que_recibe:            d.td_prof     || null,
+      Numero_de_documento_Profesional_que_recibe:          d.nd_prof     || null,
+      Codigo_de_habilitacion_del_prestador_que_recibe:     d.cod_rec_ts  || null,
+      Fecha_de_aceptacion:                                 toISO(d.fec_acept),
+      Hora_aceptacion:                                     d.hora_acept  || null,
+      Placa_ambulancia_que_realiza_el_traslado_secundario: d.placa_as    || null,
+      Tipo_de_servicio_del_transporte_secundario:          d.tipo_ts     || null
+    },
 
-          Datos_de_remision: {
-            Codigo_de_habilitacion_del_prestador_que_remite:     d.cod_rem     || null,
-            TIPO_de_documento_Profesional_que_recibe:            d.td_prof     || null,
-            Numero_de_documento_Profesional_que_recibe:          d.nd_prof     || null,
-            Codigo_de_habilitacion_del_prestador_que_recibe:     d.cod_rec_ts  || null,
-            Fecha_de_aceptacion:                                 toISO(d.fec_acept),
-            Hora_aceptacion:                                     d.hora_acept  || null,
-            Placa_ambulancia_que_realiza_el_traslado_secundario: d.placa_as    || null,
-            Tipo_de_servicio_del_transporte_secundario:          d.tipo_ts     || null
-          },
-
-          Datos_Transporte_y_movilizacion_de_la_victima: {
-            Placa_ambulancia_que_realiza_el_traslado:                          d.placa_ap    || null,
-            Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario: d.cod_rec_tp|| null,
-            Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion:      d.dir_desde   || null,
-            Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS: d.dir_hasta   || null,
-            Tipo_de_servicio_del_transporte:                                   d.tipo_tp     || null
-          }
-        }
-      ]
+    Datos_Transporte_y_movilizacion_de_la_victima: {
+      Placa_ambulancia_que_realiza_el_traslado:                           d.placa_ap   || null,
+      Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario: d.cod_rec_tp || null,
+      Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion:       d.dir_desde  || null,
+      Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS:  d.dir_hasta  || null,
+      Tipo_de_servicio_del_transporte:                                    d.tipo_tp    || null
     }
-  ];
+  };
+}
 
-  return obj;
+function buildFURJson() {
+  const d = buildFURData();
+  return [{
+    Datos_IPS: { NIT_PRESTADOR: d.nit || null },
+    Datos_reclamacion: [ buildFURReclamacionEntry(d) ]
+  }];
+}
+
+// ── Versión en LOTE: combina varias facturas (ya guardadas en Firestore) bajo un
+// mismo NIT, en un solo archivo — igual a como lo espera ADRES cuando se radican
+// varias cuentas juntas. ──
+function buildFURJsonLote(nit, listaDatos) {
+  return [{
+    Datos_IPS: { NIT_PRESTADOR: nit || null },
+    Datos_reclamacion: listaDatos.map(buildFURReclamacionEntry)
+  }];
 }
 
 // ── Ver JSON ──
@@ -5391,6 +5396,92 @@ window.descargarFURjson = () => {
   a.click();
   URL.revokeObjectURL(a.href);
   toast(`⬇ ${filename}`,'ok');
+};
+
+// ═══ Generación en LOTE (varias facturas de la misma IPS en un solo archivo) ═══
+// Reutilizable para FUR y FUR SER — 'tipo' es 'fur' o 'ser'.
+window.abrirSelectorLote = async (tipo) => {
+  if(!REC){ toast('No hay reclamación activa.','e'); return; }
+  const campoDato = tipo==='fur' ? 'fur' : 'fur_ser';
+  const nombreTipo = tipo==='fur' ? 'FUR' : 'FUR SER';
+
+  loader(true);
+  let candidatos = [];
+  try{
+    const snap = await getDocs(query(collection(db,'reclamaciones'), where('codHab','==', REC.codHab)));
+    snap.forEach(d=>{
+      const r = { id: d.id, ...d.data() };
+      // Solo entran las que ya tienen datos guardados de este tipo (fur o fur_ser)
+      const tieneDatos = tipo==='fur' ? !!r.fur : (Array.isArray(r.fur_ser) && r.fur_ser.length>0);
+      if(tieneDatos) candidatos.push(r);
+    });
+  } catch(e){
+    loader(false);
+    toast('❌ Error consultando facturas: '+e.message,'e');
+    return;
+  }
+  loader(false);
+
+  if(!candidatos.length){
+    toast(`⚠ No hay ninguna factura con ${nombreTipo} guardado todavía para esta IPS. Guarda primero con el botón "💾 Guardar en la nube".`,'w');
+    return;
+  }
+  // Ordenar: la factura actualmente abierta primero, luego el resto por número de factura
+  candidatos.sort((a,b)=>{
+    if(a.id===REC.id) return -1;
+    if(b.id===REC.id) return 1;
+    return (a.factura||'').localeCompare(b.factura||'');
+  });
+
+  const overlay = document.createElement('div');
+  overlay.id = 'lote-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg,#fff);color:var(--tx,#111);max-width:520px;width:92vw;max-height:85vh;overflow:auto;border-radius:10px;padding:20px;">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">🗂️ Generar ${nombreTipo} en lote</div>
+      <div style="font-size:12px;color:var(--tx2,#666);margin-bottom:14px;">Marca las facturas que van juntas en el mismo archivo (IPS: ${REC.codHab}).</div>
+      <div id="lote-lista" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:14px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="lote-generar" class="btn bp">⬇ Generar y descargar .json</button>
+        <button id="lote-cancelar" class="btn bs">Cancelar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const lista = overlay.querySelector('#lote-lista');
+  candidatos.forEach(r=>{
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 2px;cursor:pointer;';
+    row.innerHTML = `<input type="checkbox" value="${r.id}" checked style="width:16px;height:16px;">
+      <span>${r.factura||'(sin factura)'} ${r.id===REC.id?'<b>(esta que tienes abierta)</b>':''}</span>`;
+    lista.appendChild(row);
+  });
+
+  overlay.querySelector('#lote-cancelar').addEventListener('click', ()=>overlay.remove());
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+
+  overlay.querySelector('#lote-generar').addEventListener('click', ()=>{
+    const idsMarcados = [...lista.querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.value);
+    if(!idsMarcados.length){ toast('Marca al menos una factura.','w'); return; }
+    const seleccionados = candidatos.filter(r=>idsMarcados.includes(r.id));
+    const nit = REC.fur?.nit || REC.furips1?.c4 || g('fur-nit')?.value?.trim() || 'SIN_NIT';
+
+    let json, filename;
+    if(tipo==='fur'){
+      json = buildFURJsonLote(nit, seleccionados.map(r=>r.fur));
+      filename = `FUR_${nit}.json`;
+    } else {
+      json = buildFURSERJsonLote(nit, seleccionados);
+      filename = `SER_${nit}.json`;
+    }
+    const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+    URL.revokeObjectURL(a.href);
+    toast(`⬇ ${filename} (${seleccionados.length} factura(s))`,'ok');
+    overlay.remove();
+  });
 };
 
 // ── Mostrar/ocultar secciones FUR ──
@@ -5804,11 +5895,11 @@ window.furserCargarXML = async (files) => {
 };
 
 // Construir JSON oficial FUR SER
-function buildFURSERJson(){
-  const nit     = REC.fur?.nit || REC.furips1?.c4 || '';
-  const factura = REC.factura || '';
-
-  const servicios = (REC.fur_ser||[]).map(r => {
+// ── Construye la entrada de UNA factura para el JSON FUR SER (Servicios) ──
+// Reutilizable tanto para la descarga individual como para el lote.
+function buildFURSERServiciosEntry(rec){
+  const factura = rec.factura || '';
+  const servicios = (rec.fur_ser||[]).map(r => {
     const tf  = String((parseFloat(r.cantidad)||0) * (parseFloat(r.vrUnitFact)||0));
     const vur = parseFloat(r.vrUnitRec) || parseFloat(r.vrUnitFact) || 0;
     const tr  = String((parseFloat(r.cantidad)||0) * vur);
@@ -5826,20 +5917,23 @@ function buildFURSERJson(){
       Valor_total_reclamado:                               tr            || null,
     };
   });
+  return { NUM_FACTURA: factura || null, Servicios: servicios };
+}
 
-  return [
-    {
-      Datos_IPS: {
-        NIT_PRESTADOR: nit || null
-      },
-      Datos_servicios_reclamacion: [
-        {
-          NUM_FACTURA: factura || null,
-          Servicios: servicios
-        }
-      ]
-    }
-  ];
+function buildFURSERJson(){
+  const nit = REC.fur?.nit || REC.furips1?.c4 || '';
+  return [{
+    Datos_IPS: { NIT_PRESTADOR: nit || null },
+    Datos_servicios_reclamacion: [ buildFURSERServiciosEntry(REC) ]
+  }];
+}
+
+// ── Versión en LOTE: combina varias facturas bajo un mismo NIT en un solo archivo ──
+function buildFURSERJsonLote(nit, listaRecs){
+  return [{
+    Datos_IPS: { NIT_PRESTADOR: nit || null },
+    Datos_servicios_reclamacion: listaRecs.map(buildFURSERServiciosEntry)
+  }];
 }
 
 // Ver JSON
