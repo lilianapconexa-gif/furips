@@ -4947,8 +4947,25 @@ function updGloKpis(){
   const acept   = src.filter(g=>g.respuesta==='aceptada').length;
   const noAcept = src.filter(g=>g.respuesta==='no_aceptada').length;
   const parcial = src.filter(g=>g.respuesta==='parcial').length;
-  const totGlo  = src.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
-  const totNoAc = src.filter(g=>g.respuesta==='no_aceptada'||g.respuesta==='parcial').reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||g.vrGlosado||0),0);
+  // Los valores en dinero se agrupan por FACTURA+ÍTEM (no por causal) antes de
+  // sumar — cuando un mismo ítem tiene varias causales, cada una repite el
+  // valor del ítem completo, no una fracción; sumar por causal multiplicaba
+  // el total. Se toma el máximo por ítem, y esos máximos sí se suman entre
+  // ítems distintos.
+  const _normDupKpi = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  const _porItemKpi = {};
+  src.forEach(it=>{
+    const k = it.factura+'|||'+(_normDupKpi(it.codElemento||it.descElemento)||it.id);
+    if(!_porItemKpi[k]) _porItemKpi[k]=[];
+    _porItemKpi[k].push(it);
+  });
+  const gruposItemKpi = Object.values(_porItemKpi);
+  const totGlo  = gruposItemKpi.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrGlosado)||0)),0);
+  const totNoAc = gruposItemKpi.reduce((a,grp)=>{
+    const candidatos = grp.filter(g=>g.respuesta==='no_aceptada'||g.respuesta==='parcial');
+    if(!candidatos.length) return a;
+    return a + Math.max(...candidatos.map(g=>parseInt(g.vrNoAceptado)||g.vrGlosado||0));
+  },0);
 
   const kp=g('glo-kpis'); if(!kp) return;
   kp.innerHTML=`
@@ -5756,19 +5773,21 @@ window.verResumenGlosas = () => {
   window.renderTopCausales();
   const pf=agruparGlosFiltered();
   const facturasCount=Object.keys(pf).length;
-  // Deduplicar por ítem+causal antes de sumar (mismo criterio que en la tabla
-  // por factura) — evita que un dato repetido infle el total general.
-  const _vistosResumen = new Set();
+  // Agrupar por FACTURA+ÍTEM (no por causal) antes de sumar — cuando un mismo
+  // ítem tiene varias causales, cada una repite el valor del ítem completo,
+  // no una fracción. Hay que tomar el máximo por ítem, no sumar cada causal.
   const _normDupResumen = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
-  const srcUnicos = src.filter(it=>{
-    const k = [it.factura, _normDupResumen(it.codElemento||it.descElemento), _normDupResumen(it.descGlosa), _normDupResumen(it.anotacion), Math.round(it.vrGlosado||0)].join('|||');
-    if(_vistosResumen.has(k)) return false;
-    _vistosResumen.add(k);
-    return true;
+  const _porItemResumen = {};
+  src.forEach(it=>{
+    const k = it.factura+'|||'+(_normDupResumen(it.codElemento||it.descElemento)||it.id);
+    if(!_porItemResumen[k]) _porItemResumen[k]=[];
+    _porItemResumen[k].push(it);
   });
-  const totGlo=srcUnicos.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
-  const totNoAc=srcUnicos.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
-  const totAc=srcUnicos.reduce((a,g)=>a+(parseInt(g.vrAceptado)||0),0);
+  const gruposItemResumen = Object.values(_porItemResumen);
+  const srcUnicos = gruposItemResumen.map(grp=>grp[0]); // representante por ítem, para el conteo de pendientes
+  const totGlo   = gruposItemResumen.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrGlosado)||0)),0);
+  const totNoAc  = gruposItemResumen.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrNoAceptado)||0)),0);
+  const totAc    = gruposItemResumen.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrAceptado)||0)),0);
   const pend=srcUnicos.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
 
   // Resumen KPIs
@@ -5797,21 +5816,24 @@ window.verResumenGlosas = () => {
       <tbody>
         ${Object.entries(pf).map(([key,items])=>{
           const [fac,rad,doc]=key.split('|||');
-          // Deduplicar por ítem+causal antes de sumar — si algo quedó repetido
-          // en los datos (mismo ítem, misma causal, misma anotación), NO se
-          // debe contar dos veces: el valor glosado de la factura nunca puede
-          // superar el valor de la propia factura.
-          const _vistos = new Set();
+          // Agrupar por ÍTEM (no por causal) — cuando un mismo ítem tiene
+          // varias causales distintas, CADA causal repite el mismo valor
+          // glosado del ítem completo (no una fracción de él). Sumar por
+          // causal multiplicaba el valor; hay que tomar el máximo por ítem y
+          // sumar esos máximos entre ítems distintos.
           const _normDup = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
-          const itemsUnicos = items.filter(it=>{
-            const k = [_normDup(it.codElemento||it.descElemento), _normDup(it.descGlosa), _normDup(it.anotacion), Math.round(it.vrGlosado||0)].join('|||');
-            if(_vistos.has(k)) return false;
-            _vistos.add(k);
-            return true;
+          const _porItem = {};
+          items.forEach(it=>{
+            const k = _normDup(it.codElemento||it.descElemento) || it.id;
+            if(!_porItem[k]) _porItem[k]=[];
+            _porItem[k].push(it);
           });
-          const tGlo=itemsUnicos.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
-          const tAc=itemsUnicos.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
-          const tNoAc=itemsUnicos.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
+          const gruposItem = Object.values(_porItem);
+          const itemsUnicos = gruposItem.map(grp=>grp[0]); // representante, para el conteo "Glosas" (por ítem)
+          const tGlo   = gruposItem.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrGlosado)||0)),0);
+          const tAc    = gruposItem.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrAceptado)||0)),0);
+          const tNoAc  = gruposItem.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrNoAceptado)||0)),0);
+            _vistos.add(k);
           const pnd=itemsUnicos.filter(i=>!i.respuesta||i.respuesta==='pendiente').length;
           const ips=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—';
           const safeFac=fac.replace(/[^a-z0-9]/gi,'_');
