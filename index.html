@@ -4390,7 +4390,7 @@ window.renderGlosasPorPaquete = function(){
     return;
   }
   lista.innerHTML=paquetesFiltrados.map(p=>{
-    const idSafe='paq-'+String(p.paquete).replace(/[^a-z0-9]/gi,'');
+    const idSafe='glopaq-'+String(p.paquete).replace(/[^a-z0-9]/gi,'');
     const pct=p.totalGlosas?Math.round(p.respondidas/p.totalGlosas*100):0;
     const ipsNom=IPS_NOM_GLO[p.codHab]||p.codHab||'—';
     const nombrePaq=p.paquete==='__sin_paquete__'?'⚠️ Sin número de paquete':`📦 Paquete ${p.paquete}`;
@@ -5477,8 +5477,10 @@ window.toggleFacGlosa=(id)=>{
   const el=g(id); if(!el) return;
   const visible=el.style.display!=='none';
   el.style.display=visible?'none':'block';
-  // Update icon — find by replacing 'fac-' with 'ico-'
-  const icoId=id.replace('fac-','ico-');
+  // Buscar el ícono correspondiente — el patrón 'fac-' → 'ico-' es el original
+  // (pantalla Responder Glosas); para cualquier otro prefijo (ej. 'glopaq-' en
+  // Por Paquete), se usa 'ico-'+id directamente.
+  const icoId = id.startsWith('fac-') ? id.replace('fac-','ico-') : 'ico-'+id;
   const ico=g(icoId); if(ico) ico.textContent=visible?'▸':'▾';
 };
 
