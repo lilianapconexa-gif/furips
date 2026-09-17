@@ -5151,9 +5151,16 @@ window.renderGlosasResp = function(){
     return;
   }
 
-  // Agrupar TODAS las glosas (de la IPS activa) por factura primero
+  // Agrupar TODAS las glosas (de la IPS activa) por factura primero — se excluyen
+  // los ítems "pagados" (sin causal real: Descripción Glosa Y Anotación en
+  // blanco), porque esos NO son glosas que responder — se quitan solos de
+  // FURIPS2 automáticamente (botón "Reintentar ajuste FURIPS2"), y mostrarlos
+  // aquí para "responder" confundía, contaba mal el total, y pedía una
+  // respuesta que no aplica.
   const porFactura={};
   src.forEach(gl=>{
+    const esPagado = !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim();
+    if(esPagado) return;
     const k=gl.factura+'|||'+gl.radicado+'|||'+(gl.docVictima||'');
     if(!porFactura[k]) porFactura[k]=[];
     porFactura[k].push(gl);
