@@ -5756,10 +5756,20 @@ window.verResumenGlosas = () => {
   window.renderTopCausales();
   const pf=agruparGlosFiltered();
   const facturasCount=Object.keys(pf).length;
-  const totGlo=src.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
-  const totNoAc=src.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
-  const totAc=src.reduce((a,g)=>a+(parseInt(g.vrAceptado)||0),0);
-  const pend=src.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+  // Deduplicar por ítem+causal antes de sumar (mismo criterio que en la tabla
+  // por factura) — evita que un dato repetido infle el total general.
+  const _vistosResumen = new Set();
+  const _normDupResumen = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  const srcUnicos = src.filter(it=>{
+    const k = [it.factura, _normDupResumen(it.codElemento||it.descElemento), _normDupResumen(it.descGlosa), _normDupResumen(it.anotacion), Math.round(it.vrGlosado||0)].join('|||');
+    if(_vistosResumen.has(k)) return false;
+    _vistosResumen.add(k);
+    return true;
+  });
+  const totGlo=srcUnicos.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+  const totNoAc=srcUnicos.reduce((a,g)=>a+(parseInt(g.vrNoAceptado)||0),0);
+  const totAc=srcUnicos.reduce((a,g)=>a+(parseInt(g.vrAceptado)||0),0);
+  const pend=srcUnicos.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
 
   // Resumen KPIs
   const res=g('glo-resumen'); if(res) res.innerHTML=`
@@ -5787,10 +5797,22 @@ window.verResumenGlosas = () => {
       <tbody>
         ${Object.entries(pf).map(([key,items])=>{
           const [fac,rad,doc]=key.split('|||');
-          const tGlo=items.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
-          const tAc=items.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
-          const tNoAc=items.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
-          const pnd=items.filter(i=>!i.respuesta||i.respuesta==='pendiente').length;
+          // Deduplicar por ítem+causal antes de sumar — si algo quedó repetido
+          // en los datos (mismo ítem, misma causal, misma anotación), NO se
+          // debe contar dos veces: el valor glosado de la factura nunca puede
+          // superar el valor de la propia factura.
+          const _vistos = new Set();
+          const _normDup = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+          const itemsUnicos = items.filter(it=>{
+            const k = [_normDup(it.codElemento||it.descElemento), _normDup(it.descGlosa), _normDup(it.anotacion), Math.round(it.vrGlosado||0)].join('|||');
+            if(_vistos.has(k)) return false;
+            _vistos.add(k);
+            return true;
+          });
+          const tGlo=itemsUnicos.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
+          const tAc=itemsUnicos.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
+          const tNoAc=itemsUnicos.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
+          const pnd=itemsUnicos.filter(i=>!i.respuesta||i.respuesta==='pendiente').length;
           const ips=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—';
           const safeFac=fac.replace(/[^a-z0-9]/gi,'_');
           return `<tr style="border-bottom:1px solid var(--brd);">
@@ -5798,7 +5820,7 @@ window.verResumenGlosas = () => {
             <td style="padding:7px 10px;font-family:var(--mono);font-size:10px;">${rad}</td>
             <td style="padding:7px 10px;font-size:11px;">${doc}</td>
             <td style="padding:7px 10px;font-size:11px;">${ips.split(' ').slice(0,2).join(' ')}</td>
-            <td style="padding:7px 10px;text-align:center;">${items.length}</td>
+            <td style="padding:7px 10px;text-align:center;">${itemsUnicos.length}</td>
             <td style="padding:7px 10px;font-family:var(--mono);color:var(--red);">${fmt$(tGlo)}</td>
             <td style="padding:7px 10px;font-family:var(--mono);color:var(--acc);">${fmt$(tAc)}</td>
             <td style="padding:7px 10px;font-family:var(--mono);color:var(--green);">${fmt$(tNoAc)}</td>
