@@ -5661,6 +5661,11 @@ function agruparGlosFiltered(){
 
   const pf={};
   glosFiltradas.forEach(gl=>{
+    // Igual que en la pantalla de Responder: los ítems "pagados" (sin causal
+    // real, Descripción Glosa Y Anotación en blanco) no van en el PDF de
+    // respuesta — no son glosas en disputa, se quitan solas de FURIPS2.
+    const esPagado = !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim();
+    if(esPagado) return;
     const k=gl.factura+'|||'+gl.radicado+'|||'+(gl.docVictima||'');
     if(!pf[k]) pf[k]=[];
     pf[k].push(gl);
