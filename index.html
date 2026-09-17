@@ -5207,11 +5207,12 @@ window.renderGlosasResp = function(){
     const _furips2Factura = _recFactura?.furips2 || []; // activo — para saber si YA está resuelto
     const _furips2ParaSelector = (_recFactura?.furips2Original && _recFactura.furips2Original.length) ? _recFactura.furips2Original : _furips2Factura; // TODOS los ítems originales, para elegir
 
+    const _facKey = fac.replace(/[^a-z0-9]/gi,'')+'-'+rad;
     return `
-    <div style="background:var(--sur);border:1px solid ${pend===0?'rgba(0,178,226,.3)':'var(--brd)'};border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+    <div style="background:var(--sur);border:1px solid ${pend===0?'rgba(0,178,226,.3)':'var(--brd)'};border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);" id="card-fac-${_facKey}">
       <!-- Cabecera de factura -->
       <div style="background:var(--sur2);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;"
-        onclick="toggleFacGlosa('fac-${fac.replace(/[^a-z0-9]/gi,'')}-${rad}')">
+        onclick="toggleFacGlosa('fac-${_facKey}')">
         <div style="font-family:var(--mono);font-weight:800;font-size:14px;color:var(--acc);">${fac}</div>
         <div style="font-size:11px;color:var(--tx2);">📬 Rad: <strong>${rad}</strong></div>
         <div style="font-size:11px;color:var(--tx2);">👤 ${doc}</div>
@@ -5220,15 +5221,15 @@ window.renderGlosasResp = function(){
           <!-- Barra de progreso -->
           <div style="display:flex;align-items:center;gap:6px;">
             <div style="width:80px;height:6px;background:var(--brd);border-radius:3px;overflow:hidden;">
-              <div style="width:${pct}%;height:100%;background:${pct===100?'var(--green)':'var(--acc)'};border-radius:3px;transition:width .3s;"></div>
+              <div id="barra-${_facKey}" style="width:${pct}%;height:100%;background:${pct===100?'var(--green)':'var(--acc)'};border-radius:3px;transition:width .3s;"></div>
             </div>
-            <span style="font-size:10px;color:var(--tx2);">${respondidas}/${items.length}</span>
+            <span id="txtprog-${_facKey}" style="font-size:10px;color:var(--tx2);">${respondidas}/${items.length}</span>
           </div>
           <span style="font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;">${fmt$(totGlo)}</span>
-          ${pend>0
+          <span id="badgepend-${_facKey}">${pend>0
             ?`<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">${pend} pendiente${pend>1?'s':''}</span>`
-            :`<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">✔ Completa</span>`}
-          <span style="font-size:16px;color:var(--tx3);" id="ico-${fac.replace(/[^a-z0-9]/gi,'')}-${rad}">▾</span>
+            :`<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">✔ Completa</span>`}</span>
+          <span style="font-size:16px;color:var(--tx3);" id="ico-${_facKey}">▾</span>
         </div>
       </div>
 
@@ -5498,6 +5499,36 @@ function facturaGlosasCompleta(factura){
   return items.length>0 && items.every(g=>g.respuesta && g.respuesta!=='pendiente');
 }
 
+// Actualiza en vivo el contador/barra de progreso de UNA factura, sin
+// re-renderizar toda la lista (para no perder el scroll ni cerrar lo que el
+// usuario tiene desplegado mientras va respondiendo varios ítems seguidos).
+function actualizarProgresoFactura(factura, radicado, docVictima){
+  const fac = factura, rad = radicado;
+  const _facKey = String(fac).replace(/[^a-z0-9]/gi,'')+'-'+rad;
+  const items = GLOSAS_DB.filter(g=>{
+    const esPagado = !(g.descGlosa||'').trim() && !(g.anotacion||'').trim();
+    if(esPagado) return false; // igual que en el render, no cuentan como glosas a responder
+    return g.factura===fac && g.radicado===rad && (g.docVictima||'')===(docVictima||'');
+  });
+  if(!items.length) return;
+  const pend = items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+  const respondidas = items.length-pend;
+  const pct = items.length?Math.round(respondidas/items.length*100):0;
+
+  const barra = document.getElementById('barra-'+_facKey);
+  if(barra){ barra.style.width = pct+'%'; barra.style.background = pct===100?'var(--green)':'var(--acc)'; }
+  const txtprog = document.getElementById('txtprog-'+_facKey);
+  if(txtprog) txtprog.textContent = `${respondidas}/${items.length}`;
+  const badge = document.getElementById('badgepend-'+_facKey);
+  if(badge){
+    badge.innerHTML = pend>0
+      ? `<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">${pend} pendiente${pend>1?'s':''}</span>`
+      : `<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">✔ Completa</span>`;
+  }
+  const card = document.getElementById('card-fac-'+_facKey);
+  if(card) card.style.borderColor = pend===0 ? 'rgba(0,178,226,.3)' : 'var(--brd)';
+}
+
 window.updGlosaRespuesta = async (gloId, campo, valor) => {
   const gl=GLOSAS_DB.find(x=>x.id===gloId); if(!gl) return;
   if(campo==='tipo'){
@@ -5513,6 +5544,7 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
         actualizado:serverTimestamp(),
       });
       updGloKpis();
+      actualizarProgresoFactura(gl.factura, gl.radicado, gl.docVictima);
       registrarHistorialGlosa(gl); // no bloqueante — la UI no espera esto
       if((valor==='aceptada'||valor==='parcial') && (gl.vrAceptado||0)>0){
         window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante — se aplica por ítem, en tiempo real
@@ -5536,6 +5568,7 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
       actualizado:serverTimestamp(),
     });
     updGloKpis();
+    actualizarProgresoFactura(gl.factura, gl.radicado, gl.docVictima);
     if(campo==='vrAceptado' && (gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (gl.vrAceptado||0)>0){
       window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante — se aplica por ítem, en tiempo real
     }
