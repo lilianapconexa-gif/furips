@@ -4436,39 +4436,61 @@ window.renderGlosasPorPaquete = function(){
               <span style="margin-left:auto;">${pendCons===0?'<span style="color:var(--green);">✔ completo</span>':`<span style="color:var(--warn);">⏳ ${pendCons} pendiente${pendCons!==1?'s':''}</span>`}</span>
             </div>
           </div>
-          ${facturasCons.map(fac=>{
-            const itemsFac=itemsCons.filter(g=>g.factura===fac);
-            const pendFac=itemsFac.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
-            // Agrupar por ítem (no por causal) para los totales — mismo criterio
-            // que en Exportar Respuesta, evita inflar el valor glosado.
-            const _normDupFac = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
-            const _porItemFac = {};
-            itemsFac.forEach(it=>{
-              const k = _normDupFac(it.codElemento||it.descElemento) || it.id;
-              if(!_porItemFac[k]) _porItemFac[k]=[];
-              _porItemFac[k].push(it);
-            });
-            const gruposItemFac = Object.values(_porItemFac);
-            const tGloFac  = gruposItemFac.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrGlosado)||0)),0);
-            const tAcFac   = gruposItemFac.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrAceptado)||0)),0);
-            const tNoAcFac = gruposItemFac.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrNoAceptado)||0)),0);
-            const radFac = itemsFac[0]?.radicado||'';
-            const docFac = itemsFac[0]?.docVictima||'';
-            const tieneAceptadas = itemsFac.some(it=>(parseInt(it.vrAceptado)||0)>0);
-            return `<div style="padding:8px 16px 8px 32px;border-top:1px solid var(--brd);font-size:11px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-              <span style="font-family:var(--mono);font-weight:600;color:var(--tx);cursor:pointer;" onclick="window.irAGlosasFactura('${fac}')" title="Ir a responder esta factura">${fac}</span>
-              <span style="color:var(--tx3);">${gruposItemFac.length} ítem${gruposItemFac.length!==1?'s':''}</span>
-              <span style="font-family:var(--mono);color:var(--red);">${fmt$(tGloFac)}</span>
-              <span style="font-family:var(--mono);color:var(--acc);font-size:10px;">Ac: ${fmt$(tAcFac)}</span>
-              <span style="font-family:var(--mono);color:var(--green);font-size:10px;">No Ac: ${fmt$(tNoAcFac)}</span>
-              <span>${pendFac===0?'<span style="color:var(--green);">✔ completa</span>':`<span style="color:var(--warn);">⏳ ${pendFac} pendiente${pendFac!==1?'s':''}</span>`}</span>
-              <div style="display:flex;gap:5px;margin-left:auto;">
-                <button class="btn btn-sm bp" onclick="window.expGlosaPDF('${fac}','${radFac}','${docFac}')" title="Descargar PDF">📄 PDF</button>
-                <button class="btn btn-sm bs" onclick="window.expGlosaExcel1('${fac}','${radFac}','${docFac}')" title="Descargar Excel">📊 XLS</button>
-                ${tieneAceptadas?`<button class="btn btn-sm bs" style="border-color:#2e7d32;color:#2e7d32;" onclick="window.generarNotaCredito('${fac}','${itemsFac[0]?.codHab||''}')" title="Descargar Nota Crédito">🧾 N.Créd.</button>`:''}
-              </div>
-            </div>`;
-          }).join('')}`;
+          <div style="padding:10px 16px;overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead style="background:var(--sur2);">
+              <tr>
+                ${['Factura','Radicado','Documento','IPS','Glosas','Total Glosado','Aceptado','No Aceptado','Estado','Acciones']
+                  .map(h=>`<th style="padding:8px 10px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx2);border-bottom:1px solid var(--brd);white-space:nowrap;">${h}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${facturasCons.map(fac=>{
+                const itemsFac=itemsCons.filter(g=>g.factura===fac);
+                const pendFac=itemsFac.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
+                // Agrupar por ítem (no por causal) para los totales — mismo
+                // criterio que en Exportar Respuesta, evita inflar el valor.
+                const _normDupFac = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+                const _porItemFac = {};
+                itemsFac.forEach(it=>{
+                  const k = _normDupFac(it.codElemento||it.descElemento) || it.id;
+                  if(!_porItemFac[k]) _porItemFac[k]=[];
+                  _porItemFac[k].push(it);
+                });
+                const gruposItemFac = Object.values(_porItemFac);
+                const tGloFac  = gruposItemFac.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrGlosado)||0)),0);
+                const tAcFac   = gruposItemFac.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrAceptado)||0)),0);
+                const tNoAcFac = gruposItemFac.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrNoAceptado)||0)),0);
+                const radFac = itemsFac[0]?.radicado||'';
+                const docFac = itemsFac[0]?.docVictima||'';
+                const ipsFac = IPS_NOM_GLO[itemsFac[0]?.codHab]||itemsFac[0]?.codHab||'—';
+                const tieneAceptadas = itemsFac.some(it=>(parseInt(it.vrAceptado)||0)>0);
+                return `<tr style="border-bottom:1px solid var(--brd);cursor:pointer;" onclick="window.irAGlosasFactura('${fac}')" title="Ir a responder esta factura">
+                  <td style="padding:7px 10px;font-family:var(--mono);font-weight:700;color:var(--acc);">${fac}</td>
+                  <td style="padding:7px 10px;font-family:var(--mono);font-size:10px;">${radFac}</td>
+                  <td style="padding:7px 10px;font-size:11px;">${docFac}</td>
+                  <td style="padding:7px 10px;font-size:11px;">${ipsFac.split(' ').slice(0,2).join(' ')}</td>
+                  <td style="padding:7px 10px;text-align:center;">${gruposItemFac.length}</td>
+                  <td style="padding:7px 10px;font-family:var(--mono);color:var(--red);">${fmt$(tGloFac)}</td>
+                  <td style="padding:7px 10px;font-family:var(--mono);color:var(--acc);">${fmt$(tAcFac)}</td>
+                  <td style="padding:7px 10px;font-family:var(--mono);color:var(--green);">${fmt$(tNoAcFac)}</td>
+                  <td style="padding:7px 10px;">
+                    ${pendFac>0
+                      ?`<span style="background:rgba(245,124,0,.15);color:var(--warn);font-size:10px;padding:2px 6px;border-radius:4px;">${pendFac} pendiente${pendFac>1?'s':''}</span>`
+                      :`<span style="background:rgba(0,178,226,.1);color:var(--acc);font-size:10px;padding:2px 6px;border-radius:4px;">✔ Lista</span>`}
+                  </td>
+                  <td style="padding:7px 10px;" onclick="event.stopPropagation();">
+                    <div style="display:flex;gap:5px;">
+                      <button class="btn btn-sm bp" onclick="window.expGlosaPDF('${fac}','${radFac}','${docFac}')" title="Descargar PDF">📄 PDF</button>
+                      <button class="btn btn-sm bs" onclick="window.expGlosaExcel1('${fac}','${radFac}','${docFac}')" title="Descargar Excel">📊 XLS</button>
+                      ${tieneAceptadas?`<button class="btn btn-sm bs" style="border-color:#2e7d32;color:#2e7d32;" onclick="window.generarNotaCredito('${fac}','${itemsFac[0]?.codHab||''}')" title="Descargar Nota Crédito">🧾 N.Créd.</button>`:''}
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          </div>`;
         }).join('')}
       </div>
     </div>`;
@@ -5882,7 +5904,6 @@ window.verResumenGlosas = () => {
           const tGlo   = gruposItem.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrGlosado)||0)),0);
           const tAc    = gruposItem.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrAceptado)||0)),0);
           const tNoAc  = gruposItem.reduce((a,grp)=>a+Math.max(...grp.map(g=>parseInt(g.vrNoAceptado)||0)),0);
-            _vistos.add(k);
           const pnd=itemsUnicos.filter(i=>!i.respuesta||i.respuesta==='pendiente').length;
           const ips=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'—';
           const safeFac=fac.replace(/[^a-z0-9]/gi,'_');
