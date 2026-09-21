@@ -4334,10 +4334,14 @@ window.renderGlosasPorPaquete = function(){
     // Igual que en Exportar Respuesta y los KPIs generales: agrupar por ÍTEM
     // (no por causal) antes de sumar — evita inflar el total cuando un mismo
     // ítem tiene varias causales, cada una repitiendo el valor completo.
+    // \u00cdtems sin c\u00f3digo/descripci\u00f3n (glosa general de la factura) van bajo una
+    // clave fija '__GENERAL__' por factura, no it.id \u2014 si esa glosa general
+    // tiene varias causales (varias filas repitiendo el mismo valor total),
+    // deben agruparse juntas en vez de sumarse como \u00edtems independientes.
     const _normDupPaq = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
     const _porItemPaq = {};
     items.forEach(it=>{
-      const k = it.factura+'|||'+(_normDupPaq(it.codElemento||it.descElemento)||it.id);
+      const k = it.factura+'|||'+(_normDupPaq(it.codElemento||it.descElemento)||'__GENERAL__');
       if(!_porItemPaq[k]) _porItemPaq[k]=[];
       _porItemPaq[k].push(it);
     });
@@ -4450,10 +4454,14 @@ window.renderGlosasPorPaquete = function(){
                 const pendFac=itemsFac.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
                 // Agrupar por ítem (no por causal) para los totales — mismo
                 // criterio que en Exportar Respuesta, evita inflar el valor.
+                // \u00cdtems sin c\u00f3digo/descripci\u00f3n (glosa general de la factura) van
+                // bajo una clave fija '__GENERAL__' \u2014 si tiene varias causales
+                // repitiendo el mismo valor total, se agrupan juntas en vez de
+                // sumarse como \u00edtems independientes (cada una con su propio id).
                 const _normDupFac = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
                 const _porItemFac = {};
                 itemsFac.forEach(it=>{
-                  const k = _normDupFac(it.codElemento||it.descElemento) || it.id;
+                  const k = _normDupFac(it.codElemento||it.descElemento) || '__GENERAL__';
                   if(!_porItemFac[k]) _porItemFac[k]=[];
                   _porItemFac[k].push(it);
                 });
@@ -5021,10 +5029,17 @@ function updGloKpis(){
   // valor del ítem completo, no una fracción; sumar por causal multiplicaba
   // el total. Se toma el máximo por ítem, y esos máximos sí se suman entre
   // ítems distintos.
+  // \u00cdtems SIN c\u00f3digo/descripci\u00f3n propios (codElemento y descElemento vac\u00edos) son
+  // glosas generales de la factura (ej. falta de un soporte documental completo),
+  // no glosas de un \u00edtem puntual. Igual que los \u00edtems normales, pueden repetirse
+  // en varias filas (una por cada causal), y cada fila repite el MISMO valor total
+  // de la factura \u2014 por eso deben agruparse todas bajo una sola clave fija
+  // ('__GENERAL__') en vez de usar it.id (que es distinto por fila y las tratar\u00eda
+  // como glosas independientes, multiplicando el valor).
   const _normDupKpi = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const _porItemKpi = {};
   src.forEach(it=>{
-    const k = it.factura+'|||'+(_normDupKpi(it.codElemento||it.descElemento)||it.id);
+    const k = it.factura+'|||'+(_normDupKpi(it.codElemento||it.descElemento)||'__GENERAL__');
     if(!_porItemKpi[k]) _porItemKpi[k]=[];
     _porItemKpi[k].push(it);
   });
@@ -5333,7 +5348,10 @@ window.renderGlosasResp = function(){
         ${(()=>{
           const grupos={};
           items.forEach(gl=>{
-            const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
+            // Sin código/descripción = glosa general de la factura: todas sus
+            // causales van juntas bajo una clave fija, no por gl.id (que las
+            // separaría en tarjetas distintas repitiendo el mismo valor total).
+            const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||'__GENERAL__';
             if(!grupos[key]) grupos[key]=[];
             grupos[key].push(gl);
           });
@@ -5626,10 +5644,10 @@ function facturaGlosasCompleta(factura){
 function avanzarEnfoqueSiCompleto(gl){
   const facKey = String(gl.factura).replace(/[^a-z0-9]/gi,'')+'-'+gl.radicado;
   if(!window.FOCUS_FACTURAS.has(facKey)) return;
-  const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
+  const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||'__GENERAL__';
   const hermanas = GLOSAS_DB.filter(g=>
     g.factura===gl.factura && g.radicado===gl.radicado &&
-    ((g.codElemento||g.descElemento||'').trim().toUpperCase()||g.id)===key
+    ((g.codElemento||g.descElemento||'').trim().toUpperCase()||'__GENERAL__')===key
   );
   const todasRespondidas = hermanas.every(g=>g.respuesta && g.respuesta!=='pendiente');
   if(!todasRespondidas) return;
@@ -5847,10 +5865,14 @@ window.verResumenGlosas = () => {
   // Agrupar por FACTURA+ÍTEM (no por causal) antes de sumar — cuando un mismo
   // ítem tiene varias causales, cada una repite el valor del ítem completo,
   // no una fracción. Hay que tomar el máximo por ítem, no sumar cada causal.
+  // \u00cdtems sin c\u00f3digo/descripci\u00f3n (glosa general de la factura) se agrupan bajo
+  // una clave fija '__GENERAL__' por factura, no por it.id \u2014 si esa glosa
+  // general tiene varias causales (varias filas), todas repiten el mismo valor
+  // y deben agruparse juntas en vez de sumarse como \u00edtems distintos.
   const _normDupResumen = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const _porItemResumen = {};
   src.forEach(it=>{
-    const k = it.factura+'|||'+(_normDupResumen(it.codElemento||it.descElemento)||it.id);
+    const k = it.factura+'|||'+(_normDupResumen(it.codElemento||it.descElemento)||'__GENERAL__');
     if(!_porItemResumen[k]) _porItemResumen[k]=[];
     _porItemResumen[k].push(it);
   });
@@ -5892,10 +5914,15 @@ window.verResumenGlosas = () => {
           // glosado del ítem completo (no una fracción de él). Sumar por
           // causal multiplicaba el valor; hay que tomar el máximo por ítem y
           // sumar esos máximos entre ítems distintos.
+          // \u00cdtems sin c\u00f3digo/descripci\u00f3n (glosa general de la factura, ej. falta
+          // de soporte documental) se agrupan bajo una clave fija '__GENERAL__'
+          // en vez de it.id \u2014 si la glosa general tiene varias causales (varias
+          // filas), todas repiten el mismo valor total y deben agruparse juntas,
+          // no sumarse como si fueran \u00edtems distintos.
           const _normDup = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
           const _porItem = {};
           items.forEach(it=>{
-            const k = _normDup(it.codElemento||it.descElemento) || it.id;
+            const k = _normDup(it.codElemento||it.descElemento) || '__GENERAL__';
             if(!_porItem[k]) _porItem[k]=[];
             _porItem[k].push(it);
           });
@@ -12357,7 +12384,10 @@ window.calcularValorParaTXT = function(rec){
   if(!rondaGlosa && glosasFacturaModulo.length){
     const porItemGlosado={}, porItemAceptado={};
     glosasFacturaModulo.forEach(gl=>{
-      const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||gl.id;
+      // Sin código/descripción = glosa general de la factura: se agrupa bajo
+      // una clave fija, no por gl.id, para no sumar su valor varias veces si
+      // tiene varias causales repitiendo el mismo monto total.
+      const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||'__GENERAL__';
       const vGlo=parseInt(gl.vrGlosado)||0;
       const vAcep=gl.montoAplicadoFurips!=null?gl.montoAplicadoFurips:(parseInt(gl.vrAceptado)||0);
       if(!porItemGlosado[key] || vGlo>porItemGlosado[key]) porItemGlosado[key]=vGlo;
