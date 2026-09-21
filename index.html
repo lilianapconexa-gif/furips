@@ -4335,7 +4335,15 @@ window.switchGloTab = (tab) => {
 window.renderGlosasPorPaquete = function(){
   const kp=g('paq-kpis'), lista=g('paq-lista');
   if(!kp||!lista) return;
-  const src=window.glosasFiltradasCliente();
+  // Igual que en Responder Glosas y Exportar Respuesta: los ítems "pagados"
+  // (sin causal real, Descripción Glosa Y Anotación en blanco) no son glosas
+  // en disputa — se quitan solas de FURIPS2 y nunca tendrán una respuesta, así
+  // que si se dejaran aquí, la factura quedaría "pendiente" para siempre
+  // aunque ya se hubiera respondido todo lo que sí está en disputa.
+  const src=window.glosasFiltradasCliente().filter(gl=>{
+    const esPagado = !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim();
+    return !esPagado;
+  });
 
   if(!src.length){
     kp.innerHTML='';
