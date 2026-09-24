@@ -1358,6 +1358,18 @@ select option{background:var(--sur2);}
             <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:10px;letter-spacing:.5px;">📬 DATOS DEL RADICADO</div>
             <div id="radind-info" style="background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:10px;margin-bottom:14px;font-size:12px;"></div>
 
+            <!-- Solo visible si la factura ya tiene un radicado. Al activarlo,
+                 limpia Lote/N°/Fecha/Observaciones para que quede claro que hay
+                 que escribir los datos del NUEVO radicado (ej. el de la
+                 respuesta a una glosa) — el anterior se archiva solo, sin
+                 perderse, en "Radicados anteriores". -->
+            <div id="radind-nueva-wrap" class="hidden" style="background:rgba(0,178,226,.08);border:1px solid var(--acc);border-radius:6px;padding:10px 12px;margin-bottom:14px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;cursor:pointer;">
+                <input type="checkbox" id="radind-es-nueva" onchange="window.toggleRadindNuevaRadicacion()">
+                🔄 Esta es una NUEVA radicación (ej. reproceso tras responder una glosa) — se limpia el N° de Lote para que escribas el nuevo (el N° Individual normalmente no cambia, se conserva)
+              </label>
+            </div>
+
             <div class="g2">
               <div class="field">
                 <label class="fl">N° Radicado Lote ADRES <span class="req">*</span></label>
@@ -13153,12 +13165,49 @@ window.seleccionarRecParaRadicar = (id) => {
     g('radind-fecha').value = rec.radicado.fecha || new Date().toISOString().split('T')[0];
     g('radind-estado').value = rec.radicado.estado || 'radicada';
     g('radind-obs').value = rec.radicado.obs || '';
+    // Mostrar el interruptor "es una nueva radicación" solo cuando ya hay un
+    // radicado previo que archivar. Empieza SIN marcar (modo "editar el
+    // mismo registro"), así no se limpia nada por sorpresa.
+    g('radind-nueva-wrap').classList.remove('hidden');
+    g('radind-es-nueva').checked = false;
   } else {
     g('radind-lote').value = '';
     g('radind-num').value = '';
     g('radind-fecha').value = new Date().toISOString().split('T')[0];
     g('radind-estado').value = 'radicada';
     g('radind-obs').value = '';
+    g('radind-nueva-wrap').classList.add('hidden');
+  }
+};
+
+// Al marcar "Esta es una NUEVA radicación", limpia solo Lote/Fecha/Obs para
+// forzar a escribir los datos del nuevo lote (en vez de dejar el anterior
+// ahí, que es lo que generaba la confusión de "no hay dónde poner que es
+// otro número de lote" — el campo ya tenía un valor y no era obvio que había
+// que reemplazarlo). El N° Radicado Individual NO se borra: normalmente se
+// mantiene igual entre radicaciones (solo cambia el N° de Lote), así que se
+// deja tal como estaba para no obligar a retipearlo. Al desmarcarlo, se
+// restauran los valores del radicado actual para volver a editarlo tal cual.
+window.toggleRadindNuevaRadicacion = function(){
+  if(!RADIND_REC) return;
+  const marcado = g('radind-es-nueva').checked;
+  if(marcado){
+    g('radind-lote').value = '';
+    g('radind-fecha').value = new Date().toISOString().split('T')[0];
+    g('radind-estado').value = 'radicada';
+    g('radind-obs').value = '';
+    g('radind-lote').placeholder = 'Nuevo N° de lote (el anterior se guarda en el historial)';
+    g('radind-lote').focus();
+    // El N° Individual se deja como estaba (no se borra) porque normalmente
+    // se mantiene igual — si en tu caso también cambia, edítalo a mano.
+  } else {
+    const rec = RADIND_REC;
+    g('radind-lote').value = rec.radicado?.lote || '';
+    g('radind-num').value = rec.radicado?.numero || '';
+    g('radind-fecha').value = rec.radicado?.fecha || new Date().toISOString().split('T')[0];
+    g('radind-estado').value = rec.radicado?.estado || 'radicada';
+    g('radind-obs').value = rec.radicado?.obs || '';
+    g('radind-lote').placeholder = 'Ej: RAD-LOTE-2024-001';
   }
 };
 
@@ -13168,6 +13217,8 @@ window.cancelarRadInd = () => {
   g('radind-form').classList.add('hidden');
   g('radind-buscar').value = '';
   g('radind-resultados').innerHTML = '';
+  if(g('radind-es-nueva')) g('radind-es-nueva').checked = false;
+  if(g('radind-nueva-wrap')) g('radind-nueva-wrap').classList.add('hidden');
 };
 
 window.guardarRadInd = async () => {
