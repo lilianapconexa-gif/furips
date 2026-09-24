@@ -2110,6 +2110,16 @@ select option{background:var(--sur2);}
             </select>
             <span id="glo-resp-count" style="font-size:11px;color:var(--tx3);white-space:nowrap;"></span>
           </div>
+
+          <!-- Respuestas proyectadas: sugiere decisión+texto para ítems pendientes
+               con la MISMA causal de glosas que ya respondiste antes, SOLO cuando
+               esa causal se ha respondido siempre igual (nunca cuando ha variado —
+               esas son las que dependen de la historia clínica de cada caso). -->
+          <div style="margin-bottom:10px;">
+            <button class="btn bs" onclick="window.toggleRespuestasProyectadas()" id="btn-proyectar" style="font-size:11px;">🎯 Ver respuestas proyectadas</button>
+          </div>
+          <div id="glo-proyectadas-panel" style="display:none;margin-bottom:14px;"></div>
+
           <div id="flt-glosas" class="flt-bar hidden">
             <div class="flt-row">
               <span class="flt-lbl">FACTURA</span>
@@ -5304,6 +5314,197 @@ window.limpiarGlosas = () => {
   g('glo-file').value='';
 };
 
+// ── RESPUESTAS PROYECTADAS ──
+// Aprende de las respuestas que ya diste. La clave de agrupación es la
+// CAUSAL + el ÍTEM (código/descripción del elemento) juntos, NO la causal
+// sola — porque una misma causal puede depender del tipo de ítem al que se
+// aplica (ej. "documentación incompleta" podría responderse siempre distinto
+// en medicamentos que en consulta). Agrupar solo por causal mezclaría esos
+// casos y los descartaría a todos como "inconsistentes" aunque cada
+// combinación causal+ítem sí fuera predecible por separado.
+// Dentro de cada grupo causal+ítem, solo se considera "proyectable" cuando
+// TODO el historial de esa combinación tiene la MISMA decisión — si alguna
+// vez se aceptó y otras veces no, es señal de que se decide caso por caso
+// (típicamente porque depende de la historia clínica del paciente) y NO se
+// sugiere: hay que seguir respondiéndola manualmente, ítem por ítem.
+const _normCausal = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const _claveCausalItem = gl => _normCausal(gl.descGlosa)+'|||'+(_normCausal(gl.codElemento||gl.descElemento)||'__GENERAL__');
+
+window.construirBancoRespuestasProyectadas = function(){
+  const historial = GLOSAS_DB.filter(gl=>{
+    const esPagado = !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim();
+    return !esPagado && gl.respuesta && gl.respuesta!=='pendiente';
+  });
+  const porCausalItem = {};
+  historial.forEach(gl=>{
+    if(!_normCausal(gl.descGlosa)) return;
+    const k = _claveCausalItem(gl);
+    if(!porCausalItem[k]) porCausalItem[k]=[];
+    porCausalItem[k].push(gl);
+  });
+  const banco = {};
+  Object.entries(porCausalItem).forEach(([k,arr])=>{
+    const decisiones = new Set(arr.map(a=>a.respuesta));
+    // Solo se proyecta cuando la decisión histórica es SIEMPRE la misma Y es
+    // "todo o nada" (se acepta / no se acepta) — "parcial" implica un monto
+    // específico calculado caso por caso, así que aunque la etiqueta se
+    // repita, el valor detrás no es copiable y no se proyecta.
+    const consistente = decisiones.size===1 && (arr[0].respuesta==='aceptada' || arr[0].respuesta==='no_aceptada');
+    // Texto sugerido: el más usado entre los que sí tienen texto escrito; si
+    // hay empate, el más reciente.
+    const conteoTexto = {};
+    arr.forEach(a=>{
+      const t=(a.textoResp||'').trim();
+      if(!t) return;
+      conteoTexto[t]=(conteoTexto[t]||0)+1;
+    });
+    let textoSugerido='', maxN=0;
+    Object.entries(conteoTexto).forEach(([t,n])=>{ if(n>=maxN){ maxN=n; textoSugerido=t; } });
+    banco[k] = {
+      causalOriginal: arr[arr.length-1].descGlosa||'',
+      itemOriginal: arr[arr.length-1].codElemento||arr[arr.length-1].descElemento||'',
+      consistente,
+      decision: consistente ? arr[0].respuesta : null,
+      textoSugerido,
+      nPrecedentes: arr.length,
+    };
+  });
+  return banco;
+};
+
+window.toggleRespuestasProyectadas = function(){
+  const panel = g('glo-proyectadas-panel'); if(!panel) return;
+  const visible = panel.style.display!=='none';
+  if(visible){ panel.style.display='none'; g('btn-proyectar').textContent='🎯 Ver respuestas proyectadas'; return; }
+  panel.style.display='block';
+  g('btn-proyectar').textContent='🎯 Ocultar respuestas proyectadas';
+  window.renderRespuestasProyectadas();
+};
+
+window.renderRespuestasProyectadas = function(){
+  const panel = g('glo-proyectadas-panel'); if(!panel) return;
+  const banco = window.construirBancoRespuestasProyectadas();
+  const pendientes = window.glosasFiltradasCliente().filter(gl=>{
+    const esPagado = !(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim();
+    if(esPagado) return false;
+    return !gl.respuesta || gl.respuesta==='pendiente';
+  });
+
+  // Agrupar pendientes por CAUSAL+ÍTEM (misma clave que el banco), y separar
+  // las que tienen un precedente consistente (proyectables) de las que no.
+  const gruposProyectables = {};
+  let nNoProyectables = 0;
+  pendientes.forEach(gl=>{
+    if(!_normCausal(gl.descGlosa)) return;
+    const k = _claveCausalItem(gl);
+    const info = banco[k];
+    if(info && info.consistente){
+      if(!gruposProyectables[k]) gruposProyectables[k]={info, items:[]};
+      gruposProyectables[k].items.push(gl);
+    } else if(info && !info.consistente){
+      nNoProyectables++;
+    }
+  });
+
+  const gruposArr = Object.values(gruposProyectables);
+  const totalProyectables = gruposArr.reduce((a,gr)=>a+gr.items.length,0);
+
+  if(!gruposArr.length){
+    panel.innerHTML = `<div class="alert aw" style="margin-bottom:0;">
+      No hay respuestas para proyectar todavía${nNoProyectables>0?` (hay ${nNoProyectables} ítems pendientes cuya causal ya respondiste antes, pero con decisiones distintas cada vez — esas se revisan caso por caso, no se proyectan).`:'. Responde algunos ítems primero; cuando una misma causal se haya respondido siempre igual, aparecerá aquí para proyectarla al resto.'}
+    </div>`;
+    return;
+  }
+
+  // Organizar PRIMERO por ÍTEM (como en Responder Glosas), y DENTRO de cada
+  // ítem, por grupo de causal — cada grupo causal+ítem conserva su propio
+  // botón de aprobación, pero visualmente van anidados bajo su ítem.
+  const porItem = {};
+  gruposArr.forEach(gr=>{
+    const itemKey = _normCausal(gr.info.itemOriginal) || '__GENERAL__';
+    if(!porItem[itemKey]) porItem[itemKey]={ itemOriginal: gr.info.itemOriginal, grupos:[] };
+    porItem[itemKey].grupos.push(gr);
+  });
+  const itemsArr = Object.values(porItem).sort((a,b)=>{
+    const na=a.grupos.reduce((s,g)=>s+g.items.length,0), nb=b.grupos.reduce((s,g)=>s+g.items.length,0);
+    return nb-na;
+  });
+
+  // El índice global de cada grupo (causal+ítem) tiene que coincidir con el
+  // orden en window._proyeccionGrupos para que los botones "Aprobar" apunten
+  // al grupo correcto — se asigna aquí, recorriendo en el mismo orden en que
+  // se va a dibujar (por ítem, y dentro de cada ítem por causal).
+  let _gi = 0;
+  const gidPorGrupo = new Map();
+  itemsArr.forEach(it=>it.grupos.forEach(gr=>{ gidPorGrupo.set(gr, 'proy-'+(_gi++)); }));
+
+  panel.innerHTML = `
+    <div class="alert as" style="margin-bottom:10px;">
+      🎯 <strong>${totalProyectables} ítems pendientes</strong> tienen una causal que ya respondiste antes de forma consistente — puedes revisar y aprobar la respuesta sugerida en bloque.
+      ${nNoProyectables>0?` Además hay <strong>${nNoProyectables} ítems</strong> con causales que en el pasado respondiste de forma distinta cada vez (dependen del caso / historia clínica) — esas NO se proyectan, hay que seguir respondiéndolas una por una.`:''}
+    </div>
+    ${itemsArr.map(({itemOriginal,grupos})=>{
+      const totalItem = grupos.reduce((a,g)=>a+g.items.length,0);
+      return `
+      <div style="border:1px solid var(--brd);border-radius:8px;margin-bottom:12px;overflow:hidden;">
+        <div style="background:var(--sur2);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--brd);">
+          <span style="font-size:12px;font-family:var(--mono);font-weight:700;color:var(--acc);flex:1;min-width:200px;">🔖 ${itemOriginal||'(sin código/descripción — ítem general)'}</span>
+          <span style="font-size:10px;color:var(--tx3);">${grupos.length} causal${grupos.length>1?'es':''} proyectable${grupos.length>1?'s':''}</span>
+          <span style="font-size:11px;color:var(--acc);font-weight:700;">${totalItem} ítem${totalItem>1?'s':''} pendiente${totalItem>1?'s':''}</span>
+        </div>
+        ${grupos.map(gr=>{
+          const {info,items} = gr;
+          const decLabel = info.decision==='aceptada' ? '✔ Se acepta' : '✕ No se acepta';
+          const decColor = info.decision==='aceptada' ? 'var(--red)' : 'var(--green)';
+          const gid = gidPorGrupo.get(gr);
+          return `
+          <div style="padding:10px 14px 10px 24px;border-top:1px dashed var(--brd);">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+              <span style="font-size:12px;color:var(--tx);flex:1;min-width:200px;">${info.causalOriginal}</span>
+              <span style="font-size:10px;background:${decColor}22;color:${decColor};padding:3px 9px;border-radius:4px;font-weight:700;">${decLabel}</span>
+              <span style="font-size:10px;color:var(--tx3);">basado en ${info.nPrecedentes} respuesta${info.nPrecedentes>1?'s':''} anterior${info.nPrecedentes>1?'es':''}</span>
+              <span style="font-size:11px;color:var(--acc);font-weight:700;">${items.length} pendiente${items.length>1?'s':''}</span>
+              <button class="btn btn-sm bp" onclick="window.aprobarProyeccionGrupo('${gid}')">✔ Aprobar los ${items.length}</button>
+            </div>
+            <label class="fl" style="font-size:10px;">Texto de respuesta a aplicar (puedes editarlo antes de aprobar)</label>
+            <textarea id="${gid}-texto" rows="2" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:11px;resize:vertical;">${info.textoSugerido||''}</textarea>
+            <div style="margin-top:6px;font-size:10px;color:var(--tx3);">Facturas: ${[...new Set(items.map(i=>i.factura))].slice(0,8).join(', ')}${new Set(items.map(i=>i.factura)).size>8?'…':''}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('')}
+  `;
+  // Guardar la referencia de grupos en memoria, en el MISMO orden con que se
+  // asignaron los gid arriba (por ítem, y dentro de cada ítem por causal),
+  // para que aprobarProyeccionGrupo los ubique correctamente por índice.
+  const gruposEnOrden = [];
+  itemsArr.forEach(it=>it.grupos.forEach(gr=>gruposEnOrden.push(gr)));
+  window._proyeccionGrupos = gruposEnOrden.map(({info,items})=>({decision:info.decision, itemIds:items.map(i=>i.id)}));
+};
+
+// Aplica la decisión + texto (editado o no) de un grupo proyectado a TODOS
+// sus ítems pendientes de una sola vez. Pide confirmación porque escribe
+// varios ítems en Firestore de golpe.
+window.aprobarProyeccionGrupo = async function(gid){
+  const idx = parseInt(gid.replace('proy-',''));
+  const grupo = (window._proyeccionGrupos||[])[idx];
+  if(!grupo){ toast('No se encontró el grupo a aprobar.','e'); return; }
+  const textoEl = g(gid+'-texto');
+  const texto = textoEl ? textoEl.value : '';
+  if(!confirm(`¿Aprobar la respuesta proyectada para ${grupo.itemIds.length} ítem(s)? Se guardará como "${grupo.decision==='aceptada'?'Se acepta':grupo.decision==='no_aceptada'?'No se acepta':'Parcial'}" con el texto indicado.`)) return;
+  let ok=0, err=0;
+  for(const id of grupo.itemIds){
+    try{
+      await window.updGlosaRespuesta(id,'tipo',grupo.decision);
+      if(texto && texto.trim()) await window.updGlosaRespuesta(id,'texto',texto);
+      ok++;
+    } catch(e){ err++; }
+  }
+  toast(`${ok} ítem(s) aprobados con la respuesta proyectada${err?` · ${err} con error`:''}.`,'ok');
+  window.renderRespuestasProyectadas();
+  window.renderGlosasResp();
+};
+
 window.renderGlosasResp = function(){
   const filtEst = g('glo-filtro-est')?.value||'';
   const lista = g('glo-resp-lista'); if(!lista) return;
@@ -5823,6 +6024,13 @@ window.updGlosaRespuesta = async (gloId, campo, valor) => {
     });
     updGloKpis();
     actualizarProgresoFactura(gl.factura, gl.radicado, gl.docVictima);
+    // Al terminar de escribir el texto de respuesta (o ajustar un valor
+    // parcial) también se reintenta el avance de Modo Enfoque — por si el
+    // salto automático se había cancelado antes porque el usuario seguía
+    // escribiendo; ahora que ya soltó el campo, puede seguir su curso.
+    if(campo==='texto' && gl.respuesta && gl.respuesta!=='pendiente'){
+      avanzarEnfoqueSiCompleto(gl);
+    }
     if(campo==='vrAceptado' && (gl.respuesta==='aceptada'||gl.respuesta==='parcial') && (gl.vrAceptado||0)>0){
       window.aplicarGlosaAFurips(gl.factura, gl.codHab); // no bloqueante — se aplica por ítem, en tiempo real
     }
@@ -12893,6 +13101,26 @@ window.seleccionarRecParaRadicar = (id) => {
     `;
   }
 
+  // Radicados anteriores (archivados automáticamente al re-radicar, ej. tras
+  // responder una glosa y volver a radicar ante ADRES) — así nunca se pierde
+  // la trazabilidad del radicado original aunque se registre uno nuevo.
+  const radicadosPrevios = Array.isArray(rec.radicadosPrevios) ? rec.radicadosPrevios : [];
+  if(radicadosPrevios.length > 0){
+    html += `
+      <div style="background:var(--sur);border:1px solid var(--brd);border-radius:6px;padding:10px;margin-top:8px;">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:6px;">📜 RADICADOS ANTERIORES (${radicadosPrevios.length})</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          ${radicadosPrevios.map((rp,i) => `<div style="font-size:11px;padding:5px 7px;background:var(--sur2);border-radius:4px;">
+            <span style="font-family:var(--mono);color:var(--tx3);margin-right:6px;">#${i+1}</span>
+            Lote <strong>${rp.lote||'—'}</strong> · N° <strong>${rp.numero||'—'}</strong> · ${rp.fecha||'—'}
+            ${rp.estado?` · <span style="color:var(--tx3);">${rp.estado}</span>`:''}
+            ${rp.obs?` · <em style="color:var(--tx3);">${rp.obs}</em>`:''}
+          </div>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   // Rondas de respuesta ADRES
   if(rondas.length > 0){
     html += `
@@ -12961,11 +13189,34 @@ window.guardarRadInd = async () => {
   const eaAntes = getRespuestaAdres(rec);
   const histActual = Array.isArray(rec.historial) ? [...rec.historial] : [];
 
+  // Si la factura YA tenía un radicado con otro Lote/N° Individual, esto es
+  // una RE-radicación (ej. reproceso tras responder una glosa) — no se
+  // sobrescribe sin dejar rastro: el radicado anterior se archiva en
+  // "radicadosPrevios" antes de guardar el nuevo, para no perder la
+  // trazabilidad del radicado original. Si solo se está corrigiendo el
+  // Estado/Observaciones del MISMO radicado (mismo Lote y N° Individual), no
+  // se archiva nada — no es una radicación nueva.
+  const radicadoAnterior = rec.radicado && rec.radicado.numero ? rec.radicado : null;
+  const esReRadicacion = !!(radicadoAnterior &&
+    (String(radicadoAnterior.lote||'').trim() !== String(lote).trim() ||
+     String(radicadoAnterior.numero||'').trim() !== String(num).trim()));
+  const radicadosPreviosActual = Array.isArray(rec.radicadosPrevios) ? [...rec.radicadosPrevios] : [];
+  if(esReRadicacion){
+    radicadosPreviosActual.push({...radicadoAnterior, archivadoEn: ahora});
+  }
+
   if(egAntes !== 'radicada'){
     histActual.push({
       fecha: ahora, tipo: 'gestion',
       de: egAntes, a: 'radicada',
       motivo: `Radicación individual · Lote ${lote}${obs?' · '+obs:''}`,
+      usuario: USER.uid, usuarioNombre: USER.nombre || USER.email || '',
+    });
+  } else if(esReRadicacion){
+    histActual.push({
+      fecha: ahora, tipo: 'gestion',
+      de: 'radicada', a: 'radicada',
+      motivo: `Nueva radicación (reproceso) · Lote ${lote} / N° ${num} — se conserva el radicado anterior (Lote ${radicadoAnterior.lote||'—'} / N° ${radicadoAnterior.numero||'—'}) en el historial${obs?' · '+obs:''}`,
       usuario: USER.uid, usuarioNombre: USER.nombre || USER.email || '',
     });
   }
@@ -12986,6 +13237,7 @@ window.guardarRadInd = async () => {
         lote, numero: num, fecha, estado, obs,
         registradoPor: USER.uid, registradoEn: serverTimestamp(),
       },
+      radicadosPrevios: radicadosPreviosActual,
       estadoGestion: 'radicada',
       historial: histActual,
       actualizado: serverTimestamp(),
@@ -12997,7 +13249,9 @@ window.guardarRadInd = async () => {
       };
     }
     await updateDoc(doc(db,'reclamaciones', rec.id), update);
-    toast(`✔ ${rec.factura} radicada con lote ${lote}`, 'ok');
+    toast(esReRadicacion
+      ? `✔ ${rec.factura} re-radicada con lote ${lote} · el radicado anterior quedó guardado en el historial`
+      : `✔ ${rec.factura} radicada con lote ${lote}`, 'ok');
     cancelarRadInd();
   } catch(e){
     console.error(e);
