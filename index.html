@@ -8593,6 +8593,10 @@ window.guardarRadMasivo = async () => {
   }
 
   toast(`✔ ${ok} radicado${ok===1?'':'s'} aplicado${ok===1?'':'s'}${err>0?` · ${err} errores`:''}`, ok>0 ? 'ok' : 'e');
+  } catch(e){
+    console.error('Error inesperado en radicación masiva:', e);
+    toast('Error inesperado al aplicar radicados: '+e.message,'e');
+  }
   g('btn-radmas-guardar').disabled = false;
 };
 
