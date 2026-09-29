@@ -8495,7 +8495,10 @@ window.guardarRadMasivo = async () => {
   g('btn-radmas-guardar').disabled = true;
   g('radmas-prog').classList.remove('hidden');
   const barra = g('radmas-barra'), txt = g('radmas-txt');
-
+  // Si algo inesperado revienta más abajo, este try/catch evita que el botón
+  // quede "muerto" sin ningún aviso (que fue justo el síntoma reportado) — se
+  // muestra el error y el botón vuelve a habilitarse.
+  try {
   // Mapeo estado del Excel → respuestaAdres (radicada = sin respuesta, null)
   const mapAdres = {
     'radicada':          null,
@@ -8512,68 +8515,75 @@ window.guardarRadMasivo = async () => {
   for(let i = 0; i < listas.length; i += CHUNK){
     const slice = listas.slice(i, i + CHUNK);
     const batch = writeBatch(db);
+    // Armar el batch dentro de un try/catch propio: si UNA fila falla al
+    // construir su "update" (ej. un dato inesperado), antes se perdía todo
+    // el proceso en silencio — el botón "parecía no hacer nada" porque el
+    // error rompía la función entera sin mostrar ningún aviso. Ahora esa
+    // fila se marca como error y el resto del lote sigue su curso.
     slice.forEach(f => {
-      f.valid = 'guardando';
-      f.msg = 'Guardando...';
-      const rec = RECS.find(r => r.id === f.recId);
-      const egAntes = getEstadoGestion(rec);
-      const eaAntes = getRespuestaAdres(rec);
-      const historialActual = Array.isArray(rec?.historial) ? rec.historial : [];
-      const nuevoHist = [...historialActual];
-      if(egAntes !== 'radicada'){
-        nuevoHist.push({
-          fecha: ahora, tipo: 'gestion',
-          de: egAntes, a: 'radicada',
-          motivo: `Radicación masiva histórica · Lote ${f.radLote}${f.obs?' · '+f.obs:''}`,
-          usuario: USER.uid, usuarioNombre: USER.nombre || USER.email || '',
-        });
-      }
-      const eaNueva = mapAdres[f.estado];
-      if(eaNueva && eaAntes !== eaNueva){
-        nuevoHist.push({
-          fecha: ahora, tipo: 'adres',
-          de: eaAntes || '(sin respuesta)', a: eaNueva,
-          motivo: f.obs || '(carga masiva histórica)',
-          usuario: USER.uid, usuarioNombre: USER.nombre || USER.email || '',
-        });
-      }
-      const update = {
-        valorRadicadoConfirmado: valorRadicado||0,
-        valorRadicadoPor: USER.nombre||USER.email||'',
-        valorRadicadoEn: serverTimestamp(),
-        radicado: {
-          lote:          f.radLote,
-          numero:        f.radInd || f.radLote,
-          fecha:         f.fecha,
-          estado:        f.estado,
-          obs:           f.obs,
-          registradoPor: USER.uid,
-          registradoEn:  serverTimestamp(),
-          cargaMasiva:   true
-        },
-        estadoGestion: 'radicada',
-        historial: nuevoHist,
-        actualizado: serverTimestamp()
-      };
-      if(eaNueva){
-        update.respuestaAdres = {
-          estado: eaNueva,
-          fecha: f.fecha,
-          valorAprobado: null,
-          obs: f.obs || '(carga masiva histórica)',
-          registradoPor: USER.uid,
-          registradoEn: serverTimestamp(),
+      try{
+        f.valid = 'guardando';
+        f.msg = 'Guardando...';
+        const rec = RECS.find(r => r.id === f.recId);
+        const egAntes = getEstadoGestion(rec);
+        const eaAntes = getRespuestaAdres(rec);
+        const historialActual = Array.isArray(rec?.historial) ? rec.historial : [];
+        const nuevoHist = [...historialActual];
+        if(egAntes !== 'radicada'){
+          nuevoHist.push({
+            fecha: ahora, tipo: 'gestion',
+            de: egAntes, a: 'radicada',
+            motivo: `Radicación masiva histórica · Lote ${f.radLote}${f.obs?' · '+f.obs:''}`,
+            usuario: USER.uid, usuarioNombre: USER.nombre || USER.email || '',
+          });
+        }
+        const eaNueva = mapAdres[f.estado];
+        if(eaNueva && eaAntes !== eaNueva){
+          nuevoHist.push({
+            fecha: ahora, tipo: 'adres',
+            de: eaAntes || '(sin respuesta)', a: eaNueva,
+            motivo: f.obs || '(carga masiva histórica)',
+            usuario: USER.uid, usuarioNombre: USER.nombre || USER.email || '',
+          });
+        }
+        const update = {
+          radicado: {
+            lote:          f.radLote,
+            numero:        f.radInd || f.radLote,
+            fecha:         f.fecha,
+            estado:        f.estado,
+            obs:           f.obs,
+            registradoPor: USER.uid,
+            registradoEn:  serverTimestamp(),
+            cargaMasiva:   true
+          },
+          estadoGestion: 'radicada',
+          historial: nuevoHist,
+          actualizado: serverTimestamp()
         };
+        if(eaNueva){
+          update.respuestaAdres = {
+            estado: eaNueva,
+            fecha: f.fecha,
+            valorAprobado: null,
+            obs: f.obs || '(carga masiva histórica)',
+            registradoPor: USER.uid,
+            registradoEn: serverTimestamp(),
+          };
+        }
+        batch.update(doc(db,'reclamaciones', f.recId), update);
+      } catch(e){
+        console.error('Error preparando fila de radicación masiva:', f.factura, e);
+        f.valid = 'error'; f.msg = 'Error preparando: '+e.message; err++;
       }
-      batch.update(doc(db,'reclamaciones', f.recId), update);
     });
     renderPreviewRad();
     try {
       await batch.commit();
-      slice.forEach(f => { f.valid='hecho'; f.msg='Aplicado'; ok++; });
+      slice.forEach(f => { if(f.valid==='guardando'){ f.valid='hecho'; f.msg='Aplicado'; ok++; } });
     } catch(e){
       console.error('Error batch radicación masiva:', e);
-      slice.forEach(f => { f.valid='error'; f.msg='Error al guardar'; err++; });
+      slice.forEach(f => { if(f.valid==='guardando'){ f.valid='error'; f.msg='Error al guardar'; err++; } });
     }
     const done = Math.min(i + CHUNK, listas.length);
     const pct = Math.round(done / listas.length * 100);
