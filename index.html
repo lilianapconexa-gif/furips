@@ -5261,7 +5261,16 @@ window.procesarGlosasExcel = (file) => {
         if(sel){const opt=[...sel.options].find(o=>o.value===GLOSAS_PREVIEW[0].codHab);if(opt)sel.value=opt.value;}
       }
 
-      _s('glo-preview-info',`✔ ${GLOSAS_PREVIEW.length} glosas encontradas · Total: ${fmt$(GLOSAS_PREVIEW.reduce((a,r)=>a+r.vrGlosado,0))}`);
+      // Total real de la vista previa: agrupado por factura y aplicando la
+      // misma regla que el resto del sistema (si una factura tiene glosa
+      // general + glosas por ítem simultáneas, el valor de la factura es el
+      // MÁXIMO entre ambas, nunca su suma — no se puede glosar más del valor
+      // de la cuenta). Antes se sumaban todas las filas del Excel sin esta
+      // regla, inflando el total mostrado aquí frente a la carta de glosa.
+      const _porFacPreview={};
+      GLOSAS_PREVIEW.forEach(r=>{ (_porFacPreview[r.factura]=_porFacPreview[r.factura]||[]).push(r); });
+      const totalPreviewReal = Object.values(_porFacPreview).reduce((acc,itemsFac)=>acc+window.calcGlosasFactura(itemsFac).tGlo,0);
+      _s('glo-preview-info',`✔ ${GLOSAS_PREVIEW.length} glosas encontradas · Total: ${fmt$(totalPreviewReal)}`);
       g('glo-preview').classList.remove('hidden');
 
       const tb=g('glo-tbody'); if(!tb) return;
@@ -5574,7 +5583,7 @@ window.renderGlosasResp = function(){
 
   lista.innerHTML=facturasFiltradas.map(([key,items])=>{
     const [fac,rad,doc]=key.split('|||');
-    const totGlo=items.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+    const totGlo=window.calcGlosasFactura(items).tGlo;
     const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
     const respondidas=items.length-pend;
     const pct=items.length?Math.round(respondidas/items.length*100):0;
