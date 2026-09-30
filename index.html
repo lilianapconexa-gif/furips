@@ -5658,7 +5658,10 @@ window.renderGlosasResp = function(){
           return navegacionHTML + gruposAMostrar.map((glosasItem,gIdx)=>{
             const primero=glosasItem[0];
             const repetido=glosasItem.length>1;
-            const totGloItem=glosasItem.reduce((a,g)=>a+(parseInt(g.vrGlosado)||0),0);
+            // MAX, no suma: cuando un ítem tiene varias causales (filas repetidas
+            // del mismo ítem), ADRES repite el mismo valor glosado del ítem en cada
+            // fila — sumarlas multiplicaba el valor del ítem por su número de causales.
+            const totGloItem=Math.max(0, ...glosasItem.map(g=>parseInt(g.vrGlosado)||0));
             // Paleta de colores para el título del ítem, rotando por grupo — así se ve
             // claro dónde termina un ítem y empieza el siguiente, siempre (no solo
             // cuando se repite).
@@ -6266,9 +6269,10 @@ function htmlRespuesta(fac, rad, docId, items){
   const info=IPS_INFO_MEMBRETE[codHab]||{};
   const ipsNom=info.nombre||IPS_NOM_GLO[codHab]||codHab||'';
   const fh=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
-  const tGlo=items.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
-  const tAc=items.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
-  const tNoAc=items.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
+  // Totales con la misma regla del resto del sistema: MAX entre glosa general
+  // e itemizada, no la suma de todas las filas (una factura no puede quedar
+  // glosada por más de su propio valor).
+  const {tGlo, tAc, tNoAc} = window.calcGlosasFactura(items);
 
   const filas=items.map(gl=>`
     <tr style="border-bottom:1px solid #ddd;">
@@ -6339,9 +6343,8 @@ function generarPDFRespuesta(fac, rad, docId, items){
   const info=IPS_INFO_MEMBRETE[codHab]||{};
   const ipsNom=info.nombre||IPS_NOM_GLO[codHab]||codHab||'';
   const fh=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
-  const tGlo=items.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
-  const tAc=items.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
-  const tNoAc=items.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
+  // MAX entre glosa general e itemizada, no la suma de todas las filas.
+  const {tGlo, tAc, tNoAc} = window.calcGlosasFactura(items);
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
@@ -6794,9 +6797,8 @@ window.expGlosaExcel1=(fac,rad,doc)=>{
     ['CÓDIGO','DESCRIPCIÓN DEL ÍTEM','DESCRIPCIÓN GLOSA','Valor Glosado','RESPUESTA DE GLOSA','Valor\nAceptado','Valor\nNo Aceptado'],
   ];
   items.forEach(gl=>data.push([gl.codElemento||'',gl.descElemento||'',gl.descGlosa||'',parseInt(gl.vrGlosado)||0,gl.textoResp||'',parseInt(gl.vrAceptado)||0,parseInt(gl.vrNoAceptado)||gl.vrGlosado||0]));
-  const tGlo=items.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
-  const tAc=items.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
-  const tNoAc=items.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
+  // MAX entre glosa general e itemizada, no la suma de todas las filas.
+  const {tGlo, tAc, tNoAc} = window.calcGlosasFactura(items);
   data.push(['','','TOTAL',tGlo,'',tAc,tNoAc]);
   const ws=XLSX.utils.aoa_to_sheet(data);
   ws['!cols']=[{wch:14},{wch:35},{wch:50},{wch:14},{wch:60},{wch:14},{wch:14}];
@@ -6825,9 +6827,8 @@ window.expGlosasExcelMasivo=()=>{
       ['CÓDIGO','DESCRIPCIÓN DEL ÍTEM','DESCRIPCIÓN GLOSA','Valor Glosado','RESPUESTA DE GLOSA','Valor\nAceptado','Valor\nNo Aceptado'],
     ];
     items.forEach(gl=>data.push([gl.codElemento||'',gl.descElemento||'',gl.descGlosa||'',parseInt(gl.vrGlosado)||0,gl.textoResp||'',parseInt(gl.vrAceptado)||0,parseInt(gl.vrNoAceptado)||gl.vrGlosado||0]));
-    const tGlo=items.reduce((a,i)=>a+(parseInt(i.vrGlosado)||0),0);
-    const tAc=items.reduce((a,i)=>a+(parseInt(i.vrAceptado)||0),0);
-    const tNoAc=items.reduce((a,i)=>a+(parseInt(i.vrNoAceptado)||0),0);
+    // MAX entre glosa general e itemizada, no la suma de todas las filas.
+    const {tGlo, tAc, tNoAc} = window.calcGlosasFactura(items);
     data.push(['','','TOTAL',tGlo,'',tAc,tNoAc]);
     const ws=XLSX.utils.aoa_to_sheet(data);
     ws['!cols']=[{wch:14},{wch:35},{wch:50},{wch:14},{wch:60},{wch:14},{wch:14}];
