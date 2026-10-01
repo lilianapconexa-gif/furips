@@ -6446,10 +6446,18 @@ function generarPDFRespuesta(fac, rad, docId, items){
 }
 
 window.expGlosaPDF=(fac,rad,docId)=>{
-  const pf=agruparGlosFiltered();
-  const key=Object.keys(pf).find(k=>k.startsWith(fac+'|||'));
-  if(!key){ toast('Factura no encontrada.','w'); return; }
-  const items=pf[key];
+  // Se busca directamente en las glosas de la IPS activa (solo excluyendo
+  // los ítems "pagados"), SIN pasar por agruparGlosFiltered() — esa función
+  // aplica el filtro de estado (pendiente/respondida) y los filtros
+  // avanzados de la pestaña "Responder Glosas". Si ese filtro quedaba en
+  // "pendiente" y la factura ya estaba 100% respondida (el caso normal al
+  // descargar el PDF desde "Por Paquete", donde no existe ese mismo filtro),
+  // agruparGlosFiltered() la descartaba y el botón PDF no hacía nada.
+  const items = window.glosasFiltradasCliente().filter(gl=>
+    gl.factura===fac && gl.radicado===rad && (gl.docVictima||'')===docId &&
+    !(!(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim())
+  );
+  if(!items.length){ toast('Factura no encontrada.','w'); return; }
   if(typeof window.jspdf==='undefined'){ toast('Cargando librería PDF...','w'); setTimeout(()=>window.expGlosaPDF(fac,rad,docId),1000); return; }
   generarPDFRespuesta(fac,rad,docId,items);
 };
@@ -6815,10 +6823,15 @@ window.generarNotaCredito = async function(factura, codHab){
 // ── DESCARGAR EXCEL DE UNA FACTURA ──
 window.expGlosaExcel1=(fac,rad,doc)=>{
   if(typeof XLSX==='undefined'){ toast('Cargando librería...','w'); return; }
-  const pf=agruparGlosFiltered();
-  const key=Object.keys(pf).find(k=>k.startsWith(fac+'|||'));
-  if(!key){ toast('Factura no encontrada.','w'); return; }
-  const items=pf[key];
+  // Igual que en expGlosaPDF: se busca directo en las glosas de la IPS activa
+  // (solo excluyendo "pagados"), sin pasar por agruparGlosFiltered() — esa
+  // función depende del filtro de estado de la pestaña "Responder Glosas",
+  // que no aplica al descargar desde "Por Paquete".
+  const items = window.glosasFiltradasCliente().filter(gl=>
+    gl.factura===fac && gl.radicado===rad && (gl.docVictima||'')===doc &&
+    !(!(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim())
+  );
+  if(!items.length){ toast('Factura no encontrada.','w'); return; }
   const ipsNom=IPS_NOM_GLO[items[0]?.codHab]||items[0]?.codHab||'';
   const wb=XLSX.utils.book_new();
   const data=[
