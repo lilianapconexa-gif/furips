@@ -3881,16 +3881,36 @@ const fmtD2 = s => { if(!s) return '—'; const p=s.split('-'); return p.length=
 // completa-, así que el total de la factura debe ser el MAYOR entre el valor
 // general y la suma de los ítems puntuales, NUNCA la suma de ambos (eso
 // haría que el total superara el valor real de la factura).
+// Identifica el ÍTEM ESPECÍFICO de la factura al que pertenece una fila de
+// glosa — usado para agrupar "causales repetidas sobre el MISMO ítem" (que
+// hay que deduplicar, tomando un solo valor) sin confundirlas con "dos ítems
+// DISTINTOS que comparten la misma descripción" (que sí hay que sumar cada
+// uno por separado).
+// Prioridad: 1) el "Consecutivo Item" original de ADRES (confiable: mismo
+// consecutivo = misma fila de la factura, consecutivo distinto = ítem
+// distinto, aunque el texto de descripción sea idéntico — ej. dos jeringas
+// despachadas por separado, cada una con su propio valor glosado). 2) si la
+// glosa no tiene ese dato (se guardó antes de capturarlo, o el Excel no trae
+// esa columna), se usa el código/descripción normalizado, como antes.
+const _normItemGlosa = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+window.claveItemGlosa = function(gl){
+  const sinIdentificacion = !(gl.codElemento||'').trim() && !(gl.descElemento||'').trim();
+  const consecStr = (gl.consecItem!==undefined && gl.consecItem!==null) ? String(gl.consecItem).trim() : '';
+  const esGeneralExplicito = consecStr!=='' && parseInt(consecStr)===-1;
+  if(sinIdentificacion || esGeneralExplicito) return '__GENERAL__';
+  if(consecStr!=='') return 'C'+consecStr;
+  return _normItemGlosa(gl.codElemento||gl.descElemento) || '__GENERAL__';
+};
+
 window.calcGlosasFactura = function(items, opts){
   // opts.aceptadoDe(g): opcional, para casos como el TXT de FURIPS1/FURIPS2
   // donde el valor "aceptado" real es lo que efectivamente se aplicó/quitó en
   // FURIPS2 (montoAplicadoFurips), no lo que quedó registrado como vrAceptado
   // en la respuesta de la glosa. Por defecto usa vrAceptado.
   const aceptadoDe = (opts&&opts.aceptadoDe) || (g=>parseInt(g.vrAceptado)||0);
-  const _norm = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const porItem = {};
   items.forEach(it=>{
-    const k = _norm(it.codElemento||it.descElemento) || '__GENERAL__';
+    const k = window.claveItemGlosa(it);
     if(!porItem[k]) porItem[k]=[];
     porItem[k].push(it);
   });
@@ -5191,6 +5211,14 @@ window.procesarGlosasExcel = (file) => {
         tipoElem: marcarGlo2(fi(['Tipo Elemento'], usadasGlo2)),
         descGlosa:marcarGlo2(fi(['Descripción Glosa','Descripcion Glosa','DESCRIPCIÓN GLOSA'], usadasGlo2)),
         anotacion:marcarGlo2(fi(['Anotación','Anotacion'], usadasGlo2)),
+        // "Consecutivo Item" identifica el ÍTEM ESPECÍFICO de la factura al que
+        // pertenece la fila (-1 = glosa general de toda la cuenta). Es la forma
+        // confiable de distinguir "misma causal repetida sobre el mismo ítem"
+        // (mismo consecutivo, incluso si el texto de descripción coincide) de
+        // "dos ítems distintos con la misma descripción" (ej. dos jeringas
+        // despachadas por separado, cada una con su propio valor glosado) —
+        // antes se agrupaban solo por texto y se perdía el valor del segundo.
+        consecItem: marcarGlo2(fi(['Consecutivo Item','Consecutivo Ítem'], usadasGlo2)),
       };
 
       // ADRES suele combinar celdas (merge) en las columnas de agrupación: Paquete,
@@ -5242,6 +5270,10 @@ window.procesarGlosasExcel = (file) => {
           descGlosa:   descGlosa,
           anotacion:   anotacion,
           vrGlosado:   Math.round(vrG),
+          // Puede venir vacío en archivos viejos/sin esa columna — se maneja
+          // como "sin dato" (string vacío), no como 0, para no confundirlo con
+          // un consecutivo real 0.
+          consecItem:  idx.consecItem>=0?String(row[idx.consecItem]??'').trim():'',
           codHab:      idx.codHab>=0?String(row[idx.codHab]||'').trim():gv('glo-ips-sel'),
           periodo:     gv('glo-periodo'),
           fechaRecepcion: gv('glo-fecha-recepcion'),
@@ -5626,10 +5658,12 @@ window.renderGlosasResp = function(){
         ${(()=>{
           const grupos={};
           items.forEach(gl=>{
-            // Sin código/descripción = glosa general de la factura: todas sus
-            // causales van juntas bajo una clave fija, no por gl.id (que las
-            // separaría en tarjetas distintas repitiendo el mismo valor total).
-            const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||'__GENERAL__';
+            // Se agrupa por ÍTEM real (Consecutivo Item de ADRES cuando está
+            // disponible, si no por código/descripción) — así dos ítems
+            // distintos con la misma descripción (ej. dos jeringas despachadas
+            // por separado) quedan en tarjetas separadas con su propio valor,
+            // en vez de mezclarse como si fueran causales repetidas de un solo ítem.
+            const key=window.claveItemGlosa(gl);
             if(!grupos[key]) grupos[key]=[];
             grupos[key].push(gl);
           });
@@ -5935,10 +5969,10 @@ function _cancelarAvanceEnfoquePendiente(facKey){
 function avanzarEnfoqueSiCompleto(gl){
   const facKey = String(gl.factura).replace(/[^a-z0-9]/gi,'')+'-'+gl.radicado;
   if(!window.FOCUS_FACTURAS.has(facKey)) return;
-  const key=(gl.codElemento||gl.descElemento||'').trim().toUpperCase()||'__GENERAL__';
+  const key=window.claveItemGlosa(gl);
   const hermanas = GLOSAS_DB.filter(g=>
     g.factura===gl.factura && g.radicado===gl.radicado &&
-    ((g.codElemento||g.descElemento||'').trim().toUpperCase()||'__GENERAL__')===key
+    window.claveItemGlosa(g)===key
   );
   const todasRespondidas = hermanas.every(g=>g.respuesta && g.respuesta!=='pendiente');
   _cancelarAvanceEnfoquePendiente(facKey);
@@ -11140,10 +11174,26 @@ window.trazMostrar = function(rec){
     });
   }
 
+  // Se ordenan por fecha ANTES de numerarlas como "Radicación 1", "Radicación 2"...
+  // — antes se numeraban según la posición en el arreglo guardado, y si una
+  // radicación más antigua quedaba guardada DESPUÉS de una más reciente (por
+  // ejemplo al sincronizar desde ADRES, o al digitarlas en otro orden), la
+  // línea de tiempo terminaba mostrando "Radicación 2" con una fecha anterior
+  // a "Radicación 1", como si el orden real de los hechos fuera otro.
+  const _parseFechaRad = f => f ? new Date(f.includes?.('/')?f.split('/').reverse().join('-'):f) : null;
+  todasRads.sort((a,b)=>{
+    const da=_parseFechaRad(a.fecha), db=_parseFechaRad(b.fecha);
+    const va = da&&!isNaN(da), vb = db&&!isNaN(db);
+    if(va&&vb) return da-db;
+    if(va) return -1; // con fecha va antes que sin fecha
+    if(vb) return 1;
+    return 0;
+  });
+
   todasRads.forEach((r,i)=>{
     // Radicación
     if(r.fecha){
-      const d = new Date(r.fecha.includes?.('/')?r.fecha.split('/').reverse().join('-'):r.fecha);
+      const d = _parseFechaRad(r.fecha);
       if(!isNaN(d)) eventos.push({fecha:d, tipo:'radicacion', label:`📬 Radicación ${i+1} ante ADRES`, sub:`N° ${r.numero||'—'} · Lote ${r.lote||'—'}`, color:'#00B2E2'});
     }
     // Respuesta
