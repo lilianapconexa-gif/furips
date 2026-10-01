@@ -5613,9 +5613,12 @@ window.renderGlosasResp = function(){
   const _normTxtGlo = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const _srcRecs = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(typeof RECS!=='undefined'?RECS:[]);
 
-  // Aviso general arriba de la lista: facturas sin informaci\u00f3n de FURIPS2 (ni
-  // reclamaci\u00f3n encontrada, ni \u00edtems de FURIPS2 cargados) \u2014 sin eso no se
-  // puede descontar lo aceptado del FURIPS2 de esa cuenta al responder.
+  // Aviso general arriba de la lista: facturas sin información de FURIPS2 (ni
+  // reclamación encontrada, ni ítems de FURIPS2 cargados). Es un RECORDATORIO,
+  // no un bloqueo: se puede responder la glosa igual sin tener el FURIPS2
+  // todavía — lo ideal es cargarlo antes para que el descuento de lo aceptado
+  // se aplique de una vez, pero si se carga después tampoco hay problema, el
+  // sistema lo aplicará en cuanto el FURIPS2 esté disponible.
   const _facturasSinFurips2 = facturasFiltradas.filter(([key])=>{
     const fac = key.split('|||')[0];
     const rec = _srcRecs.find(r=>r.factura===fac);
@@ -5623,9 +5626,9 @@ window.renderGlosasResp = function(){
   }).map(([key])=>key.split('|||')[0]);
   const _bannerSinFurips2 = _facturasSinFurips2.length ? `
     <div class="alert aw" style="margin-bottom:12px;">
-      \u26a0 <strong>${_facturasSinFurips2.length} factura${_facturasSinFurips2.length>1?'s':''} sin informaci\u00f3n de FURIPS2:</strong>
-      ${_facturasSinFurips2.slice(0,8).join(', ')}${_facturasSinFurips2.length>8?` y ${_facturasSinFurips2.length-8} m\u00e1s`:''}.
-      Revisa que esas facturas existan en el sistema y tengan su FURIPS2 cargado antes de responder \u2014 si no, el ajuste por glosa no se podr\u00e1 aplicar a esa cuenta.
+      ⚠ <strong>${_facturasSinFurips2.length} factura${_facturasSinFurips2.length>1?'s':''} sin información de FURIPS2:</strong>
+      ${_facturasSinFurips2.slice(0,8).join(', ')}${_facturasSinFurips2.length>8?` y ${_facturasSinFurips2.length-8} más`:''}.
+      Idealmente carga el FURIPS2 de esas facturas antes de contestar la glosa, para que el descuento de lo aceptado se aplique de inmediato — pero puedes responder ya mismo: si lo cargas después, el sistema lo ajusta igual, no se pierde nada.
     </div>` : '';
 
   lista.innerHTML=_bannerSinFurips2+facturasFiltradas.map(([key,items])=>{
