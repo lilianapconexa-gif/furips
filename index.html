@@ -5613,7 +5613,22 @@ window.renderGlosasResp = function(){
   const _normTxtGlo = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const _srcRecs = (typeof RECS_ALL!=='undefined'&&RECS_ALL.length>0)?RECS_ALL:(typeof RECS!=='undefined'?RECS:[]);
 
-  lista.innerHTML=facturasFiltradas.map(([key,items])=>{
+  // Aviso general arriba de la lista: facturas sin informaci\u00f3n de FURIPS2 (ni
+  // reclamaci\u00f3n encontrada, ni \u00edtems de FURIPS2 cargados) \u2014 sin eso no se
+  // puede descontar lo aceptado del FURIPS2 de esa cuenta al responder.
+  const _facturasSinFurips2 = facturasFiltradas.filter(([key])=>{
+    const fac = key.split('|||')[0];
+    const rec = _srcRecs.find(r=>r.factura===fac);
+    return !rec || !(rec.furips2||[]).length;
+  }).map(([key])=>key.split('|||')[0]);
+  const _bannerSinFurips2 = _facturasSinFurips2.length ? `
+    <div class="alert aw" style="margin-bottom:12px;">
+      \u26a0 <strong>${_facturasSinFurips2.length} factura${_facturasSinFurips2.length>1?'s':''} sin informaci\u00f3n de FURIPS2:</strong>
+      ${_facturasSinFurips2.slice(0,8).join(', ')}${_facturasSinFurips2.length>8?` y ${_facturasSinFurips2.length-8} m\u00e1s`:''}.
+      Revisa que esas facturas existan en el sistema y tengan su FURIPS2 cargado antes de responder \u2014 si no, el ajuste por glosa no se podr\u00e1 aplicar a esa cuenta.
+    </div>` : '';
+
+  lista.innerHTML=_bannerSinFurips2+facturasFiltradas.map(([key,items])=>{
     const [fac,rad,doc]=key.split('|||');
     const totGlo=window.calcGlosasFactura(items).tGlo;
     const pend=items.filter(g=>!g.respuesta||g.respuesta==='pendiente').length;
@@ -5623,6 +5638,11 @@ window.renderGlosasResp = function(){
     const _recFactura = _srcRecs.find(r=>r.factura===fac);
     const _furips2Factura = _recFactura?.furips2 || []; // activo — para saber si YA está resuelto
     const _furips2ParaSelector = (_recFactura?.furips2Original && _recFactura.furips2Original.length) ? _recFactura.furips2Original : _furips2Factura; // TODOS los ítems originales, para elegir
+    // Aviso: sin reclamación encontrada (la factura no existe en el sistema)
+    // o sin ítems de FURIPS2 — sin eso no se puede aplicar el ajuste de la
+    // glosa al FURIPS2 de la cuenta (descontar lo aceptado), así que hay que
+    // avisarlo de una vez en vez de que se descubra al intentar aplicar.
+    const _sinFurips2 = !_recFactura || !_furips2Factura.length;
 
     const _facKey = fac.replace(/[^a-z0-9]/gi,'')+'-'+rad;
     return `
@@ -5634,6 +5654,7 @@ window.renderGlosasResp = function(){
         <div style="font-size:11px;color:var(--tx2);">📬 Rad: <strong>${rad}</strong></div>
         <div style="font-size:11px;color:var(--tx2);">👤 ${doc}</div>
         <div style="font-size:11px;color:var(--tx2);">🏥 ${ipsNom}</div>
+        ${_sinFurips2?`<span title="${!_recFactura?'No se encontró esta factura en el sistema (FURIPS1/FURIPS2).':'La factura existe pero no tiene ítems de FURIPS2 cargados.'}" style="background:rgba(248,81,73,.12);color:#f85149;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;">⚠ Sin FURIPS2</span>`:''}
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
           <!-- Barra de progreso -->
           <div style="display:flex;align-items:center;gap:6px;">
@@ -6458,6 +6479,19 @@ window.expGlosaPDF=(fac,rad,docId)=>{
     !(!(gl.descGlosa||'').trim() && !(gl.anotacion||'').trim())
   );
   if(!items.length){ toast('Factura no encontrada.','w'); return; }
+
+  // Si la glosa de esta factura se ACEPTÓ EN SU TOTALIDAD (cada ítem real,
+  // sin duplicar por causal, quedó en "Se acepta" — nada pendiente ni en
+  // disputa), no tiene sentido generar la carta de respuesta a ADRES: no
+  // hay nada que argumentar, la IPS está de acuerdo con toda la glosa. Ahí
+  // lo que corresponde es la Nota Crédito, no el PDF de respuesta.
+  const itemsUnicos = window.calcGlosasFactura(items).itemsUnicos;
+  const todoAceptado = itemsUnicos.length>0 && itemsUnicos.every(it=>it.respuesta==='aceptada');
+  if(todoAceptado){
+    toast('Esta factura aceptó la glosa en su totalidad — no se genera PDF de respuesta. Usa el botón "Nota Crédito" en su lugar.','w');
+    return;
+  }
+
   if(typeof window.jspdf==='undefined'){ toast('Cargando librería PDF...','w'); setTimeout(()=>window.expGlosaPDF(fac,rad,docId),1000); return; }
   generarPDFRespuesta(fac,rad,docId,items);
 };
@@ -6898,7 +6932,19 @@ window.expGlosasExcelMasivo=()=>{
 window.expGlosasPDFMasivo=()=>{
   if(!GLOSAS_DB.length){ toast('No hay glosas cargadas.','w'); return; }
   const pf=agruparGlosFiltered();
-  const partes=Object.entries(pf).map(([key,items])=>{
+  // Se excluyen las facturas donde la glosa se ACEPTÓ EN SU TOTALIDAD (todo
+  // ítem real quedó en "Se acepta", nada en disputa) — igual que en el PDF
+  // individual: ahí no hay nada que argumentarle a ADRES, corresponde Nota
+  // Crédito, no una carta de respuesta.
+  let omitidasPorAceptacionTotal=0;
+  const entradasConRespuesta = Object.entries(pf).filter(([,items])=>{
+    const itemsUnicos = window.calcGlosasFactura(items).itemsUnicos;
+    const todoAceptado = itemsUnicos.length>0 && itemsUnicos.every(it=>it.respuesta==='aceptada');
+    if(todoAceptado) omitidasPorAceptacionTotal++;
+    return !todoAceptado;
+  });
+  if(!entradasConRespuesta.length){ toast('Todas las facturas filtradas aceptaron la glosa en su totalidad — no hay PDF de respuesta que generar. Usa Nota Crédito.','w'); return; }
+  const partes=entradasConRespuesta.map(([key,items])=>{
     const [fac,rad,doc]=key.split('|||');
     return htmlRespuesta(fac,rad,doc,items).replace('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">','').replace('</body></html>','<div style="page-break-after:always;"></div>');
   });
@@ -6911,7 +6957,7 @@ window.expGlosasPDFMasivo=()=>{
   win.document.close();
   win.focus();
   setTimeout(()=>win.print(),800);
-  toast(`📄 PDF masivo con ${Object.keys(pf).length} facturas. Guarda como PDF.`,'ok');
+  toast(`📄 PDF masivo con ${entradasConRespuesta.length} facturas${omitidasPorAceptacionTotal?` · ${omitidasPorAceptacionTotal} omitidas por aceptación total`:''}. Guarda como PDF.`,'ok');
 };
 
 // ── INFORMES ──
