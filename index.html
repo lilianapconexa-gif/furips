@@ -11208,14 +11208,12 @@ window.trazMostrar = function(rec){
     eventos.push({fecha:d, tipo:'created', label:'📋 Ingresada al sistema', sub:`Por ${rec.creadoPorNombre||'CONEXA'}`, color:'#999899'});
   }
 
-  // Historial interno
-  if(rec.historial?.length){
-    rec.historial.forEach(h=>{
-      const d = h.fecha?.toDate?h.fecha.toDate():(h.fecha?new Date(h.fecha):null);
-      if(!d) return;
-      eventos.push({fecha:d, tipo:'historial', label:`⚙ ${h.accion||h.estado||'Actualización'}`, sub:h.obs||h.nota||'', color:'#00B2E2'});
-    });
-  }
+  // El historial interno ("⚙ Actualización...") YA NO se muestra en esta
+  // línea de tiempo — es un registro técnico/interno (ediciones de campos,
+  // ajustes, etc.) que no es un movimiento real de la cuenta ante ADRES y no
+  // le aporta nada al cliente; solo genera ruido y hace la línea de tiempo
+  // interminable. La línea de tiempo queda solo con los movimientos reales
+  // de la cuenta: ingreso al sistema, radicaciones y respuestas de ADRES.
 
   // Radicaciones (del array respuestasAdres y radicado actual)
   const todasRads = [];
