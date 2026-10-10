@@ -1117,6 +1117,7 @@ select option{background:var(--sur2);}
             </select>
           </div>
           <button class="btn btn-sm bs" onclick="limpiarFiltros()" style="font-size:11px;">✕ Limpiar</button>
+          <button class="btn btn-sm" style="background:#1d6f42;border-color:#217346;color:#fff;font-size:11px;" onclick="window.expXLFiltro()">📊 Descargar Excel</button>
         </div>
 
         <!-- BARRA ACCIONES SELECCIÓN -->
@@ -3863,6 +3864,33 @@ window.expXLSel=()=>{
   XLSX.utils.book_append_sheet(wb,ws1,'Reclamaciones');
   XLSX.writeFile(wb,`Seleccion_${new Date().toISOString().split('T')[0].replace(/-/g,'')}.xlsx`);
   toast(`✔ Excel generado para ${ids.length} reclamaciones.`,'ok');
+};
+
+// Descarga en Excel de la lista TAL COMO está filtrada en pantalla (Gestión +
+// ADRES + F1 + filtros avanzados), sin necesidad de seleccionar manualmente.
+// Útil por ejemplo para bajar de una vez todas las cuentas "📥 Por Procesar".
+window.expXLFiltro=()=>{
+  if(typeof XLSX==='undefined'){ toast('Cargando Excel...','w'); setTimeout(window.expXLFiltro,1500); return; }
+  const recs=recsFiltrados();
+  if(!recs.length){ toast('No hay reclamaciones con este filtro.','w'); return; }
+  const wb=XLSX.utils.book_new();
+  const h1=['Factura','Consec','CodHab','Gestión','Respuesta ADRES','Radicado_Lote','Radicado_Ind','Fecha_Rad','Estado_Rad','F1_Completo'];
+  const r1=recs.map(r=>{
+    const estG=window.getEstadoGestion(r);
+    const estA=window.getRespuestaAdres(r);
+    return [
+      r.factura, r.consec, r.codHab,
+      EST_GESTION[estG]?.lbl || estG,
+      estA ? (EST_ADRES[estA]?.lbl || estA) : '—',
+      r.radicado?.lote||'', r.radicado?.numero||'', r.radicado?.fecha||'',
+      r.radicado?.estado||'sin radicar', r.furips1?.c83?'Sí':'No'
+    ];
+  });
+  const ws1=XLSX.utils.aoa_to_sheet([h1,...r1]); ws1['!cols']=h1.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,ws1,'Reclamaciones');
+  const etiqFiltro = FILTRO_GESTION ? '_'+EST_GESTION[FILTRO_GESTION]?.lbl.replace(/\s+/g,'_') : (FILTRO_ADRES ? '_'+EST_ADRES[FILTRO_ADRES]?.lbl.replace(/\s+/g,'_') : '');
+  XLSX.writeFile(wb,`Reclamaciones${etiqFiltro}_${new Date().toISOString().split('T')[0].replace(/-/g,'')}.xlsx`);
+  toast(`✔ Excel generado con ${recs.length} reclamaciones.`,'ok');
 };
 
 // ── PAGOS Y COMISIONES ──
