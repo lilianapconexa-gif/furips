@@ -333,6 +333,14 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
       <div id="fur-norec" class="alert aw">⚠️ No hay reclamación activa. Cierra esta ventana y selecciona una desde la Parte 1.</div>
       <div id="fur-body" class="hidden">
 
+        <!-- ── Cargar RIPS (JSON, Res. 2275/2023) para autocompletar ── -->
+        <div class="alert ai" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="flex:1;min-width:220px;">📥 <strong>¿Tienes el RIPS (JSON) de esta factura?</strong> Autocompleta documento y municipio de residencia de la víctima, y sugiere la Naturaleza del Evento a partir de la causa de atención.</span>
+          <button class="btn bs" onclick="document.getElementById('fur-rips-input').click()" style="font-size:12px;flex-shrink:0;">📥 Cargar RIPS (JSON)</button>
+          <input type="file" id="fur-rips-input" accept=".json" style="display:none" onchange="window.furCargarRIPS(this.files[0]);this.value='';">
+        </div>
+        <div id="fur-rips-alr" class="hidden" style="margin-bottom:14px;"></div>
+
         <!-- ── SECCIÓN I: Prestador ── -->
         <div class="fsec on" id="fur-s0">
           <div class="ft" style="--acc:var(--green);">I. Datos del Prestador</div>
@@ -464,6 +472,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
                 <option value="26">26 — Vendaval</option>
                 <option value="27">27 — Tornado</option>
               </select>
+              <div id="fur-nat-rips-hint" style="display:none;margin-top:4px;padding:5px 9px;border-radius:5px;background:rgba(121,192,255,.1);border:1px solid rgba(121,192,255,.35);color:var(--acc2);font-size:11px;"></div>
             </div>
             <div class="field hidden" id="fur-ff-desc_otro">
               <span class="fl"><span class="fn">C14</span>Descripción Otro Evento<span class="cnd">●</span></span>
