@@ -506,6 +506,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
               <span class="fl"><span class="fn">C20</span>Descripción Corta del Evento<span class="req">*</span></span>
               <textarea id="fur-desc_evento" maxlength="1000" placeholder="Descripción detallada de los hechos (mín 100 caracteres, sin comas)" style="min-height:72px;" oninput="furDescCnt();furFv('desc_evento');furFp()"></textarea>
               <div style="display:flex;justify-content:space-between;"><span class="hint">Mínimo 100 · máximo 1000 caracteres. Sin comas (,).</span><span id="fur-desc-cnt" style="font-size:10px;color:var(--tx3);font-family:var(--mono);">0/1000</span></div>
+              <div id="fur-desc-alerta" style="display:none;margin-top:4px;padding:5px 9px;border-radius:5px;background:rgba(227,179,65,.12);border:1px solid rgba(227,179,65,.4);color:var(--warn);font-size:11px;font-weight:600;"></div>
             </div>
           </div>
         </div>
@@ -4781,15 +4782,23 @@ window.furFv = (campo) => {
   const ff = g('fur-ff-'+campo);
   if(!el || !ff) return;
   const v = el.value?.trim();
-  if(!v){ ff.classList.remove('ok'); ff.classList.add('err'); }
-  else  { ff.classList.remove('err'); ff.classList.add('ok'); }
+  // Caso especial: la descripción del evento (C20) no solo debe tener texto,
+  // debe cumplir el mínimo de 100 caracteres que exige ADRES — si no, el
+  // campo se marca como pendiente aunque ya tenga algo escrito.
+  const cumple = campo === 'desc_evento' ? (v && v.length >= 100) : !!v;
+  if(!cumple){ ff.classList.remove('ok'); ff.classList.add('err'); }
+  else       { ff.classList.remove('err'); ff.classList.add('ok'); }
 };
 
 // ── Progreso FUR ──
 window.furFp = () => {
   const total = FUR_REQS.length;
   const filled = FUR_REQS.filter(id => {
-    const el = g('fur-'+id); return el && el.value?.trim().length > 0;
+    const el = g('fur-'+id); if(!el) return false;
+    const len = el.value?.trim().length || 0;
+    // C20 (desc_evento) solo cuenta como "lleno" si ya alcanzó el mínimo de
+    // 100 caracteres que exige ADRES, igual que en furFv().
+    return id === 'desc_evento' ? len >= 100 : len > 0;
   }).length;
   const pct = total > 0 ? Math.round(filled/total*100) : 0;
   // Actualizar dots sidebar
@@ -4804,7 +4813,11 @@ window.furFp = () => {
     };
     const reqs = secReqs[i] || [];
     if(reqs.length === 0) continue;
-    const allOk = reqs.every(k => { const e=g('fur-'+k); return e && e.value?.trim(); });
+    const allOk = reqs.every(k => {
+      const e=g('fur-'+k); if(!e) return false;
+      const len = e.value?.trim().length || 0;
+      return k === 'desc_evento' ? len >= 100 : !!len;
+    });
     const si = g('fur-si-'+i);
     if(allOk){ si?.classList.add('done'); sd.textContent = '✓'; }
     else     { si?.classList.remove('done'); sd.textContent = ['I','II','III','IV','V','VI','VII','VIII','IX','X'][i]; }
@@ -4812,13 +4825,28 @@ window.furFp = () => {
 };
 
 // ── Contador descripción ──
+// ADRES (Circular 003) exige mínimo 100 caracteres en este campo; si el
+// digitador escribe menos, se le avisa de forma clara y visible (no solo con
+// el color del contador, que es fácil de pasar por alto) para que lo ajuste
+// antes de guardar o descargar el FUR.
 window.furDescCnt = () => {
   const el = g('fur-desc_evento');
   const cnt = g('fur-desc-cnt');
+  const alerta = g('fur-desc-alerta');
   if(!el || !cnt) return;
   const len = el.value.length;
   cnt.textContent = `${len}/1000`;
   cnt.style.color = len < 100 ? 'var(--warn)' : len >= 900 ? 'var(--red)' : 'var(--tx3)';
+  if(alerta){
+    if(len === 0){
+      alerta.style.display = 'none';
+    } else if(len < 100){
+      alerta.style.display = 'block';
+      alerta.textContent = `⚠ Te faltan ${100 - len} caracteres para llegar al mínimo de 100 que exige ADRES.`;
+    } else {
+      alerta.style.display = 'none';
+    }
+  }
 };
 
 // ── Validación de fechas FUR ──
@@ -5386,6 +5414,15 @@ window.guardarFUR = async () => {
 
 // ── Descargar JSON ──
 window.descargarFURjson = () => {
+  // Misma validación que guardarFUR(): no dejar salir un JSON con la
+  // descripción del evento por debajo del mínimo exigido por ADRES, aunque
+  // el digitador descargue directo sin pasar por "Guardar en nube".
+  const descLen = (g('fur-desc_evento')?.value?.trim() || '').length;
+  if(descLen > 0 && descLen < 100){
+    toast(`⚠ La descripción del evento (C20) tiene ${descLen} caracteres; faltan ${100-descLen} para el mínimo de 100.`,'w');
+    furGoSec(3);
+    return;
+  }
   const json = buildFURJson();
   const nit = g('fur-nit')?.value?.trim() || 'SIN_NIT';
   const filename = `FUR_${nit}.json`;
