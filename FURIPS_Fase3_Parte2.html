@@ -335,7 +335,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
 
         <!-- ── Cargar RIPS (JSON, Res. 2275/2023) para autocompletar ── -->
         <div class="alert ai" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span style="flex:1;min-width:220px;">📥 <strong>¿Tienes el RIPS (JSON) de esta factura?</strong> Autocompleta documento y municipio de residencia de la víctima, y sugiere la Naturaleza del Evento a partir de la causa de atención.</span>
+          <span style="flex:1;min-width:220px;">📥 <strong>¿Tienes el RIPS (JSON) de esta factura?</strong> Autocompleta NIT del prestador, documento y municipio de residencia de la víctima; sugiere la Naturaleza del Evento y valida fechas contra el RIPS.</span>
           <button class="btn bs" onclick="document.getElementById('fur-rips-input').click()" style="font-size:12px;flex-shrink:0;">📥 Cargar RIPS (JSON)</button>
           <input type="file" id="fur-rips-input" accept=".json" style="display:none" onchange="window.furCargarRIPS(this.files[0]);this.value='';">
         </div>
@@ -472,6 +472,11 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
                 <option value="26">26 — Vendaval</option>
                 <option value="27">27 — Tornado</option>
               </select>
+              <div id="fur-siras-atajo" style="display:none;margin-top:6px;padding:7px 10px;border-radius:6px;background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.5);color:var(--tx);font-size:12px;">
+                <strong>🔵 Accidente de tránsito:</strong> el <strong>Radicado SIRAS (C28)</strong> es obligatorio. Se digita en la Sección V.
+                <button type="button" class="btn btn-sm bs" style="margin-left:6px;" onclick="furIrSiras()">Ir al campo SIRAS ›</button>
+                <span id="fur-siras-atajo-est" style="margin-left:6px;font-weight:600;"></span>
+              </div>
               <div id="fur-nat-rips-hint" style="display:none;margin-top:4px;padding:5px 9px;border-radius:5px;background:rgba(121,192,255,.1);border:1px solid rgba(121,192,255,.35);color:var(--acc2);font-size:11px;"></div>
             </div>
             <div class="field hidden" id="fur-ff-desc_otro">
@@ -602,9 +607,9 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
               <span class="hint">Oblig. si estado 4 o 6.</span>
             </div>
             <div class="field" id="fur-ff-siras">
-              <span class="fl"><span class="fn">C28</span>Radicado SIRAS<span class="cnd">●</span></span>
-              <input id="fur-siras" maxlength="20" placeholder="Código SIRAS" oninput="this.value=this.value.toUpperCase();furFp()">
-              <span class="hint">Oblig. si AT y fecha ocurrencia ≥ 01/06/2023</span>
+              <span class="fl"><span class="fn">C28</span>Radicado SIRAS<span class="cnd" id="fur-siras-req">●</span></span>
+              <input id="fur-siras" maxlength="30" placeholder="Número de radicado SIRAS" oninput="this.value=this.value.trim();furSirasEstado();furFp()" autocomplete="off">
+              <span class="hint">Oblig. si Naturaleza = 01 (AT) y fecha ocurrencia ≥ 01/06/2023</span>
             </div>
             <div class="field" id="fur-ff-agot_tope">
               <span class="fl"><span class="fn">C29</span>Cobro Agotamiento Tope<span class="cnd">●</span></span>
@@ -950,7 +955,7 @@ setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
 // ── DATOS DANE — Departamentos y Municipios Colombia ──
 const DEPTOS={"05":"Antioquia","08":"Atlántico","11":"Bogotá D.C.","13":"Bolívar","15":"Boyacá","17":"Caldas","18":"Caquetá","19":"Cauca","20":"Cesar","23":"Córdoba","25":"Cundinamarca","27":"Chocó","41":"Huila","44":"La Guajira","47":"Magdalena","50":"Meta","52":"Nariño","54":"Norte de Santander","63":"Quindío","66":"Risaralda","68":"Santander","70":"Sucre","73":"Tolima","76":"Valle del Cauca","81":"Arauca","85":"Casanare","86":"Putumayo","88":"San Andrés y Providencia","91":"Amazonas","94":"Guainía","95":"Guaviare","97":"Vaupés","99":"Vichada"};
-const MPIOS={"05":{"001":"Medellín","002":"Abejorral","021":"Alejandría","030":"Amagá","031":"Amalfi","034":"Andes","036":"Angelópolis","038":"Angostura","040":"Anorí","045":"Apartadó","051":"Arboletes","055":"Argelia","079":"Barbosa","086":"Belmira","088":"Bello","101":"Ciudad Bolívar","107":"Briceño","113":"Buriticá","120":"Cáceres","125":"Caicedo","129":"Caldas","138":"Cañasgordas","142":"Caracolí","147":"Carepa","154":"Caucasia","172":"Chigorodó","197":"Cocorná","206":"Concepción","209":"Concordia","212":"Copacabana","234":"Dabeiba","237":"Don Matías","243":"El Bagre","252":"Envigado","256":"Fredonia","258":"Frontino","266":"Girardota","270":"Gómez Plata","284":"Guadalupe","288":"Guarne","291":"Guatapé","306":"Itagüí","308":"Ituango","310":"Jardín","313":"Jericó","318":"La Ceja","321":"La Estrella","349":"La Unión","360":"Marinilla","368":"Montebello","376":"Nariño","400":"Olaya","425":"Peque","440":"Pueblorrico","467":"Puerto Berrío","475":"Puerto Nare","480":"Puerto Triunfo","483":"Remedios","490":"Retiro","495":"Rionegro","541":"Sabaneta","549":"Río Viejo","556":"San Carlos","560":"San Jerónimo","564":"San Juan de Urabá","568":"San Luis","572":"San Pedro de los Milagros","579":"San Pedro de Urabá","585":"San Rafael","591":"San Roque","607":"Santa Bárbara","615":"Santa Rosa de Osos","642":"Segovia","647":"Sonsón","649":"Sopetrán","652":"Támesis","656":"Tarazá","658":"Tarso","665":"Titiribí","667":"Toledo","670":"Turbo","679":"Urrao","686":"Valdivia","690":"Valparaíso","736":"Vigía del Fuerte","758":"Yarumal","761":"Yolombó","764":"Yondó","789":"Zaragoza"},"08":{"001":"Barranquilla","078":"Baranoa","137":"Campo de la Cruz","141":"Candelaria","296":"Galapa","372":"Juan de Acosta","421":"Luruaco","433":"Malambo","436":"Manatí","520":"Palmar de Varela","549":"Piojó","558":"Polonuevo","560":"Ponedera","573":"Puerto Colombia","606":"Repelón","634":"Sabanagrande","638":"Sabanalarga","675":"Santa Lucía","685":"Santo Tomás","758":"Soledad","770":"Suan","832":"Tubará","849":"Usiacurí"},"11":{"001":"Bogotá D.C."},"13":{"001":"Cartagena","006":"Achí","030":"Altos del Rosario","042":"Arenal","052":"Arjona","062":"Arroyohondo","074":"Barranco de Loba","140":"Calamar","160":"Cantagallo","188":"Cicuco","212":"Córdoba","222":"Clemencia","244":"El Carmen de Bolívar","248":"El Guamo","268":"El Peñón","300":"Hatillo de Loba","360":"Magangué","362":"Mahates","380":"Margarita","382":"María la Baja","400":"Mompós","433":"Montecristo","440":"Morales","473":"Pinillos","490":"Regidor","549":"Río Viejo","580":"San Cristóbal","600":"San Estanislao","620":"San Fernando","647":"San Jacinto","654":"San Juan Nepomuceno","657":"San Pablo","667":"Santa Catalina","670":"Santa Rosa","673":"Santa Rosa del Sur","683":"Simití","688":"Soplaviento","744":"Talaigua Nuevo","760":"Tiquisio","780":"Turbaco","787":"Turbaná","810":"Villanueva","836":"Zambrano"},"15":{"001":"Tunja","022":"Almeida","047":"Aquitania","051":"Arcabuco","087":"Belén","090":"Berbeo","097":"Boavita","104":"Boyacá","106":"Briceño","109":"Buenavista","114":"Busbanzá","131":"Caldas","135":"Campohermoso","162":"Cerinza","172":"Chinavita","176":"Chiquinquirá","180":"Chíquiza","189":"Ciénega","204":"Cómbita","212":"Coper","215":"Corrales","218":"Covarachía","223":"Cubará","226":"Cuítiva","244":"Firavitoba","248":"Floresta","272":"Gachantivá","276":"Gámeza","293":"Garagoa","299":"Guateque","317":"Guayatá","322":"Güicán","362":"Iza","367":"Jenesano","368":"Jericó","377":"Labranzagrande","380":"La Capilla","401":"La Victoria","403":"La Uvita","407":"Villa de Leyva","425":"Macanal","442":"Maripí","455":"Miraflores","464":"Mongua","466":"Monguí","469":"Moniquirá","476":"Motavita","480":"Muzo","491":"Nobsa","494":"Nuevo Colón","500":"Oicatá","507":"Otanche","511":"Pachavita","514":"Páez","516":"Paipa","518":"Pajarito","522":"Panqueba","531":"Pauna","533":"Paya","537":"Paz de Río","542":"Pesca","572":"Puerto Boyacá","580":"Quípama","599":"Ramiriquí","600":"Ráquira","621":"Rondón","632":"Saboyá","638":"Sáchica","646":"Samacá","660":"San Eduardo","664":"San José de Pare","673":"San Mateo","681":"San Pablo de Borbur","686":"Santana","690":"Santa María","693":"Santa Rosa de Viterbo","696":"Santa Sofía","720":"Sativanorte","723":"Sativasur","740":"Siachoque","753":"Soatá","757":"Socotá","759":"Socha","761":"Sogamoso","763":"Sora","764":"Sotaquirá","776":"Susacón","778":"Sutamarchán","790":"Sutatenza","798":"Tasco","804":"Tenza","806":"Tibaná","808":"Tinjacá","810":"Tipacoque","814":"Toca","820":"Tópaga","822":"Turmequé","832":"Tununguá","839":"Tutazá","842":"Umbita","861":"Ventaquemada","897":"Zetaquira"},"17":{"001":"Manizales","013":"Aguadas","042":"Anserma","050":"Aranzazu","088":"Belalcázar","174":"Chinchiná","272":"Filadelfia","380":"La Dorada","388":"La Merced","433":"Manzanares","442":"Marmato","444":"Marquetalia","446":"Marulanda","486":"Neira","495":"Norcasia","513":"Pácora","524":"Palestina","541":"Pensilvania","614":"Riosucio","616":"Risaralda","653":"Salamina","662":"Samaná","665":"San José","777":"Supía","867":"Victoria","873":"Villamaría","877":"Viterbo"},"18":{"001":"Florencia","029":"Albania","094":"Belén de los Andaquíes","150":"Cartagena del Chairá","205":"Curillo","247":"El Doncello","256":"El Paujil","410":"La Montañita","460":"Milán","479":"Morelia","592":"Puerto Rico","610":"San José del Fragua","753":"San Vicente del Caguán","756":"Solano","785":"Solita","860":"Valparaíso"},"19":{"001":"Popayán","022":"Almaguer","050":"Argelia","075":"Balboa","100":"Bolívar","110":"Buenos Aires","130":"Cajibío","137":"Caldono","142":"Caloto","212":"Corinto","256":"El Tambo","300":"Guachené","318":"Guapi","355":"Inzá","364":"Jambaló","392":"La Sierra","397":"La Vega","418":"López de Micay","450":"Mercaderes","455":"Miranda","473":"Morales","513":"Padilla","517":"Páez","532":"Patía","537":"Piendamó","548":"Puerto Tejada","573":"Puracé","585":"Rosas","622":"San Sebastián","630":"Santander de Quilichao","638":"Santa Rosa","693":"Silvia","698":"Sotará","701":"Suárez","743":"Timbío","745":"Timbiquí","750":"Toribío","755":"Totoró","807":"Villa Rica"},"20":{"001":"Valledupar","011":"Aguachica","013":"Agustín Codazzi","032":"Astrea","045":"Becerril","060":"Bosconia","175":"Chimichagua","178":"Chiriguaná","228":"Curumaní","238":"El Copey","250":"El Paso","295":"Gamarra","310":"González","383":"La Gloria","400":"La Jagua de Ibirico","443":"Manaure","517":"Pailitas","550":"Pelaya","570":"Pueblo Bello","614":"Río de Oro","621":"La Paz","710":"San Alberto","750":"San Diego","770":"San Martín","787":"Tamalameque"},"23":{"001":"Montería","068":"Ayapel","079":"Buenavista","090":"Canalete","162":"Cereté","168":"Chimá","182":"Chinú","189":"Ciénaga de Oro","300":"Cotorra","350":"La Apartada","417":"Lorica","419":"Los Córdobas","464":"Momil","466":"Montelíbano","500":"Moñitos","555":"Planeta Rica","570":"Pueblo Nuevo","574":"Puerto Escondido","580":"Puerto Libertador","586":"Purísima","660":"Sahagún","670":"San Andrés de Sotavento","672":"San Antero","675":"San Bernardo del Viento","678":"San Carlos","682":"San José de Uré","686":"San Pelayo","770":"Tierralta","807":"Tuchín","855":"Valencia"},"25":{"001":"Agua de Dios","019":"Albán","035":"Anapoima","040":"Anolaima","053":"Arbeláez","086":"Beltrán","095":"Bituima","099":"Bojacá","120":"Cabrera","123":"Cachipay","126":"Cajicá","148":"Cáqueza","154":"Carmen de Carupa","175":"Chía","178":"Chipaque","181":"Choachí","183":"Chocontá","200":"Cogua","214":"Cota","224":"Cucunubá","245":"El Colegio","260":"El Rosal","269":"Facatativá","279":"Fomeque","281":"Fosca","286":"Funza","290":"Fusagasugá","293":"Gachalá","295":"Gachancipá","297":"Gachetá","307":"Girardot","312":"Granada","317":"Guachetá","320":"Guaduas","322":"Guasca","324":"Guataquí","326":"Guatavita","335":"Guayabetal","339":"Gutiérrez","368":"Jerusalén","372":"Junín","377":"La Calera","386":"La Mesa","394":"La Palma","398":"La Peña","402":"La Vega","407":"Lenguazaque","426":"Macheta","430":"Madrid","436":"Manta","438":"Medina","473":"Mosquera","483":"Nariño","486":"Nemocón","488":"Nilo","489":"Nimaima","491":"Nocaima","513":"Pacho","518":"Paime","524":"Pandi","530":"Paratebueno","535":"Pasca","572":"Puerto Salgar","580":"Pulí","592":"Quebradanegra","594":"Quetame","612":"Ricaurte","645":"San Antonio del Tequendama","649":"San Bernardo","653":"San Cayetano","658":"San Francisco","662":"San Juan de Río Seco","718":"Sasaima","736":"Sesquilé","740":"Sibaté","743":"Silvania","745":"Simijaca","754":"Soacha","758":"Sopó","769":"Subachoque","772":"Suesca","777":"Supatá","779":"Susa","785":"Tausa","793":"Tena","797":"Tenjo","799":"Tibacuy","805":"Tibirita","807":"Tocaima","809":"Tocancipá","815":"Topaipí","817":"Ubalá","819":"Ubaque","822":"Ubaté","824":"Une","841":"Vergara","843":"Vianí","873":"Villapinzón","875":"Villeta","878":"Viotá","885":"Yacopí","898":"Zipacón","899":"Zipaquirá"},"27":{"001":"Quibdó","006":"Acandí","025":"Alto Baudó","050":"Atrato","073":"Bagadó","075":"Bahía Solano","077":"Bajo Baudó","099":"Bojaya","150":"Carmen del Darién","160":"Cértegui","205":"Condoto","245":"El Carmen de Atrato","361":"Istmina","372":"Juradó","413":"Lloró","425":"Medio Atrato","430":"Medio Baudó","450":"Medio San Juan","491":"Nóvita","495":"Nuquí","580":"Río Iró","600":"Río Quito","615":"Riosucio","660":"San José del Palmar","745":"Sipí","787":"Tadó","800":"Unguía","810":"Unión Panamericana"},"41":{"001":"Neiva","006":"Acevedo","013":"Agrado","016":"Aipe","020":"Algeciras","026":"Altamira","078":"Baraya","132":"Campoalegre","206":"Colombia","244":"Elías","298":"Garzón","306":"Gigante","319":"Guadalupe","349":"Hobo","357":"Iquira","359":"Isnos","378":"La Argentina","396":"La Plata","483":"Nátaga","503":"Oporapa","518":"Paicol","524":"Palermo","530":"Palestina","548":"Pital","551":"Pitalito","615":"Rivera","660":"Saladoblanco","668":"San Agustín","676":"Santa María","770":"Suaza","791":"Tarqui","797":"Tesalia","799":"Tello","801":"Timana","807":"Villavieja","872":"Yaguará"},"44":{"001":"Riohacha","035":"Albania","078":"Barrancas","090":"Dibulla","098":"Distracción","110":"El Molino","143":"Fonseca","160":"Hatonuevo","378":"La Jagua del Pilar","420":"Maicao","430":"Manaure","560":"San Juan del Cesar","650":"Uribia","674":"Urumita","878":"Villanueva"},"47":{"001":"Santa Marta","030":"Algarrobo","053":"Aracataca","058":"Ariguaní","161":"Cerro de San Antonio","170":"Chibolo","189":"Ciénaga","205":"Concordia","245":"El Banco","258":"El Piñón","268":"El Retén","288":"Fundación","318":"Guamal","460":"Nueva Granada","541":"Pedraza","545":"Pijiño del Carmen","551":"Pivijay","555":"Plato","570":"Puebloviejo","605":"Remolino","660":"Sabanas de San Ángel","675":"Salamina","692":"San Sebastián de Buenavista","703":"San Zenón","707":"Santa Ana","720":"Santa Bárbara de Pinto","745":"Sitionuevo","798":"Tenerife","960":"Zapayán","963":"Zona Bananera"},"50":{"001":"Villavicencio","006":"Acacías","110":"Barranca de Upía","124":"Cabuyaro","150":"Castilla la Nueva","223":"Cubarral","226":"Cumaral","245":"El Calvario","251":"El Castillo","270":"El Dorado","287":"Fuente de Oro","313":"Granada","318":"Guamal","325":"Mapiripán","330":"Mesetas","350":"La Macarena","400":"Lejanías","568":"Puerto Concordia","573":"Puerto Gaitán","577":"Puerto Lleras","590":"Puerto López","606":"Puerto Rico","680":"Restrepo","689":"San Carlos de Guaroa","711":"San Juan de Arama","716":"San Juanito","720":"San Martín","790":"Uribe","840":"Vistahermosa"},"52":{"001":"Pasto","019":"Albán","022":"Aldana","036":"Ancuyá","051":"Arboleda","079":"Barbacoas","083":"Belén","110":"Buesaco","207":"Colón","210":"Consacá","215":"Contadero","224":"Córdoba","227":"Cuaspud","233":"Cumbal","240":"Cumbitara","250":"Chachagüí","254":"El Charco","258":"El Peñol","260":"El Rosario","265":"El Tablón de Gómez","268":"El Tambo","287":"Funes","317":"Guachucal","320":"Guaitarilla","323":"Gualmatán","352":"Iles","354":"Imués","356":"Ipiales","378":"La Cruz","381":"La Florida","385":"La Llanada","390":"La Tola","399":"La Unión","405":"Leiva","411":"Linares","418":"Los Andes","427":"Magüí","435":"Mallama","473":"Mosquera","480":"Nariño","490":"Olaya Herrera","506":"Ospina","520":"Francisco Pizarro","540":"Policarpa","560":"Potosí","565":"Providencia","573":"Pupiales","585":"Ricaurte","612":"Roberto Payán","621":"Samaniego","678":"Sandoná","683":"San Bernardo","685":"San Lorenzo","687":"San Pablo","693":"Santa Bárbara","696":"Santacruz","699":"Sapuyes","720":"Taminango","740":"Tangua","786":"San Andrés de Tumaco","807":"Túquerres","835":"Yacuanquer"},"54":{"001":"Cúcuta","003":"Ábrego","051":"Arboledas","099":"Bochalema","109":"Bucarasica","125":"Cácota","128":"Cáchira","172":"Chinácota","174":"Chitagá","206":"Convención","223":"Cucutilla","239":"Durania","243":"El Carmen","250":"El Tarra","258":"El Zulia","313":"Gramalote","385":"Hacarí","398":"Herrán","405":"Labateca","418":"La Esperanza","480":"Ocaña","498":"Pamplona","500":"Pamplonita","518":"Puerto Santander","553":"Ragonvalia","599":"Salazar","660":"San Calixto","670":"San Cayetano","673":"Santiago","680":"Sardinata","720":"Silos","743":"Teorama","800":"Tibú","820":"Toledo","874":"Villa del Rosario"},"63":{"001":"Armenia","051":"Buenavista","077":"Calarcá","111":"Circasia","129":"Córdoba","190":"Filandia","212":"Génova","401":"La Tebaida","443":"Montenegro","473":"Pijao","548":"Quimbaya","594":"Salento"},"66":{"001":"Pereira","045":"Apía","075":"Balboa","088":"Belén de Umbría","170":"Dosquebradas","318":"Guática","383":"La Celia","400":"La Virginia","440":"Marsella","456":"Mistrató","572":"Pueblo Rico","594":"Quinchía","682":"Santa Rosa de Cabal","687":"Santuario"},"68":{"001":"Bucaramanga","013":"Aguada","020":"Albania","051":"Aratoca","077":"Barbosa","079":"Barichara","081":"Barrancabermeja","092":"Betulia","101":"Bolívar","121":"Cabrera","132":"California","147":"Capitanejo","152":"Carcasí","160":"Cepitá","162":"Cerrito","167":"Charalá","169":"Charta","190":"Cimitarra","207":"Concepción","209":"Confines","211":"Contratación","217":"Coromoro","229":"Curití","235":"El Carmen de Chucurí","245":"El Guacamayo","250":"El Peñón","255":"El Playón","264":"Encino","266":"Enciso","271":"Florián","276":"Floridablanca","296":"Galán","298":"Gámbita","307":"Girón","318":"Guaca","320":"Guadalupe","322":"Guapotá","324":"Guavatá","327":"Güepsa","344":"Hato","368":"Jesús María","370":"Jordán","377":"La Belleza","385":"Landázuri","397":"La Paz","406":"Lebrija","418":"Los Santos","425":"Macaravita","432":"Málaga","444":"Matanza","464":"Mogotes","468":"Molagavita","498":"Ocamonte","500":"Oiba","502":"Onzaga","522":"Palmar","533":"Páramo","547":"Piedecuesta","572":"Pinchote","615":"Puente Nacional","617":"Puerto Parra","655":"Puerto Wilches","669":"Rionegro","673":"Sabana de Torres","679":"San Andrés","682":"San Benito","684":"San Gil","686":"San Joaquín","689":"San José de Miranda","693":"San Miguel","695":"San Vicente de Chucurí","720":"Santa Bárbara","745":"Santa Helena del Opón","755":"Simacota","770":"Socorro","773":"Suaita","780":"Sucre","820":"Suratá","861":"Tona","867":"Valle de San José","872":"Vélez","876":"Vetas","885":"Villanueva","895":"Zapatoca"},"70":{"001":"Sincelejo","101":"Buenavista","110":"Caimito","124":"Coloso","130":"Corozal","147":"Coveñas","150":"Chalán","204":"El Roble","215":"Galeras","221":"Guaranda","230":"La Unión","233":"Los Palmitos","235":"Majagual","255":"Morroa","258":"Ovejas","508":"Sampués","523":"San Benito Abad","535":"San Juan de Betulia","549":"San Marcos","550":"San Onofre","555":"San Pedro","565":"Sincé","678":"Sucre","702":"Santiago de Tolú","708":"Tolú Viejo"},"73":{"001":"Ibagué","024":"Alpujarra","026":"Alvarado","030":"Ambalema","043":"Anzoátegui","055":"Armero","067":"Ataco","100":"Cajamarca","124":"Carmen de Apicalá","130":"Casabianca","148":"Chaparral","152":"Coello","168":"Coyaima","178":"Cunday","190":"Espinal","200":"Falan","217":"Flandes","226":"Fresno","236":"Guamo","268":"Herveo","270":"Honda","275":"Icononzo","349":"Lérida","347":"Líbano","411":"Mariquita","443":"Melgar","449":"Murillo","461":"Natagaima","483":"Ortega","504":"Palocabildo","520":"Piedras","530":"Planadas","547":"Prado","555":"Purificación","563":"Rioblanco","585":"Roncesvalles","592":"Rovira","616":"Saldaña","622":"San Antonio","624":"San Luis","630":"Santa Isabel","671":"Suárez","675":"Valle de San Juan","678":"Venadillo","686":"Villahermosa","690":"Villarrica"},"76":{"001":"Cali","020":"Alcalá","036":"Andalucía","041":"Ansermanuevo","054":"Argelia","100":"Bolívar","109":"Buenaventura","111":"Buga","113":"Bugalagrande","122":"Caicedonia","126":"Calima","130":"Candelaria","147":"Cartago","233":"Dagua","243":"El Águila","246":"El Cairo","248":"El Cerrito","250":"El Dovio","275":"Florida","306":"Ginebra","318":"Guacarí","364":"Jamundí","377":"La Cumbre","400":"La Unión","403":"La Victoria","440":"Obando","520":"Palmira","563":"Pradera","606":"Restrepo","616":"Riofrío","622":"Roldanillo","670":"San Pedro","736":"Sevilla","823":"Toro","828":"Trujillo","834":"Tuluá","845":"Ulloa","863":"Versalles","869":"Vijes","890":"Yotoco","892":"Yumbo","895":"Zarzal"},"81":{"001":"Arauca","065":"Arauquita","220":"Cravo Norte","238":"Fortul","591":"Puerto Rondón","736":"Saravena","794":"Tame"},"85":{"001":"Yopal","010":"Aguazul","015":"Chámeza","125":"Hato Corozal","136":"La Salina","139":"Maní","162":"Monterrey","225":"Nunchía","230":"Orocué","250":"Paz de Ariporo","263":"Pore","279":"Recetor","300":"Sabanalarga","315":"Sácama","325":"San Luis de Palenque","400":"Támara","410":"Tauramena","430":"Trinidad","440":"Villanueva"},"86":{"001":"Mocoa","219":"Colón","320":"Orito","418":"Puerto Asís","430":"Puerto Caicedo","438":"Puerto Guzmán","573":"Puerto Leguízamo","749":"Sibundoy","755":"San Francisco","757":"San Miguel","761":"Santiago","865":"Valle del Guamuez","885":"Villagarzón"},"88":{"001":"San Andrés","564":"Providencia"},"91":{"001":"Leticia","263":"El Encanto","405":"La Chorrera","407":"La Pedrera","430":"La Victoria","460":"Mirití-Paraná","530":"Puerto Alegría","536":"Puerto Arica","540":"Puerto Nariño","669":"Puerto Santander","798":"Tarapacá"},"94":{"001":"Inírida","343":"Barranco Minas","663":"Maparipana","884":"San Felipe","885":"Puerto Colombia"},"95":{"001":"San José del Guaviare","015":"Calamar","025":"El Retorno","200":"Miraflores"},"97":{"001":"Mitú","161":"Carurú","511":"Pacoa","666":"Taraira","889":"Yavaraté"},"99":{"001":"Puerto Carreño","524":"La Primavera","624":"Santa Rosalía","773":"Cumaribo"}};
+const MPIOS={"11":{"001":"Bogotá D.C."},"13":{"140":"Calamar","160":"Cantagallo","188":"Cicuco","212":"Córdoba","222":"Clemencia","244":"El Carmen de Bolívar","248":"El Guamo","268":"El Peñón","300":"Hatillo de Loba","430":"Magangué","433":"Mahates","440":"Margarita","442":"María la Baja","458":"Montecristo","468":"Santa Cruz de Mompox","473":"Morales","490":"Norosí","549":"Pinillos","580":"Regidor","600":"Río Viejo","620":"San Cristóbal","647":"San Estanislao","650":"San Fernando","654":"San Jacinto","655":"San Jacinto","657":"San Juan Nepomuceno","667":"San Martín de Loba","670":"San Pablo","673":"Santa Catalina","683":"Santa Rosa","688":"Santa Rosa del Sur","744":"Simití","760":"Soplaviento","780":"Talaigua Nuevo","810":"Tiquisio","836":"Turbaco","838":"Turbaná","873":"Villanueva","894":"Zambrano","001":"Cartagena","006":"Achí","030":"Altos del Rosario","042":"Arenal","052":"Arjona","062":"Arroyohondo","074":"Barranco de Loba"},"15":{"104":"Boyacá","106":"Briceño","109":"Buenavista","114":"Busbanzá","131":"Caldas","135":"Campohermoso","162":"Cerinza","172":"Chinavita","176":"Chiquinquirá","180":"Chiscas","183":"Chita","185":"Chitaraque","187":"Chivatá","189":"Ciénega","204":"Cómbita","212":"Coper","215":"Corrales","218":"Covarachía","223":"Cubará","224":"Cucaita","226":"Cuítiva","232":"Chíquiza","236":"Chivor","238":"Duitama","244":"El Cocuy","248":"El Espino","272":"Firavitoba","276":"Floresta","293":"Gachantivá","296":"Gámeza","299":"Garagoa","317":"Guacamayas","322":"Guateque","325":"Guayatá","332":"Güicán","362":"Iza","367":"Jenesano","368":"Jericó","377":"Labranzagrande","380":"La Capilla","401":"La Victoria","403":"La Uvita","407":"Villa de Leyva","425":"Macanal","442":"Maripí","455":"Miraflores","464":"Mongua","466":"Monguí","469":"Moniquirá","476":"Motavita","480":"Muzo","491":"Nobsa","494":"Nuevo Colón","500":"Oicatá","507":"Otanche","511":"Pachavita","514":"Páez","516":"Paipa","518":"Pajarito","522":"Panqueba","531":"Pauna","533":"Paya","537":"Paz de Río","542":"Pesca","550":"Pisba","572":"Puerto Boyacá","580":"Quípama","599":"Ramiriquí","600":"Ráquira","621":"Rondón","632":"Saboyá","638":"Sáchica","646":"Samacá","660":"San Eduardo","664":"San José de Pare","667":"San Luis de Gaceno","673":"San Mateo","676":"San Miguel de Sema","681":"San Pablo de Borbur","686":"Santana","690":"Santa María","693":"Santa Rosa de Viterbo","696":"Santa Sofía","720":"Sativanorte","723":"Sativasur","740":"Siachoque","753":"Soatá","755":"Socotá","757":"Socha","759":"Sogamoso","761":"Somondoco","762":"Sora","763":"Sotaquirá","764":"Soracá","774":"Susacón","776":"Sutamarchán","778":"Sutatenza","790":"Tasco","798":"Tenza","804":"Tibaná","806":"Tibasosa","808":"Tinjacá","810":"Tipacoque","814":"Toca","816":"Togüí","820":"Tópaga","822":"Tota","832":"Tununguá","835":"Turmequé","837":"Tuta","839":"Tutazá","842":"Umbita","861":"Ventaquemada","879":"Viracachá","897":"Zetaquira","001":"Tunja","022":"Almeida","047":"Aquitania","051":"Arcabuco","087":"Belén","090":"Berbeo","092":"Betéitiva","097":"Boavita"},"17":{"174":"Chinchiná","272":"Filadelfia","380":"La Dorada","388":"La Merced","433":"Manzanares","442":"Marmato","444":"Marquetalia","446":"Marulanda","486":"Neira","495":"Norcasia","513":"Pácora","524":"Palestina","541":"Pensilvania","614":"Riosucio","616":"Risaralda","653":"Salamina","662":"Samaná","665":"San José","777":"Supía","867":"Victoria","873":"Villamaría","877":"Viterbo","001":"Manizales","013":"Aguadas","042":"Anserma","050":"Aranzazu","088":"Belalcázar"},"18":{"150":"Cartagena del Chairá","205":"Curillo","247":"El Doncello","256":"El Paujil","410":"La Montañita","460":"Milán","479":"Morelia","592":"Puerto Rico","610":"San José del Fragua","753":"San Vicente del Caguán","756":"Solano","785":"Solita","860":"Valparaíso","001":"Florencia","029":"Albania","094":"Belén de los Andaquíes"},"19":{"100":"Bolívar","110":"Buenos Aires","130":"Cajibío","137":"Caldono","142":"Caloto","212":"Corinto","256":"El Tambo","290":"Florencia","300":"Guachené","318":"Guapi","355":"Inzá","364":"Jambaló","392":"La Sierra","397":"La Vega","418":"López de Micay","450":"Mercaderes","455":"Miranda","473":"Morales","513":"Padilla","517":"Páez","532":"Patía","533":"Piamonte","548":"Piendamó","573":"Puerto Tejada","585":"Puracé","622":"Rosas","693":"San Sebastián","698":"Santander de Quilichao","701":"Santa Rosa","743":"Silvia","760":"Sotará","780":"Suárez","785":"Sucre","807":"Timbío","809":"Timbiquí","821":"Toribío","824":"Totoró","845":"Villa Rica","001":"Popayán","022":"Almaguer","050":"Argelia","075":"Balboa"},"20":{"175":"Chimichagua","178":"Chiriguaná","228":"Curumaní","238":"El Copey","250":"El Paso","295":"Gamarra","310":"González","383":"La Gloria","400":"La Jagua de Ibirico","443":"Manaure","517":"Pailitas","550":"Pelaya","570":"Pueblo Bello","614":"Río de Oro","621":"La Paz","710":"San Alberto","750":"San Diego","770":"San Martín","787":"Tamalameque","001":"Valledupar","011":"Aguachica","013":"Agustín Codazzi","032":"Astrea","045":"Becerril","060":"Bosconia"},"23":{"162":"Cereté","168":"Chimá","182":"Chinú","189":"Ciénaga de Oro","300":"Cotorra","350":"La Apartada","417":"Lorica","419":"Los Córdobas","464":"Momil","466":"Montelíbano","500":"Moñitos","555":"Planeta Rica","570":"Pueblo Nuevo","574":"Puerto Escondido","580":"Puerto Libertador","586":"Purísima","660":"Sahagún","670":"San Andrés de Sotavento","672":"San Antero","675":"San Bernardo del Viento","678":"San Carlos","682":"San José de Uré","686":"San Pelayo","807":"Tierralta","815":"Tuchín","855":"Valencia","001":"Montería","068":"Ayapel","079":"Buenavista","090":"Canalete"},"25":{"120":"Cabrera","123":"Cachipay","126":"Cajicá","148":"Caparrapí","151":"Cáqueza","154":"Carmen de Carupa","168":"Chaguaní","175":"Chía","178":"Chipaque","181":"Choachí","183":"Chocontá","200":"Cogua","214":"Cota","224":"Cucunubá","245":"El Colegio","258":"El Peñón","260":"El Rosal","269":"Facatativá","279":"Fomeque","281":"Fosca","286":"Funza","288":"Fúquene","290":"Fusagasugá","293":"Gachalá","295":"Gachancipá","297":"Gachetá","299":"Gama","307":"Girardot","312":"Granada","317":"Guachetá","320":"Guaduas","322":"Guasca","324":"Guataquí","326":"Guatavita","328":"Guayabal de Síquima","335":"Guayabetal","339":"Gutiérrez","368":"Jerusalén","372":"Junín","377":"La Calera","386":"La Mesa","394":"La Palma","398":"La Peña","402":"La Vega","407":"Lenguazaque","426":"Macheta","430":"Madrid","436":"Manta","438":"Medina","473":"Mosquera","483":"Nariño","486":"Nemocón","488":"Nilo","489":"Nimaima","491":"Nocaima","506":"Venecia","513":"Pacho","518":"Paime","524":"Pandi","530":"Paratebueno","535":"Pasca","572":"Puerto Salgar","580":"Pulí","592":"Quebradanegra","594":"Quetame","596":"Quipile","599":"Apulo","612":"Ricaurte","645":"San Antonio del Tequendama","649":"San Bernardo","653":"San Cayetano","658":"San Francisco","662":"San Juan de Rioseco","718":"Sasaima","736":"Sesquilé","740":"Sibaté","743":"Silvania","745":"Simijaca","754":"Soacha","758":"Sopó","769":"Subachoque","772":"Suesca","777":"Supatá","779":"Susa","781":"Sutatausa","785":"Tabio","793":"Tausa","797":"Tena","799":"Tenjo","805":"Tibacuy","807":"Tibirita","815":"Tocaima","817":"Tocancipá","823":"Topaipí","839":"Ubalá","841":"Ubaque","843":"Villa de San Diego de Ubaté","845":"Une","851":"Útica","862":"Vergara","867":"Vianí","871":"Villagómez","873":"Villapinzón","875":"Villeta","878":"Viotá","885":"Yacopí","898":"Zipacón","899":"Zipaquirá","001":"Agua de Dios","019":"Albán","035":"Anapoima","040":"Anolaima","053":"Arbeláez","086":"Beltrán","095":"Bituima","099":"Bojacá"},"27":{"135":"El Cantón del San Pablo","150":"Carmen del Darién","160":"Cértegui","205":"Condoto","245":"El Carmen de Atrato","250":"El Litoral del San Juan","361":"Istmina","372":"Juradó","413":"Lloró","425":"Medio Atrato","430":"Medio Baudó","450":"Medio San Juan","491":"Nóvita","495":"Nuquí","580":"Río Iró","600":"Río Quito","615":"Riosucio","660":"San José del Palmar","745":"Sipí","787":"Tadó","800":"Unguía","810":"Unión Panamericana","001":"Quibdó","006":"Acandí","025":"Alto Baudó","050":"Atrato","073":"Bagadó","075":"Bahía Solano","077":"Bajo Baudó","099":"Bojaya"},"41":{"132":"Campoalegre","206":"Colombia","244":"Elías","298":"Garzón","306":"Gigante","319":"Guadalupe","349":"Hobo","357":"Iquira","359":"Isnos","378":"La Argentina","396":"La Plata","483":"Nátaga","503":"Oporapa","518":"Paicol","524":"Palermo","530":"Palestina","548":"Pital","551":"Pitalito","615":"Rivera","660":"Saladoblanco","668":"San Agustín","676":"Santa María","770":"Suaza","791":"Tarqui","797":"Tesalia","799":"Tello","801":"Teruel","807":"Timana","872":"Villavieja","885":"Yaguará","001":"Neiva","006":"Acevedo","013":"Agrado","016":"Aipe","020":"Algeciras","026":"Altamira","078":"Baraya"},"44":{"110":"El Molino","279":"Fonseca","378":"Hatonuevo","420":"La Jagua del Pilar","430":"Maicao","560":"Manaure","650":"San Juan del Cesar","847":"Uribia","855":"Urumita","874":"Villanueva","001":"Riohacha","035":"Albania","078":"Barrancas","090":"Dibulla","098":"Distracción"},"47":{"161":"Cerro de San Antonio","170":"Chivolo","189":"Ciénaga","205":"Concordia","245":"El Banco","258":"El Piñón","268":"El Retén","288":"Fundación","318":"Guamal","460":"Nueva Granada","541":"Pedraza","545":"Pijiño del Carmen","551":"Pivijay","555":"Plato","570":"Puebloviejo","605":"Remolino","660":"Sabanas de San Ángel","675":"Salamina","692":"San Sebastián de Buenavista","703":"San Zenón","707":"Santa Ana","720":"Santa Bárbara de Pinto","745":"Sitionuevo","798":"Tenerife","960":"Zapayán","980":"Zona Bananera","001":"Santa Marta","030":"Algarrobo","053":"Aracataca","058":"Ariguaní"},"50":{"110":"Barranca de Upía","124":"Cabuyaro","150":"Castilla la Nueva","223":"Cubarral","226":"Cumaral","245":"El Calvario","251":"El Castillo","270":"El Dorado","287":"Fuente de Oro","313":"Granada","318":"Guamal","325":"Mapiripán","330":"Mesetas","350":"La Macarena","370":"Uribe","400":"Lejanías","450":"Puerto Concordia","568":"Puerto Gaitán","573":"Puerto López","577":"Puerto Lleras","590":"Puerto Rico","606":"Restrepo","680":"San Carlos de Guaroa","683":"San Juan de Arama","686":"San Juanito","689":"San Martín","711":"Vistahermosa","001":"Villavicencio","006":"Acacías"},"52":{"110":"Buesaco","203":"Colón","207":"Consacá","210":"Contadero","215":"Córdoba","224":"Cuaspud","227":"Cumbal","233":"Cumbitara","240":"Chachagüí","250":"El Charco","254":"El Peñol","256":"El Rosario","258":"El Tablón de Gómez","260":"El Tambo","287":"Funes","317":"Guachucal","320":"Guaitarilla","323":"Gualmatán","352":"Iles","354":"Imués","356":"Ipiales","378":"La Cruz","381":"La Florida","385":"La Llanada","390":"La Tola","399":"La Unión","405":"Leiva","411":"Linares","418":"Los Andes","427":"Magüí","435":"Mallama","473":"Mosquera","480":"Nariño","490":"Olaya Herrera","506":"Ospina","520":"Francisco Pizarro","540":"Policarpa","560":"Potosí","565":"Providencia","573":"Puerres","585":"Pupiales","612":"Ricaurte","621":"Roberto Payán","678":"Samaniego","683":"Sandoná","685":"San Bernardo","687":"San Lorenzo","693":"San Pablo","694":"San Pedro de Cartago","696":"Santa Bárbara","699":"Santacruz","720":"Sapuyes","786":"Taminango","788":"Tangua","835":"San Andrés de Tumaco","838":"Túquerres","885":"Yacuanquer","001":"Pasto","019":"Albán","022":"Aldana","036":"Ancuyá","051":"Arboleda","079":"Barbacoas","083":"Belén"},"54":{"109":"Bucarasica","125":"Cácota","128":"Cáchira","172":"Chinácota","174":"Chitagá","206":"Convención","223":"Cucutilla","239":"Durania","245":"El Carmen","250":"El Tarra","261":"El Zulia","313":"Gramalote","344":"Hacarí","347":"Herrán","377":"Labateca","385":"La Esperanza","398":"La Playa","405":"Los Patios","418":"Lourdes","480":"Mutiscua","498":"Ocaña","518":"Pamplona","520":"Pamplonita","553":"Puerto Santander","599":"Ragonvalia","660":"Salazar","670":"San Calixto","673":"San Cayetano","680":"Santiago","720":"Sardinata","743":"Silos","800":"Teorama","810":"Tibú","820":"Toledo","871":"Villa Caro","874":"Villa del Rosario","001":"Cúcuta","003":"Ábrego","051":"Arboledas","099":"Bochalema"},"63":{"111":"Buenavista","130":"Calarcá","190":"Circasia","212":"Córdoba","272":"Filandia","302":"Génova","401":"La Tebaida","470":"Montenegro","548":"Pijao","594":"Quimbaya","690":"Salento","001":"Armenia"},"66":{"170":"Dosquebradas","318":"Guática","383":"La Celia","400":"La Virginia","440":"Marsella","456":"Mistrató","572":"Pueblo Rico","594":"Quinchía","682":"Santa Rosa de Cabal","687":"Santuario","001":"Pereira","045":"Apía","075":"Balboa","088":"Belén de Umbría"},"68":{"101":"Bolívar","121":"Cabrera","132":"California","147":"Capitanejo","152":"Carcasí","160":"Cepitá","162":"Cerrito","167":"Charalá","169":"Charta","176":"Chima","179":"Chipatá","190":"Cimitarra","207":"Concepción","209":"Confines","211":"Contratación","217":"Coromoro","229":"Curití","235":"El Carmen de Chucurí","245":"El Guacamayo","250":"El Peñón","255":"El Playón","264":"Encino","266":"Enciso","271":"Florián","276":"Floridablanca","296":"Galán","298":"Gámbita","307":"Girón","318":"Guaca","320":"Guadalupe","322":"Guapotá","324":"Guavatá","327":"Güepsa","344":"Hato","368":"Jesús María","370":"Jordán","377":"La Belleza","385":"Landázuri","397":"La Paz","406":"Lebrija","418":"Los Santos","425":"Macaravita","432":"Málaga","444":"Matanza","464":"Mogotes","468":"Molagavita","498":"Ocamonte","500":"Oiba","502":"Onzaga","522":"Palmar","524":"Socorro","533":"Páramo","547":"Piedecuesta","549":"Pinchote","572":"Puente Nacional","573":"Puerto Parra","575":"Puerto Wilches","615":"Rionegro","655":"Sabana de Torres","669":"San Andrés","673":"San Benito","679":"San Gil","682":"San Joaquín","684":"San José de Miranda","686":"San Miguel","689":"San Vicente de Chucurí","705":"Santa Bárbara","720":"Santa Helena del Opón","745":"Simacota","755":"Socorro","770":"Suaita","773":"Sucre","780":"Suratá","820":"Tona","855":"Valle de San José","861":"Vélez","867":"Vetas","872":"Villanueva","895":"Zapatoca","001":"Bucaramanga","013":"Aguada","020":"Albania","051":"Aratoca","077":"Barbosa","079":"Barichara","081":"Barrancabermeja","092":"Betulia"},"70":{"110":"Buenavista","124":"Caimito","204":"Coloso","215":"Corozal","221":"Coveñas","230":"Chalán","233":"El Roble","235":"Galeras","265":"Guaranda","400":"La Unión","418":"Los Palmitos","429":"Majagual","473":"Morroa","508":"Ovejas","523":"Palmito","670":"Sampués","678":"San Benito Abad","702":"San Juan de Betulia","708":"San Marcos","713":"San Onofre","717":"San Pedro","742":"Sincé","771":"Sucre","820":"Santiago de Tolú","823":"San José de Toluviejo","001":"Sincelejo"},"73":{"124":"Cajamarca","148":"Carmen de Apicalá","152":"Casabianca","168":"Chaparral","200":"Coello","217":"Coyaima","226":"Cunday","236":"Dolores","268":"Espinal","270":"Falan","275":"Flandes","283":"Fresno","319":"Guamo","347":"Herveo","349":"Honda","352":"Icononzo","408":"Lérida","411":"Líbano","443":"Mariquita","449":"Melgar","461":"Murillo","483":"Natagaima","504":"Ortega","520":"Palocabildo","547":"Piedras","555":"Planadas","563":"Prado","585":"Purificación","616":"Rioblanco","622":"Roncesvalles","624":"Rovira","671":"Saldaña","675":"San Antonio","678":"San Luis","686":"Santa Isabel","770":"Suárez","854":"Valle de San Juan","861":"Venadillo","870":"Villahermosa","873":"Villarrica","001":"Ibagué","024":"Alpujarra","026":"Alvarado","030":"Ambalema","043":"Anzoátegui","055":"Armero","067":"Ataco"},"76":{"100":"Bolívar","109":"Buenaventura","111":"Buga","113":"Bugalagrande","122":"Caicedonia","126":"Calima","130":"Candelaria","147":"Cartago","233":"Dagua","243":"El Águila","246":"El Cairo","248":"El Cerrito","250":"El Dovio","275":"Florida","306":"Ginebra","318":"Guacarí","364":"Jampionamedí","377":"La Cumbre","400":"La Unión","403":"La Victoria","497":"Obando","520":"Palmira","563":"Pradera","606":"Restrepo","616":"Riofrío","622":"Roldanillo","670":"San Pedro","736":"Sevilla","823":"Toro","828":"Trujillo","834":"Tuluá","845":"Ulloa","863":"Versalles","869":"Vijes","890":"Yotoco","892":"Yumbo","895":"Zarzal","001":"Cali","020":"Alcalá","036":"Andalucía","041":"Ansermanuevo","054":"Argelia"},"81":{"220":"Cravo Norte","300":"Fortul","591":"Puerto Rondón","736":"Saravena","794":"Tame","001":"Arauca","065":"Arauquita"},"85":{"125":"Hato Corozal","136":"La Salina","139":"Maní","162":"Monterrey","225":"Nunchía","230":"Orocué","250":"Paz de Ariporo","263":"Pore","279":"Recetor","300":"Sabanalarga","315":"Sácama","325":"San Luis de Palenque","400":"Támara","410":"Tauramena","430":"Trinidad","440":"Villanueva","001":"Yopal","010":"Aguazul","015":"Chámeza"},"86":{"219":"Colón","320":"Orito","568":"Puerto Asís","569":"Puerto Caicedo","571":"Puerto Guzmán","573":"Puerto Leguízamo","749":"Sibundoy","755":"San Francisco","757":"San Miguel","760":"Santiago","865":"Valle del Guamuez","885":"Villagarzón","001":"Mocoa"},"88":{"564":"Providencia","001":"San Andrés"},"91":{"263":"El Encanto","405":"La Chorrera","407":"La Pedrera","430":"La Victoria","460":"Mirití-Paraná","530":"Puerto Alegría","536":"Puerto Arica","540":"Puerto Nariño","669":"Puerto Santander","798":"Tarapacá","001":"Leticia"},"94":{"343":"Barrancominas","883":"San Felipe","884":"Puerto Colombia","885":"La Guadalupe","886":"Cacahual","887":"Pana Pana","888":"Morichal","001":"Inírida"},"95":{"200":"Miraflores","001":"San José del Guaviare","015":"Calamar","025":"El Retorno"},"97":{"161":"Carurú","511":"Pacoa","666":"Taraira","777":"Papunahua","889":"Yavaraté","001":"Mitú"},"99":{"524":"La Primavera","624":"Santa Rosalía","773":"Cumaribo","001":"Puerto Carreño"},"05":{"101":"Ciudad Bolívar","107":"Briceño","113":"Buriticá","120":"Cáceres","125":"Caicedo","129":"Caldas","134":"Campamento","138":"Cañasgordas","142":"Caracolí","145":"Caramanta","147":"Carepa","148":"El Carmen de Viboral","150":"Carolina","154":"Caucasia","172":"Chigorodó","190":"Cisneros","197":"Cocorná","206":"Concepción","209":"Concordia","212":"Copacabana","234":"Dabeiba","237":"Donmatías","240":"Ebéjico","250":"El Bagre","264":"Entrerríos","266":"Envigado","282":"Fredonia","284":"Frontino","306":"Giraldo","308":"Girardota","310":"Gómez Plata","313":"Granada","315":"Guadalupe","318":"Guarne","321":"Guatapé","347":"Heliconia","353":"Hispania","360":"Itagüí","361":"Ituango","364":"Jardín","368":"Jericó","376":"La Ceja","380":"La Estrella","390":"La Pintada","400":"La Unión","411":"Liborina","425":"Maceo","440":"Marinilla","467":"Montebello","475":"Murindó","480":"Mutatá","483":"Nariño","490":"Necoclí","495":"Nechí","501":"Olaya","541":"Peñol","543":"Peque","576":"Pueblorrico","579":"Puerto Berrío","585":"Puerto Nare","591":"Puerto Triunfo","604":"Remedios","607":"Retiro","615":"Rionegro","628":"Sabanalarga","631":"Sabaneta","642":"Salgar","647":"San Andrés de Cuerquía","649":"San Carlos","652":"San Francisco","656":"San Jerónimo","658":"San José de la Montaña","659":"San Juan de Urabá","660":"San Luis","664":"San Pedro de los Milagros","665":"San Pedro de Urabá","667":"San Rafael","670":"San Roque","674":"San Vicente Ferrer","679":"Santa Bárbara","686":"Santa Rosa de Osos","690":"Santo Domingo","697":"El Santuario","736":"Segovia","756":"Sonsón","761":"Sopetrán","789":"Támesis","790":"Tarazá","792":"Tarso","809":"Titiribí","819":"Toledo","837":"Turbo","842":"Uramita","847":"Urrao","854":"Valdivia","856":"Valparaíso","858":"Vegachí","861":"Venecia","873":"Vigía del Fuerte","885":"Yalí","887":"Yarumal","890":"Yolombó","893":"Yondó","895":"Zaragoza","001":"Medellín","002":"Abejorral","004":"Abriaquí","021":"Alejandría","030":"Amagá","031":"Amalfi","034":"Andes","036":"Angelópolis","038":"Angostura","040":"Anorí","042":"Santa Fé de Antioquia","044":"Anzá","045":"Apartadó","051":"Arboletes","055":"Argelia","059":"Armenia","079":"Barbosa","086":"Belmira","088":"Bello","091":"Betania","093":"Betulia"},"08":{"137":"Campo de la Cruz","141":"Candelaria","296":"Galapa","372":"Juan de Acosta","421":"Luruaco","433":"Malambo","436":"Manatí","520":"Palmar de Varela","549":"Piojó","558":"Polonuevo","560":"Ponedera","573":"Puerto Colombia","606":"Repelón","634":"Sabanagrande","638":"Sabanalarga","675":"Santa Lucía","685":"Santo Tomás","758":"Soledad","770":"Suan","832":"Tubará","849":"Usiacurí","001":"Barranquilla","078":"Baranoa"}};
 
 // Función para generar opciones de departamento
 function dOpts(sel=''){
@@ -4748,6 +4753,28 @@ window.switchTab=(t)=>{
 // ═══════════════════════════════════════════════════════════════
 
 // ── Campos FUR (todos los IDs con prefijo "fur-") ──
+// ── NIT del prestador ──
+// El NIT (C1 del FUR, NIT_PRESTADOR del JSON, nombre del archivo) NO es el
+// código de habilitación (12 dígitos, REC.codHab / furips1.c4): son datos
+// distintos. Mapa código de habilitación -> NIT de cada IPS. Agregar aquí las
+// IPS nuevas (NIT sin dígito de verificación).
+const IPS_NIT = {
+  '157590080301': '891856161',   // CLÍNICA EL LAGUITO S.A
+  // '760011259501': '',         // OCCIDENTAL DE SALUD SAS — pendiente: completar NIT
+};
+// Un NIT válido son solo dígitos, hasta 10 (el código de habilitación tiene 12).
+const nitValido = v => /^\d{6,10}$/.test(String(v||'').trim());
+// Devuelve el NIT correcto de la IPS de la reclamación: primero lo digitado /
+// guardado SI es un NIT válido (no un código de habilitación); si no, el del mapa.
+function nitIPS(rec, nitFormulario){
+  for(const c of [nitFormulario, rec?.fur?.nit]){
+    const v = String(c||'').trim();
+    if(nitValido(v) && v !== String(rec?.codHab||'').trim()) return v;
+  }
+  const cod = String(rec?.codHab || rec?.furips1?.c4 || '').trim();
+  return IPS_NIT[cod] || '';
+}
+
 const FUR_CAMPOS = [
   'nit','num_factura',
   'tipo_doc_v','num_doc_v','pob_especial','nomb1_v','nomb2_v','apell1_v','apell2_v',
@@ -4783,6 +4810,158 @@ function furInitDeptos() {
 window.furUpdateMpio = (depId, mpioId) => {
   updateMpio(depId, mpioId, '');
   furFp();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ── CARGAR RIPS (JSON, Resolución 2275 de 2023) ──
+// El RIPS en JSON no trae nombres de la víctima (solo tipo/número de
+// documento), así que SOLO se autocompletan datos que son el mismo dato
+// en ambos archivos, sin ambigüedad:
+//   • Tipo y número de documento de la víctima
+//   • Municipio/Departamento de RESIDENCIA de la víctima (codMunicipioResidencia)
+//     — esto es justo lo que exige ADRES que coincida entre el FUR y el RIPS
+//     de usuarios (regla RVC006), así que si sale del mismo archivo, siempre
+//     va a coincidir.
+// La causa de atención (causaMotivoAtencion) del RIPS NO se autoselecciona
+// en Naturaleza del Evento porque su catálogo no es 1 a 1 con el de SOAT:
+// solo se muestra como dato de referencia para que el digitador decida.
+// ═══════════════════════════════════════════════════════════════
+window.furCargarRIPS = (file) => {
+  if(!file) return;
+  if(!REC){ toast('No hay reclamación activa.','e'); return; }
+  const alr = g('fur-rips-alr');
+  const mostrarAlr = (msg, tipo) => { if(alr){ alr.className = 'alert '+(tipo==='e'?'ae':tipo==='w'?'aw':'as'); alr.textContent = msg; alr.classList.remove('hidden'); } };
+
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    let data;
+    try { data = JSON.parse(ev.target.result); }
+    catch(e){ toast('⚠ El archivo no es un JSON válido.','e'); mostrarAlr('⚠ El archivo no es un JSON válido.','e'); return; }
+
+    // Un RIPS puede venir como objeto único o como arreglo de un elemento.
+    const ripsObj = Array.isArray(data) ? data[0] : data;
+    if(!ripsObj || !Array.isArray(ripsObj.usuarios) || !ripsObj.usuarios.length){
+      toast('⚠ El JSON no tiene la estructura de RIPS esperada (falta "usuarios").','e');
+      mostrarAlr('⚠ El JSON no tiene la estructura de RIPS esperada (falta "usuarios").','e');
+      return;
+    }
+
+    // Validar que el RIPS corresponda a esta factura, para no mezclar datos
+    // de otro paciente en la reclamación activa.
+    const facRips = String(ripsObj.numFactura||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const facRec  = String(REC.factura||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(facRips && facRec && facRips !== facRec){
+      toast(`⚠ El RIPS es de la factura ${ripsObj.numFactura}, pero esta reclamación es ${REC.factura}. No se cargó nada.`,'e');
+      mostrarAlr(`⚠ El RIPS cargado es de la factura ${ripsObj.numFactura} y esta reclamación es ${REC.factura}. Verifica que sea el archivo correcto.`,'e');
+      return;
+    }
+
+    // Si hay varios usuarios en el RIPS, intentar emparejar con el documento
+    // ya digitado; si no hay ninguno digitado aún, tomar el primero.
+    const numDocActual = g('fur-num_doc_v')?.value?.trim();
+    let usuario = ripsObj.usuarios[0];
+    if(ripsObj.usuarios.length > 1 && numDocActual){
+      usuario = ripsObj.usuarios.find(u => String(u.numDocumentoIdentificacion||'').trim() === numDocActual) || usuario;
+    }
+
+    const completados = [];
+    const pendientesRevision = [];
+
+    // ── NIT del prestador (numDocumentoIdObligado) ──
+    // Mismo dato en ambos archivos, sin ambigüedad: el RIPS trae en su
+    // cabecera el NIT del prestador que factura, igual que el C1 del FUR.
+    if(ripsObj.numDocumentoIdObligado){
+      const el = g('fur-nit');
+      if(el && !nitValido(el.value)){
+        el.value = String(ripsObj.numDocumentoIdObligado).replace(/\D/g,'');
+        furFv('nit');
+        completados.push('NIT del prestador');
+      }
+    }
+
+    // ── Tipo y número de documento ──
+    if(usuario.tipoDocumentoIdentificacion){
+      const sel = g('fur-tipo_doc_v');
+      const existe = sel && [...sel.options].some(o => o.value === usuario.tipoDocumentoIdentificacion);
+      if(sel && existe){ sel.value = usuario.tipoDocumentoIdentificacion; furFv('tipo_doc_v'); completados.push('Tipo documento'); }
+      else if(usuario.tipoDocumentoIdentificacion) pendientesRevision.push(`Tipo documento del RIPS ("${usuario.tipoDocumentoIdentificacion}") no coincide con ninguna opción del FUR — revísalo manualmente.`);
+    }
+    if(usuario.numDocumentoIdentificacion){
+      const el = g('fur-num_doc_v');
+      if(el){ el.value = String(usuario.numDocumentoIdentificacion).toUpperCase(); furFv('num_doc_v'); completados.push('Número documento'); }
+    }
+
+    // ── Municipio / Departamento de residencia (codMunicipioResidencia: 5 dígitos = 2 depto + 3 municipio) ──
+    const codMpio = String(usuario.codMunicipioResidencia||'').trim();
+    if(/^\d{5}$/.test(codMpio)){
+      const depto = codMpio.slice(0,2), mpio = codMpio.slice(2);
+      const selDepto = g('fur-depto_v');
+      const deptoExiste = selDepto && [...selDepto.options].some(o => o.value === depto);
+      if(selDepto && deptoExiste && MPIOS[depto] && MPIOS[depto][mpio]){
+        selDepto.value = depto;
+        updateMpio(depto, 'fur-mpio_v', mpio);
+        furFv('mpio_v');
+        completados.push(`Municipio de residencia (${MPIOS[depto][mpio]}, ${depto}${mpio})`);
+      } else {
+        pendientesRevision.push(`El código de municipio del RIPS ("${codMpio}") no se reconoce — selecciona el municipio de residencia manualmente.`);
+      }
+    } else if(codMpio) {
+      pendientesRevision.push(`El código de municipio del RIPS ("${codMpio}") no tiene el formato esperado (5 dígitos) — selecciona el municipio de residencia manualmente.`);
+    }
+
+    // ── Radicado SIRAS (registroSIRAS) ──
+    if(usuario.registroSIRAS && String(usuario.registroSIRAS).trim()){
+      const el = g('fur-siras');
+      if(el && !el.value.trim()){ el.value = String(usuario.registroSIRAS).trim(); completados.push('Radicado SIRAS'); }
+    }
+
+    // ── Causa de atención: solo como sugerencia junto a Naturaleza del Evento ──
+    const serv = usuario.servicios||{};
+    const atenciones = [...(serv.urgencias||[]), ...(serv.consultas||[]), ...(serv.procedimientos||[])];
+    const atencionConCausa = atenciones.find(a => a.causaMotivoAtencion) || null;
+    const hint = g('fur-nat-rips-hint');
+    if(hint){
+      if(atencionConCausa){
+        const fechaAt = (atencionConCausa.fechaInicioAtencion||'').split(' ')[0];
+        hint.style.display = 'block';
+        hint.innerHTML = `ℹ️ RIPS: causa de atención código <strong>${atencionConCausa.causaMotivoAtencion}</strong>${fechaAt?` · atención del ${fechaAt}`:''}. Verifica que corresponda a la Naturaleza del Evento seleccionada (el catálogo de causas del RIPS no es igual al de SOAT, por eso no se selecciona sola).`;
+      } else {
+        hint.style.display = 'none';
+      }
+    }
+
+    // ── Validaciones cruzadas (no se autocompleta nada, solo se avisa) ──
+    // 1) Código de habilitación del prestador que atendió (codPrestador en
+    //    cualquier servicio) debe ser el mismo de la IPS de la reclamación.
+    const todosServicios = [...atenciones, ...(serv.medicamentos||[]), ...(serv.otrosServicios||[])];
+    const codPrestadorRips = (todosServicios.find(s => s.codPrestador)||{}).codPrestador;
+    if(codPrestadorRips && REC.codHab && String(codPrestadorRips).trim() !== String(REC.codHab).trim()){
+      pendientesRevision.push(`El código de habilitación del RIPS ("${codPrestadorRips}") no coincide con el de esta reclamación ("${REC.codHab}") — verifica que el RIPS sea de la IPS correcta.`);
+    }
+    // 2) Fecha de atención (urgencias/consultas) vs Fecha del Evento ya
+    //    cargada en el FUR — una diferencia aquí fue justo el primer error
+    //    que detectó ADRES en el reporte de verificaciones.
+    const fecAtencionStr = (atenciones.find(a=>a.fechaInicioAtencion)||{}).fechaInicioAtencion;
+    const fecOcurrEl = g('fur-fec_ocurr');
+    if(fecAtencionStr && fecOcurrEl && fecOcurrEl.value.trim()){
+      const fechaAt = fecAtencionStr.split(' ')[0]; // YYYY-MM-DD
+      const [yAt,mAt,dAt] = fechaAt.split('-');
+      const fechaAtDMY = (yAt&&mAt&&dAt) ? `${dAt}/${mAt}/${yAt}` : null;
+      const fechaFurDMY = fecOcurrEl.value.trim();
+      if(fechaAtDMY && fechaAtDMY !== fechaFurDMY){
+        pendientesRevision.push(`La fecha de atención del RIPS (${fechaAtDMY}) no coincide con la Fecha del Evento ya cargada en el FUR (${fechaFurDMY}) — confirma cuál es la correcta.`);
+      }
+    }
+
+    furSirasEstado();
+    furFp();
+    const resumen = completados.length ? `✔ RIPS cargado: ${completados.join(', ')}.` : '⚠ El RIPS se leyó pero no había datos nuevos para completar.';
+    const detalle = pendientesRevision.length ? ' ' + pendientesRevision.join(' ') : '';
+    toast(completados.length ? '✔ Datos del RIPS cargados en el FUR.' : '⚠ No se completó ningún campo desde el RIPS.', completados.length ? 'ok' : 'w');
+    mostrarAlr(resumen + detalle, pendientesRevision.length ? 'w' : 'ok');
+  };
+  reader.onerror = () => { toast('⚠ No se pudo leer el archivo.','e'); };
+  reader.readAsText(file);
 };
 
 // ── Validación visual de campo ──
@@ -4930,9 +5109,33 @@ window.furValFechas = () => {
 };
 
 // ── Lógica condicional ──
+window.furIrSiras = () => {
+  furGoSec(4);
+  setTimeout(()=>{ const e=g('fur-siras'); if(e){ e.scrollIntoView({block:'center',behavior:'smooth'}); e.focus(); } },80);
+};
+window.furSirasEstado = () => {
+  const nat = g('fur-nat_evento')?.value || '';
+  const isAT = nat === '01';
+  const at = g('fur-siras-atajo'), est = g('fur-siras-atajo-est'), req = g('fur-siras-req');
+  if(at) at.style.display = isAT ? 'block' : 'none';
+  const v = (g('fur-siras')?.value||'').trim();
+  if(est) est.innerHTML = v ? '<span style="color:var(--ok,#3fb950)">✔ '+v+'</span>' : '<span style="color:var(--err,#f85149)">✖ Sin radicado</span>';
+  if(req) req.textContent = isAT ? '*' : '●';
+  const inp = g('fur-siras');
+  if(inp) inp.style.borderColor = (isAT && !v) ? 'var(--err,#f85149)' : '';
+};
+// SIRAS requerido: AT y fecha de ocurrencia >= 01/06/2023 (o sin fecha aún)
+window.furSirasFalta = () => {
+  if((g('fur-nat_evento')?.value||'') !== '01') return false;
+  if((g('fur-siras')?.value||'').trim()) return false;
+  const m = (g('fur-fec_ocurr')?.value||'').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m && `${m[3]}${m[2]}${m[1]}` < '20230601') return false;
+  return true;
+};
 window.furOnNat = () => {
   const nat = g('fur-nat_evento')?.value || '';
   const isAT = nat === '01';
+  setTimeout(()=>window.furSirasEstado&&window.furSirasEstado(),0);
   const is17 = nat === '17';
   // Condición víctima: solo AT
   const ffCV = g('fur-ff-cond_v');
@@ -5182,9 +5385,16 @@ function loadFURData() {
     if(el && fur[k] !== undefined && fur[k] !== null) el.value = fur[k];
   });
 
-  // Precargar NIT desde furips1.c4 si FUR vacío
-  if(!g('fur-nit')?.value && REC.furips1?.c4) {
-    const el = g('fur-nit'); if(el) el.value = REC.furips1.c4;
+  // Precargar NIT del prestador (NO el código de habilitación). Si el FUR guardado
+  // trae un valor que no es NIT (ej. el código de habilitación de 12 dígitos
+  // cargado por error antes), se reemplaza por el NIT correcto de la IPS.
+  {
+    const el = g('fur-nit');
+    if(el && !nitValido(el.value)){
+      const n = nitIPS(REC, '');
+      el.value = n;
+      if(!n) toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1).','w');
+    }
   }
   // Precargar factura
   if(!g('fur-num_factura')?.value && REC.factura) {
@@ -5384,6 +5594,16 @@ window.guardarFUR = async () => {
     toast(`⚠ Faltan ${faltantes.length} campo(s): ${faltantes.slice(0,3).map(k=>k.toUpperCase()).join(', ')}${faltantes.length>3?' …':''}`, 'w');
     return;
   }
+  if(!nitValido(g('fur-nit')?.value)){
+    toast('⚠ El NIT del prestador (C1) no es válido: debe ser el NIT (máx 10 dígitos), no el código de habilitación.','w');
+    furGoSec(0);
+    return;
+  }
+  if(furSirasFalta()){
+    toast('⚠ Falta el Radicado SIRAS (C28): es obligatorio para Accidente de Tránsito (01).','w');
+    furIrSiras();
+    return;
+  }
   const desc = g('fur-desc_evento')?.value?.trim() || '';
   if(desc.length < 100){
     toast('⚠ La descripción del evento (C20) debe tener mínimo 100 caracteres.','w');
@@ -5432,8 +5652,18 @@ window.descargarFURjson = () => {
     furGoSec(3);
     return;
   }
+  const nit = g('fur-nit')?.value?.trim() || '';
+  if(!nitValido(nit)){
+    toast('⚠ El NIT del prestador (C1) no es válido: debe ser el NIT (máx 10 dígitos), no el código de habilitación.','w');
+    furGoSec(0);
+    return;
+  }
+  if(furSirasFalta()){
+    toast('⚠ Falta el Radicado SIRAS (C28): es obligatorio para Accidente de Tránsito (01).','w');
+    furIrSiras();
+    return;
+  }
   const json = buildFURJson();
-  const nit = g('fur-nit')?.value?.trim() || 'SIN_NIT';
   const filename = `FUR_${nit}.json`;
   const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
   const a = document.createElement('a');
@@ -5511,7 +5741,8 @@ window.abrirSelectorLote = async (tipo) => {
     const idsMarcados = [...lista.querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.value);
     if(!idsMarcados.length){ toast('Marca al menos una factura.','w'); return; }
     const seleccionados = candidatos.filter(r=>idsMarcados.includes(r.id));
-    const nit = REC.fur?.nit || REC.furips1?.c4 || g('fur-nit')?.value?.trim() || 'SIN_NIT';
+    const nit = nitIPS(REC, g('fur-nit')?.value);
+    if(!nit){ toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1) del FUR.','w'); return; }
 
     let json, filename;
     if(tipo==='fur'){
@@ -5855,13 +6086,13 @@ function furserValidar(tfM, trM, tfT, trT){
 // Operaciones de tabla
 window.furserAddRow = () => {
   if(!REC.fur_ser) REC.fur_ser=[];
-  REC.fur_ser.push({ factura: REC.factura, nit: REC.furips1?.c4||REC.fur?.nit||'', tipo:'2' });
+  REC.fur_ser.push({ factura: REC.factura, nit: nitIPS(REC, g('fur-nit')?.value), tipo:'2' });
   furserRender();
 };
 window.furserDel      = (i)=>{ REC.fur_ser.splice(i,1); furserRender(); };
 window.furserMoveUp   = (i)=>{ if(i<=0) return; [REC.fur_ser[i-1],REC.fur_ser[i]]=[REC.fur_ser[i],REC.fur_ser[i-1]]; furserRender(); };
 window.furserMoveDown = (i)=>{ if(i>=REC.fur_ser.length-1) return; [REC.fur_ser[i],REC.fur_ser[i+1]]=[REC.fur_ser[i+1],REC.fur_ser[i]]; furserRender(); };
-window.furserInsert   = (i)=>{ if(!REC.fur_ser) REC.fur_ser=[]; REC.fur_ser.splice(i,0,{factura:REC.factura,nit:REC.fur?.nit||'',tipo:'2'}); furserRender(); };
+window.furserInsert   = (i)=>{ if(!REC.fur_ser) REC.fur_ser=[]; REC.fur_ser.splice(i,0,{factura:REC.factura,nit:nitIPS(REC, g('fur-nit')?.value),tipo:'2'}); furserRender(); };
 
 // Organizar por tipo
 window.furserOrganizar = () => {
@@ -5889,7 +6120,7 @@ window.furserDescomponer = () => {
     if(!REC.fur_ser) REC.fur_ser=[];
     REC.fur_ser.push({
       factura: REC.factura,
-      nit: REC.fur?.nit||'',
+      nit: nitIPS(REC, g('fur-nit')?.value),
       tipo: '2',
       codQx: c,
       consecQx: consec,
@@ -5923,7 +6154,7 @@ window.furserCargarXML = async (files) => {
   // Convertir items de FURIPS2 al formato FUR SER
   REC.fur_ser = result.items.map(r => ({
     factura:        r.factura||REC.factura,
-    nit:            REC.fur?.nit||'',
+    nit:            nitIPS(REC, g('fur-nit')?.value),
     tipo:           r.tipo||'2',
     codQx:          '',
     consecQx:       '',
@@ -5967,7 +6198,7 @@ function buildFURSERServiciosEntry(rec){
 }
 
 function buildFURSERJson(){
-  const nit = REC.fur?.nit || REC.furips1?.c4 || '';
+  const nit = nitIPS(REC, g('fur-nit')?.value);
   return [{
     Datos_IPS: { NIT_PRESTADOR: nit || null },
     Datos_servicios_reclamacion: [ buildFURSERServiciosEntry(REC) ]
@@ -6029,8 +6260,9 @@ window.guardarFURSER = async () => {
 
 // Descargar JSON
 window.descargarFURSERjson = () => {
+  const nit  = nitIPS(REC, g('fur-nit')?.value);
+  if(!nit){ toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1) de la pestaña FUR.','w'); return; }
   const json = buildFURSERJson();
-  const nit  = REC.fur?.nit || REC.furips1?.c4 || 'SIN_NIT';
   const filename = `SER_${nit}.json`;
   const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
   const a = document.createElement('a');
