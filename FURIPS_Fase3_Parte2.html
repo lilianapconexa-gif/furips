@@ -3739,107 +3739,99 @@ window.f2Add=()=>f2AddRow();
 // Parsea un XML de factura DIAN y devuelve { factura, items:[] }
 const parsearXMLDIAN = (xmlString) => {
   const parser = new DOMParser();
+  const reInvoice = /<(?:[A-Za-z0-9_.-]+:)?(Invoice|CreditNote|DebitNote)[\s>]/;
+  const quitarBOM = t => String(t||'').replace(/^﻿/, '').trim();
 
-  // ── Detectar si es AttachedDocument (factura embebida en CDATA) ──
-  // En ese caso, extraer el XML de la factura del CDATA y parsearlo
-  let xmlToParse = xmlString;
-  if(xmlString.includes('AttachedDocument') && xmlString.includes('CDATA')){
-    // Extraer contenido del CDATA que contiene <Invoice>
-    const cdataMatch = xmlString.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
-    if(cdataMatch && cdataMatch[1] && cdataMatch[1].includes('<Invoice')){
-      xmlToParse = cdataMatch[1].trim();
-    } else {
-      // Intentar extraer cualquier bloque que empiece con <Invoice
-      const invoiceMatch = xmlString.match(/<Invoice[\s\S]*?<\/Invoice>/);
-      if(invoiceMatch) xmlToParse = invoiceMatch[0];
+  // ── AttachedDocument (contenedor DIAN): la factura viaja embebida en un
+  //    CDATA, o escapada (&lt;Invoice ...) según el software de facturación.
+  //    Se revisan TODOS los bloques y se toma el que contiene la factura
+  //    (con o sin prefijo de namespace), no solo el primero. ──
+  let xmlToParse = quitarBOM(xmlString);
+  if(/AttachedDocument/.test(xmlToParse)){
+    let hallado = null;
+    const cdatas = [...xmlToParse.matchAll(/<!\[CDATA\[([\s\S]*?)\]\]>/g)].map(m => m[1]);
+    for(const c of cdatas){ if(reInvoice.test(c) && !/<(?:[\w.-]+:)?ApplicationResponse[\s>]/.test(c.slice(0,800))){ hallado = c; break; } }
+    if(!hallado){
+      // Variante escapada: &lt;Invoice ... &lt;/Invoice&gt;
+      const m = xmlToParse.match(/&lt;(?:[\w.-]+:)?(?:\?xml[\s\S]{0,200}?\?&gt;\s*&lt;)?(Invoice|CreditNote)[\s\S]*?&lt;\/(?:[\w.-]+:)?\1&gt;/);
+      if(m){
+        hallado = m[0].replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+      }
     }
-    // Si no encontramos Invoice dentro, intentar extraer factura del AttachedDocument mismo
-    if(!xmlToParse.includes('<Invoice')){
-      // Extraer ID de factura del AttachedDocument
+    if(!hallado){
+      const m = xmlToParse.match(/<(?:[\w.-]+:)?(Invoice)[\s\S]*?<\/(?:[\w.-]+:)?Invoice>/);
+      if(m) hallado = m[0];
+    }
+    if(hallado){
+      xmlToParse = quitarBOM(hallado);
+    } else {
       const idMatch = xmlString.match(/<cbc:ParentDocumentID>([^<]+)<\/cbc:ParentDocumentID>/);
-      const facturaId = idMatch ? idMatch[1].trim() : '';
-      // No hay ítems en el AttachedDocument wrapper
-      return { factura: facturaId, items: [] };
+      return { factura: idMatch ? idMatch[1].trim() : '', items: [], diag: 'AttachedDocument sin factura embebida (no hay <Invoice> dentro del contenedor).' };
     }
   }
 
   const doc = parser.parseFromString(xmlToParse, 'application/xml');
-
-  // Verificar errores de parseo
   const err = doc.querySelector('parsererror');
   if(err) throw new Error('XML malformado: '+err.textContent.slice(0,100));
 
-  // Namespaces UBL 2.1
-  const NS_CBC = 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
-  const NS_CAC = 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
-
-  // Helper para buscar con namespace
-  const qns = (parent, localName, ns) => {
-    return parent.getElementsByTagNameNS(ns, localName)[0] || null;
+  // Se busca por nombre local ('*' = cualquier namespace): tolera prefijos y
+  // versiones de UBL distintas según el proveedor tecnológico de cada IPS.
+  const NS = '*';
+  const qns = (parent, localName) => parent ? (parent.getElementsByTagNameNS(NS, localName)[0] || null) : null;
+  const qnsAll = (parent, localName) => parent ? [...parent.getElementsByTagNameNS(NS, localName)] : [];
+  // Hijo DIRECTO con ese nombre local (evita tomar el valor de un nodo anidado)
+  const hijo = (parent, localName) => parent ? ([...parent.children].find(c => c.localName === localName) || null) : null;
+  const numero = t => {
+    // Acepta "1.234,56" y "1,234.56" además de "1234.56"
+    let x = String(t||'').trim().replace(/\s/g,'');
+    if(/,\d{1,2}$/.test(x) && x.includes('.')) x = x.replace(/\./g,'').replace(',','.');
+    else if(/,\d{1,2}$/.test(x)) x = x.replace(',','.');
+    else x = x.replace(/,/g,'');
+    const n = parseFloat(x);
+    return isNaN(n) ? 0 : n;
   };
-  const qnsAll = (parent, localName, ns) => {
-    return [...parent.getElementsByTagNameNS(ns, localName)];
-  };
 
-  // Número de factura: <cbc:ID> hijo directo de <Invoice>
   const root = doc.documentElement;
-  let facturaId = '';
-  const cbcIds = qnsAll(root, 'ID', NS_CBC);
-  for(const el of cbcIds){
-    if(el.parentNode === root || el.parentNode.localName === 'Invoice'){
-      facturaId = el.textContent.trim();
-      break;
-    }
-  }
-  // Fallback: buscar prefijo FE/FV en cualquier ID
+  // Número de factura: <cbc:ID> hijo directo del documento
+  let facturaId = (hijo(root,'ID')?.textContent || '').trim();
   if(!facturaId){
-    for(const el of cbcIds){
+    for(const el of qnsAll(root,'ID')){
       const t = el.textContent.trim();
-      if(/^(FE|FV)\d+$/i.test(t)){ facturaId = t; break; }
+      if(/^[A-Za-z]{1,6}\d+$/.test(t)){ facturaId = t; break; }
     }
   }
 
-  // Parsear líneas
-  const invoiceLines = qnsAll(root, 'InvoiceLine', NS_CAC);
+  // Líneas: InvoiceLine (factura), CreditNoteLine (nota crédito), DebitNoteLine
+  let lineas = qnsAll(root,'InvoiceLine');
+  if(!lineas.length) lineas = qnsAll(root,'CreditNoteLine');
+  if(!lineas.length) lineas = qnsAll(root,'DebitNoteLine');
   const items = [];
 
-  for(const line of invoiceLines){
-    const qty = qns(line, 'InvoicedQuantity', NS_CBC);
-    const lineExt = qns(line, 'LineExtensionAmount', NS_CBC);
-    const item = qns(line, 'Item', NS_CAC);
-    const desc = item ? qns(item, 'Description', NS_CBC) : null;
+  for(const line of lineas){
+    const qty = hijo(line,'InvoicedQuantity') || hijo(line,'CreditedQuantity') || hijo(line,'DebitedQuantity') || qns(line,'InvoicedQuantity');
+    const lineExt = hijo(line,'LineExtensionAmount') || qns(line,'LineExtensionAmount');
+    const item = hijo(line,'Item') || qns(line,'Item');
+    const desc = item ? (hijo(item,'Description') || qns(item,'Description')) : null;
 
-    // Código: SellersItemIdentification/ID o StandardItemIdentification/ID
+    // Código: SellersItemIdentification → StandardItemIdentification → AdditionalItemIdentification
     let codigo = '';
-    const sellerIdNode = item ? qns(item, 'SellersItemIdentification', NS_CAC) : null;
-    if(sellerIdNode){
-      const sid = qns(sellerIdNode, 'ID', NS_CBC);
-      if(sid) codigo = sid.textContent.trim();
-    }
-    if(!codigo){
-      const stdIdNode = item ? qns(item, 'StandardItemIdentification', NS_CAC) : null;
-      if(stdIdNode){
-        const sid = qns(stdIdNode, 'ID', NS_CBC);
-        if(sid) codigo = sid.textContent.trim();
-      }
+    for(const nodo of ['SellersItemIdentification','StandardItemIdentification','AdditionalItemIdentification','ManufacturersItemIdentification']){
+      const n = item ? hijo(item,nodo) : null;
+      const sid = n ? hijo(n,'ID') : null;
+      const t = sid ? sid.textContent.trim() : '';
+      if(t && t !== '0' && t !== '999'){ codigo = t; break; }
     }
 
-    // Precio unitario: Price/PriceAmount
-    const priceNode = qns(line, 'Price', NS_CAC);
-    const priceAmt = priceNode ? qns(priceNode, 'PriceAmount', NS_CBC) : null;
+    const priceNode = hijo(line,'Price') || qns(line,'Price');
+    const priceAmt = priceNode ? (hijo(priceNode,'PriceAmount') || qns(priceNode,'PriceAmount')) : null;
 
-    const cantidad = qty ? parseFloat(qty.textContent) : 0;
-    const vrUnitario = priceAmt ? Math.round(parseFloat(priceAmt.textContent)) : 0;
-    const totalFact = lineExt ? Math.round(parseFloat(lineExt.textContent)) : Math.round(cantidad * vrUnitario);
+    const cantidad = qty ? numero(qty.textContent) : 0;
+    let vrUnitario = priceAmt ? Math.round(numero(priceAmt.textContent)) : 0;
+    let totalFact  = lineExt ? Math.round(numero(lineExt.textContent)) : Math.round(cantidad * vrUnitario);
+    // Algunas facturas traen precio unitario 0 o vacío: se deduce del total de la línea
+    if(!vrUnitario && cantidad && totalFact) vrUnitario = Math.round(totalFact / cantidad);
 
-    // Limpiar descripción (a veces viene con encoding roto — normalizar)
-    let descripcion = desc ? desc.textContent.trim() : '';
-    // Intentar reparar encoding roto (UTF-8 doble encoding)
-    try {
-      if(descripcion.includes('Ã')) {
-        // No reparar programáticamente, dejar como viene — el usuario puede corregir
-      }
-    } catch(e){}
+    const descripcion = desc ? desc.textContent.trim() : '';
 
     items.push(corregirItemDesdeCatalogos({
       codigo: codigo,
@@ -3852,7 +3844,11 @@ const parsearXMLDIAN = (xmlString) => {
     }));
   }
 
-  return { factura: facturaId, items: items };
+  return {
+    factura: facturaId,
+    items: items,
+    diag: items.length ? '' : `Documento <${root.localName}> con ${lineas.length} línea(s) de detalle (se esperaba InvoiceLine).`,
+  };
 };
 
 // Maneja la carga de uno o varios archivos (XML o ZIP con XMLs)
@@ -3885,7 +3881,7 @@ const cargarXMLsDIAN = async (fileList) => {
           n.toLowerCase().endsWith('.xml') &&
           (n.toLowerCase().includes('fv') || n.toLowerCase().includes('invoice') || n.toLowerCase().includes('factura')) &&
           !n.toLowerCase().includes('_cdr') &&
-          !n.toLowerCase().includes('ad0') // excluir acuse
+          !n.startsWith('__MACOSX')
         );
         for(const xf of xmlFiles){
           const txt = await zip.files[xf].async('text');
@@ -3920,6 +3916,8 @@ const cargarXMLsDIAN = async (fileList) => {
   let totalItems = 0;
   let facturasEncontradas = [];
   let erroresXML = [];
+  const diagXML = [];
+  const yaCargadas = new Set();
 
   // Para la reclamación activa: usar los ítems del XML
   // Si hay múltiples XMLs, intentar emparejar por factura; si solo hay 1, usarlo directamente
@@ -3930,7 +3928,11 @@ const cargarXMLsDIAN = async (fileList) => {
       const result = parsearXMLDIAN(xml.contenido);
       facturasEncontradas.push(result.factura);
 
-      if(!result.items.length) continue;
+      if(!result.items.length){ if(result.diag) diagXML.push(`${xml.nombre}: ${result.diag}`); continue; }
+      // Mismo XML presente dos veces (factura + contenedor AttachedDocument): no duplicar ítems
+      const claveDup = String(result.factura||'').toUpperCase()+'|'+result.items.length;
+      if(yaCargadas.has(claveDup)) continue;
+      yaCargadas.add(claveDup);
 
       // Emparejar por factura (comparación flexible: contiene, empieza con, etc.)
       const facRec = (REC.factura||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
@@ -3975,6 +3977,7 @@ const cargarXMLsDIAN = async (fileList) => {
   if(!itemsParaCargar.length){
     const msg = `No se encontró factura que coincida con "${REC.factura}". ` +
                 `Facturas en los XML: ${facturasEncontradas.join(', ')||'ninguna'}.` +
+                (diagXML.length ? `\nDetalle: ${diagXML.slice(0,3).join(' · ')}` : '') +
                 (erroresXML.length ? `\nErrores: ${erroresXML.join(' · ')}` : '');
     toast(msg, 'w');
     if(status){ status.innerHTML='⚠ '+msg; status.style.color='var(--warn)'; }
