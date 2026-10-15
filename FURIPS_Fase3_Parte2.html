@@ -5712,14 +5712,55 @@ window.abrirSelectorLote = async (tipo) => {
     return (a.factura||'').localeCompare(b.factura||'');
   });
 
+  // ── Validación previa de cada factura (mismas reglas que la descarga individual) ──
+  const problemasLote = (r) => {
+    const out = [];
+    if(tipo==='fur'){
+      const d = r.fur || {};
+      const desc = String(d.desc_evento||'').trim().length;
+      if(desc < 100) out.push(`Descripción del evento (C20): ${desc}/100 caracteres`);
+      if(d.nat_evento === '01' && !String(d.siras||'').trim()){
+        const m = String(d.fec_ocurr||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if(!m || `${m[3]}${m[2]}${m[1]}` >= '20230601') out.push('Falta el Radicado SIRAS (C28), obligatorio en accidente de tránsito');
+      }
+      [['depto_v','mpio_v','residencia víctima'],['depto_ocurr','mpio_ocurr','ocurrencia'],['depto_prop','mpio_prop','propietario'],['depto_cond','mpio_cond','conductor']].forEach(([dk,mk,lbl])=>{
+        if(d[dk] && d[mk] && !(MPIOS[d[dk]] && MPIOS[d[dk]][d[mk]])) out.push(`Municipio de ${lbl} no válido (${d[dk]}${d[mk]})`);
+      });
+      const falt = (typeof FUR_REQS!=='undefined' ? FUR_REQS : []).filter(k => !String(d[k]??'').trim());
+      if(falt.length) out.push(`Faltan ${falt.length} campo(s) obligatorios (${falt.slice(0,4).map(k=>k.toUpperCase()).join(', ')}${falt.length>4?'…':''})`);
+    } else {
+      const filas = Array.isArray(r.fur_ser) ? r.fur_ser : [];
+      if(!filas.length) out.push('Sin servicios cargados');
+      const sinCod = filas.filter(x => !String(x.codigoServicio||'').trim()).length;
+      const sinVal = filas.filter(x => !(parseFloat(x.cantidad)>0) || !(parseFloat(x.vrUnitFact)>0)).length;
+      if(sinCod) out.push(`${sinCod} servicio(s) sin código`);
+      if(sinVal) out.push(`${sinVal} servicio(s) sin cantidad o valor`);
+    }
+    return out;
+  };
+  candidatos.forEach(r => { r._prob = problemasLote(r); });
+  const paquetes = [...new Set(candidatos.map(r => r.paquete?.radicadoInterno).filter(Boolean))].sort().reverse();
+
   const overlay = document.createElement('div');
   overlay.id = 'lote-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML = `
-    <div style="background:var(--bg,#fff);color:var(--tx,#111);max-width:520px;width:92vw;max-height:85vh;overflow:auto;border-radius:10px;padding:20px;">
+    <div style="background:var(--bg,#fff);color:var(--tx,#111);max-width:620px;width:94vw;max-height:88vh;overflow:auto;border-radius:10px;padding:20px;">
       <div style="font-weight:700;font-size:15px;margin-bottom:4px;">🗂️ Generar ${nombreTipo} en lote</div>
-      <div style="font-size:12px;color:var(--tx2,#666);margin-bottom:14px;">Marca las facturas que van juntas en el mismo archivo (IPS: ${REC.codHab}).</div>
-      <div id="lote-lista" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:14px;"></div>
+      <div style="font-size:12px;color:var(--tx2,#666);margin-bottom:10px;">Marca las facturas que van juntas en el mismo archivo (IPS: ${REC.codHab}). Las que tienen problemas aparecen en rojo y no se pueden incluir hasta corregirlas.</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+        <label style="font-size:12px;">📦 Paquete de recepción:</label>
+        <select id="lote-paq" style="font-size:12px;padding:3px 6px;">
+          <option value="">Todos</option>
+          ${paquetes.map(x=>`<option value="${x}">${x}</option>`).join('')}
+          <option value="__sin">Sin paquete</option>
+        </select>
+        <span style="flex:1"></span>
+        <button id="lote-ok" class="btn bs" style="font-size:11px;padding:3px 8px;">Marcar sin problemas</button>
+        <button id="lote-ninguna" class="btn bs" style="font-size:11px;padding:3px 8px;">Ninguna</button>
+      </div>
+      <div id="lote-resumen" style="font-size:11px;color:var(--tx2,#666);margin-bottom:6px;"></div>
+      <div id="lote-lista" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:14px;"></div>
       <div style="display:flex;gap:8px;">
         <button id="lote-generar" class="btn bp">⬇ Generar y descargar .json</button>
         <button id="lote-cancelar" class="btn bs">Cancelar</button>
@@ -5729,21 +5770,49 @@ window.abrirSelectorLote = async (tipo) => {
   document.body.appendChild(overlay);
 
   const lista = overlay.querySelector('#lote-lista');
-  candidatos.forEach(r=>{
-    const row = document.createElement('label');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 2px;cursor:pointer;';
-    row.innerHTML = `<input type="checkbox" value="${r.id}" checked style="width:16px;height:16px;">
-      <span>${r.factura||'(sin factura)'} ${r.id===REC.id?'<b>(esta que tienes abierta)</b>':''}</span>`;
-    lista.appendChild(row);
+  const marcadas = new Set(candidatos.filter(r => !r._prob.length).map(r => r.id)); // por defecto: solo las sin problemas
+  const visibles = () => {
+    const f = overlay.querySelector('#lote-paq').value;
+    return candidatos.filter(r => !f ? true : f==='__sin' ? !r.paquete?.radicadoInterno : r.paquete?.radicadoInterno === f);
+  };
+  const pintar = () => {
+    const vis = visibles();
+    lista.innerHTML = '';
+    vis.forEach(r => {
+      const row = document.createElement('label');
+      const mal = r._prob.length > 0;
+      row.style.cssText = `display:flex;align-items:flex-start;gap:8px;font-size:12px;padding:4px 2px;cursor:${mal?'not-allowed':'pointer'};${mal?'color:#c0392b;':''}`;
+      row.innerHTML = `<input type="checkbox" value="${r.id}" ${marcadas.has(r.id)?'checked':''} ${mal?'disabled':''} style="width:16px;height:16px;margin-top:2px;">
+        <span><b>${r.factura||'(sin factura)'}</b> ${r.id===REC.id?'<b>(esta que tienes abierta)</b>':''}
+          ${r.paquete?.radicadoInterno?`<span style="font-size:10px;color:#7d4fd1;"> 📦 ${r.paquete.radicadoInterno}</span>`:''}
+          ${mal?`<div style="font-size:11px;">⚠ ${r._prob.join(' · ')}</div>`:''}</span>`;
+      row.querySelector('input').addEventListener('change', e => { e.target.checked ? marcadas.add(r.id) : marcadas.delete(r.id); resumen(); });
+      lista.appendChild(row);
+    });
+    resumen();
+  };
+  const resumen = () => {
+    const vis = visibles();
+    const ok = vis.filter(r => !r._prob.length).length, mal = vis.length - ok;
+    const sel = vis.filter(r => marcadas.has(r.id)).length;
+    overlay.querySelector('#lote-resumen').innerHTML = `${vis.length} factura(s) · <span style="color:#2e7d32;">${ok} listas</span> · <span style="color:#c0392b;">${mal} con problemas</span> · <b>${sel} marcadas</b>`;
+  };
+  overlay.querySelector('#lote-paq').addEventListener('change', () => {
+    // al cambiar de paquete, quedan marcadas las listas de ese paquete
+    marcadas.clear(); visibles().filter(r => !r._prob.length).forEach(r => marcadas.add(r.id)); pintar();
   });
+  overlay.querySelector('#lote-ok').addEventListener('click', () => { visibles().filter(r => !r._prob.length).forEach(r => marcadas.add(r.id)); pintar(); });
+  overlay.querySelector('#lote-ninguna').addEventListener('click', () => { visibles().forEach(r => marcadas.delete(r.id)); pintar(); });
+  pintar();
 
   overlay.querySelector('#lote-cancelar').addEventListener('click', ()=>overlay.remove());
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 
   overlay.querySelector('#lote-generar').addEventListener('click', ()=>{
-    const idsMarcados = [...lista.querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.value);
-    if(!idsMarcados.length){ toast('Marca al menos una factura.','w'); return; }
-    const seleccionados = candidatos.filter(r=>idsMarcados.includes(r.id));
+    const seleccionados = visibles().filter(r => marcadas.has(r.id));
+    if(!seleccionados.length){ toast('Marca al menos una factura.','w'); return; }
+    const conProblema = seleccionados.filter(r => r._prob.length);
+    if(conProblema.length){ toast(`⚠ ${conProblema.length} factura(s) marcadas tienen problemas: ${conProblema.slice(0,3).map(r=>r.factura).join(', ')}`,'w'); return; }
     const nit = nitIPS(REC, g('fur-nit')?.value);
     if(!nit){ toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1) del FUR.','w'); return; }
 
