@@ -2326,7 +2326,7 @@ select option{background:var(--sur2);}
         </div>
 
         <!-- LISTA -->
-        <div id="paq-v-lista" style="display:none;"><div id="paq-lista"></div></div>
+        <div id="paq-v-lista" style="display:none;"><div id="paq-aviso"></div><div id="paq-lista-pq"></div></div>
 
         <!-- CONTROL DE PLAZO -->
         <div id="paq-v-plazo" style="display:none;"><div id="paq-plazo"></div></div>
@@ -15000,12 +15000,13 @@ const fmtM = n => '$ ' + (Number(n)||0).toLocaleString('es-CO');
 const fmtF = iso => { if(!iso) return '—'; const [y,m,d]=String(iso).slice(0,10).split('-'); return (y&&m&&d)?`${d}/${m}/${y}`:iso; };
 const paqIpsNom = cod => (CLIENTES_IPS.find(c=>c.nit===cod)||{}).razon || cod || '—';
 
-window.paqTab = (t) => {
+window.paqTab = (t) => { try{ paqTabInner(t); }catch(e){ console.error(e); toast('Error en Paquetes: '+e.message,'e'); } };
+function paqTabInner(t){
   ['nuevo','lista','det','plazo'].forEach(k => { const v=g('paq-v-'+k); if(v) v.style.display = (k===t)?'block':'none'; });
   ['nuevo','lista','plazo'].forEach(k => { const b=g('paq-t-'+k); if(b) b.className = 'btn btn-sm ' + ((k===t || (t==='det'&&k==='lista'))?'bp':'bs'); });
-  if(t==='lista') paqRenderLista();
+  if(t==='lista'){ paqRenderLista(); paqCargarLista(); }
   if(t==='plazo') paqRenderPlazo();
-};
+}
 
 window.paqLoad = async () => {
   const sel = g('paq-ips');
@@ -15018,14 +15019,19 @@ window.paqLoad = async () => {
   await paqCargarLista();
 };
 
+function paqAviso(html){
+  ['paq-aviso','paq-res'].forEach(id=>{ const e=g(id); if(e) e.innerHTML = html ? `<div class="alert ae" style="margin:8px 0;">⛔ ${html}</div>` : ''; });
+}
 async function paqCargarLista(){
+  paqAviso('');
   try{
     const snap = await getDocs(collection(db,'paquetes'));
     PAQS = snap.docs.map(d=>({id:d.id,...d.data()}));
     PAQS.sort((a,b)=> (b.radicadoInterno||'').localeCompare(a.radicadoInterno||''));
   }catch(e){
     PAQS = [];
-    toast('No se pudo leer la colección "paquetes": '+e.message+' (revisa las reglas de Firestore).','e');
+    paqAviso(`No se pudo leer la colección <b>paquetes</b>: ${escH(e.message)}. Si dice "permissions", hay que habilitar la colección <code>paquetes</code> en las reglas de Firestore (ver instrucciones).`);
+    toast('No se pudo leer la colección "paquetes": '+e.message,'e');
   }
   paqRenderLista();
 }
@@ -15216,6 +15222,7 @@ window.paqCrear = async () => {
       toast(`✔ Paquete ${radPaq} creado`,'ok');
     }catch(e){
       loader(false); console.error(e);
+      paqAviso(`No se pudo crear el paquete: ${escH(e.message)}. Si dice "permissions", hay que habilitar las colecciones <code>paquetes</code> y <code>reclamaciones</code> en las reglas de Firestore.`);
       toast('Error al crear el paquete: '+e.message,'e');
     }
   });
@@ -15265,7 +15272,7 @@ function paqEstadoLbl(p){
   return {t:'Revisado', col:'#3fb950'};
 }
 window.paqRenderLista = () => {
-  const cont = g('paq-lista'); if(!cont) return;
+  const cont = g('paq-lista-pq'); if(!cont) return;
   if(!PAQS.length){ cont.innerHTML = '<div style="padding:24px;text-align:center;color:var(--tx3);font-size:12px;">Aún no hay paquetes registrados.</div>'; return; }
   cont.innerHTML = `<div style="border:1px solid var(--brd);border-radius:8px;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
     <thead><tr style="background:var(--sur2);"><th style="padding:7px 9px;text-align:left;">Radicado interno</th><th style="padding:7px 9px;text-align:left;">IPS</th><th style="padding:7px 9px;text-align:left;">Recibido</th><th style="padding:7px 9px;text-align:left;">Asunto</th><th style="padding:7px 9px;text-align:right;">Cuentas</th><th style="padding:7px 9px;text-align:left;">Revisión</th><th style="padding:7px 9px;text-align:left;">Estado</th><th></th></tr></thead>
@@ -15438,7 +15445,7 @@ window.paqGuardarRevision = async () => {
 
 
 /* ─────────── Control del plazo de radicación (22 días hábiles desde la expedición) ─────────── */
-let PAQ_PLAZO_INCL = false;
+let PAQ_PLAZO_INCL = false, PAQ_SINFECHA = false, PAQ_FEXP_DRAFT = {}, PAQ_SF_FILTRO = '';
 function paqFilasPlazo(){
   const filas = [];
   RECS_ALL.forEach(r=>{
@@ -15454,6 +15461,74 @@ function paqFilasPlazo(){
   filas.sort((a,b)=> (a.pi.radicada===b.pi.radicada ? 0 : a.pi.radicada?1:-1) || a.pi.limite.localeCompare(b.pi.limite));
   return filas;
 }
+function paqSinFechaRecs(){
+  return RECS_ALL.filter(r=>!r.fechaExpedicion && ['por_procesar','pendiente','devuelta_ips'].includes(getEstadoGestion(r)))
+    .sort((a,b)=>String(a.factura||'').localeCompare(String(b.factura||'')));
+}
+function paqPanelSinFecha(){
+  const todas = paqSinFechaRecs();
+  const q = PAQ_SF_FILTRO.trim().toUpperCase();
+  const filas = q ? todas.filter(r=>String(r.factura||'').toUpperCase().includes(q)) : todas;
+  const nDraft = Object.values(PAQ_FEXP_DRAFT).filter(Boolean).length;
+  return `<div style="border:1px solid var(--brd);border-radius:8px;padding:12px;margin-bottom:12px;background:var(--sur2);">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:8px;">
+      <div class="field" style="margin:0;"><label class="fl">Buscar factura</label><input data-libre value="${escH(PAQ_SF_FILTRO)}" oninput="PAQ_SF_FILTRO=this.value" onchange="paqRenderPlazo()" placeholder="Ej: FECR89"></div>
+      <div class="field" style="margin:0;"><label class="fl">Cargar Excel (factura, fecha expedición)</label><input type="file" accept=".xlsx,.xls,.csv" onchange="paqCargarFexpExcel(this.files[0]);this.value='';"></div>
+      <span style="flex:1;"></span>
+      <button class="btn bp" onclick="paqGuardarFexp()" ${nDraft?'':'disabled'}>💾 Guardar ${nDraft} fecha(s)</button>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:6px;">${filas.length} de ${todas.length} cuentas. Digita la fecha o cárgala desde un Excel (se empareja por número de factura) y luego guarda.</div>
+    <div style="max-height:380px;overflow:auto;border:1px solid var(--brd);border-radius:6px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--bg,#fff);position:sticky;top:0;"><th style="padding:5px 8px;text-align:left;">Factura</th><th style="padding:5px 8px;text-align:left;">IPS</th><th style="padding:5px 8px;text-align:left;">Estado</th><th style="padding:5px 8px;text-align:left;">Fecha expedición</th><th style="padding:5px 8px;text-align:left;">Límite (22 d.h.)</th></tr></thead>
+      <tbody>${filas.slice(0,400).map(r=>{ const d=PAQ_FEXP_DRAFT[r.id]||''; const pi=d?plazoInfo(d):null; return `<tr style="border-top:1px solid var(--brd);">
+        <td style="padding:4px 8px;font-family:var(--mono);">${escH(r.factura)} <span class="badge bb2">${escH(r.consec)}</span></td><td style="padding:4px 8px;">${escH(paqIpsNom(r.codHab))}</td>
+        <td style="padding:4px 8px;">${escH(EST_GESTION[getEstadoGestion(r)]?.lbl||'')}</td>
+        <td style="padding:4px 8px;"><input type="date" value="${d}" onchange="paqSetFexpDraft('${r.id}',this.value)"></td>
+        <td style="padding:4px 8px;font-size:11px;">${pi?`${fmtF(pi.limite)}<div style="color:${pi.col};font-weight:600;">${pi.txt}</div>`:'—'}</td></tr>`; }).join('')}</tbody></table></div>
+    ${filas.length>400?'<div style="font-size:11px;color:var(--tx3);margin-top:4px;">Se muestran las primeras 400; usa el buscador para acotar.</div>':''}
+  </div>`;
+}
+window.paqToggleSinFecha = () => { PAQ_SINFECHA = !PAQ_SINFECHA; paqRenderPlazo(); };
+window.paqSetFexpDraft = (id,v) => { PAQ_FEXP_DRAFT[id] = v; paqRenderPlazo(); };
+window.paqCargarFexpExcel = async (file) => {
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), {type:'array', cellDates:true});
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:false, dateNF:'yyyy-mm-dd', defval:''});
+    const norm = x => String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+    const h = (rows[0]||[]).map(norm);
+    const iF = h.findIndex(x=>/^(factura|nfactura|numfactura|numerofactura)$/.test(x));
+    const iX = h.findIndex(x=>/(expedicion|emision|fechafactura|fecha)/.test(x));
+    const conEnc = iF>=0 && iX>=0;
+    const cF = conEnc?iF:0, cX = conEnc?iX:1;
+    const porFac = {}; paqSinFechaRecs().forEach(r=>{ porFac[String(r.factura||'').toUpperCase().replace(/\s+/g,'')] = r; });
+    let ok=0, noEnc=0, sinF=0;
+    rows.slice(conEnc?1:0).forEach(r=>{
+      const fac = String(r[cF]||'').toUpperCase().replace(/\s+/g,''); if(!fac) return;
+      const f = paqFecha(r[cX]); const rec = porFac[fac];
+      if(!rec){ noEnc++; return; } if(!f){ sinF++; return; }
+      PAQ_FEXP_DRAFT[rec.id] = f; ok++;
+    });
+    paqRenderPlazo();
+    toast(`✔ ${ok} fecha(s) emparejadas${noEnc?` · ${noEnc} facturas no están entre las pendientes`:''}${sinF?` · ${sinF} filas sin fecha válida`:''}. Revisa y pulsa Guardar.`, ok?'ok':'w');
+  }catch(e){ toast('No se pudo leer el archivo: '+e.message,'e'); }
+};
+window.paqGuardarFexp = async () => {
+  const ids = Object.entries(PAQ_FEXP_DRAFT).filter(([,v])=>v).map(([k])=>k);
+  if(!ids.length){ toast('No hay fechas por guardar.','w'); return; }
+  loader(true);
+  try{
+    for(let i=0;i<ids.length;i+=400){
+      const b = writeBatch(db);
+      ids.slice(i,i+400).forEach(id=>{ const f=PAQ_FEXP_DRAFT[id]; b.update(doc(db,'reclamaciones',id),{fechaExpedicion:f, fechaLimiteRad:sumarHabiles(f,PLAZO_HABILES), actualizado:serverTimestamp()}); });
+      await b.commit();
+    }
+    ids.forEach(id=>{ delete PAQ_FEXP_DRAFT[id]; });
+    loader(false); toast(`✔ ${ids.length} fecha(s) de expedición guardadas`,'ok');
+    paqRenderPlazo();
+  }catch(e){ loader(false); console.error(e); toast('Error al guardar: '+e.message,'e'); }
+};
 window.paqTogglePlazoIncl = (v) => { PAQ_PLAZO_INCL = v; paqRenderPlazo(); };
 window.paqRenderPlazo = () => {
   const cont = g('paq-plazo'); if(!cont) return;
@@ -15469,8 +15544,10 @@ window.paqRenderPlazo = () => {
       <div class="stat"><div class="sv" style="color:#f85149;">${hoy}</div><div class="sl">Vencen hoy</div></div>
       <div class="stat"><div class="sv" style="color:#f85149;">${crit}</div><div class="sl">1–5 d. hábiles</div></div>
       <div class="stat"><div class="sv" style="color:#e3b341;">${med}</div><div class="sl">6–10 d. hábiles</div></div>
-      <div class="stat"><div class="sv" style="color:var(--tx3);">${sinExp}</div><div class="sl">Sin fecha de expedición</div></div>
+      <div class="stat" style="cursor:pointer;${PAQ_SINFECHA?'border-color:var(--acc);':''}" onclick="paqToggleSinFecha()" title="Clic para ver y completar estas cuentas"><div class="sv" style="color:var(--tx3);">${sinExp}</div><div class="sl">Sin fecha de expedición ${sinExp?(PAQ_SINFECHA?'▲':'▼'):''}</div></div>
     </div>
+    <div style="font-size:11px;color:var(--tx3);margin:-4px 0 10px;">“Sin fecha de expedición” son cuentas ya registradas (por procesar, pendientes o devueltas) a las que nunca se les capturó la fecha de la factura; sin ella no se puede calcular su plazo de ${PLAZO_HABILES} días hábiles. Haz clic en la tarjeta para completarlas.</div>
+    ${PAQ_SINFECHA?paqPanelSinFecha():''}
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
       <label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${PAQ_PLAZO_INCL?'checked':''} onchange="paqTogglePlazoIncl(this.checked)"> Incluir ya radicadas (cumplimiento)</label>
       <span style="flex:1;"></span>
