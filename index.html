@@ -347,6 +347,7 @@ select option{background:var(--sur2);}
       <!-- ETAPA 2: INGRESAR RECLAMACIÓN -->
       <div class="ng">1 · Ingresar</div>
       <div class="ni" id="n-nueva"   onclick="go('nueva')" style="display:none;"> <span class="ndot"></span>Nueva Reclamación</div>
+      <div class="ni" id="n-paq"     onclick="go('paq')">   <span class="ndot"></span>📦 Paquetes de Recepción</div>
       <div class="ni" id="n-lista"   onclick="go('lista')"> <span class="ndot"></span>Lista de Reclamaciones</div>
 
       <!-- ETAPA 3: DILIGENCIAR FURIPS -->
@@ -2277,9 +2278,66 @@ select option{background:var(--sur2);}
       </div>
 
       <!-- HISTORIAL / AUDITORÍA -->
+      <!-- ══ PAQUETES DE RECEPCIÓN ══ -->
+      <div class="page hidden" id="p-paq">
+        <div class="ptitle">📦 Paquetes de Recepción</div>
+        <div class="psub">Registra las cuentas que la IPS envía por correo como <strong>un paquete con radicado interno</strong>, descarga el Excel de acuse para responderle, y luego revisa cada cuenta: <strong>pasa a radicación, devolución o pendiente</strong>, con su observación y trazabilidad.</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+          <button class="btn btn-sm bp" id="paq-t-nuevo" onclick="paqTab('nuevo')">➕ Nuevo paquete</button>
+          <button class="btn btn-sm bs" id="paq-t-lista" onclick="paqTab('lista')">📋 Paquetes recibidos</button>
+          <button class="btn btn-sm bs" id="paq-t-plazo" onclick="paqTab('plazo')">⏰ Plazo 22 días hábiles</button>
+        </div>
+
+        <!-- NUEVO -->
+        <div id="paq-v-nuevo">
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-bottom:12px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+              <div class="field"><label class="fl">IPS que envía <span class="req">*</span></label><select id="paq-ips"></select></div>
+              <div class="field"><label class="fl">Fecha de recepción <span class="req">*</span></label><input id="paq-fec" type="date"></div>
+              <div class="field"><label class="fl">Asunto / referencia del correo</label><input id="paq-asunto" data-libre maxlength="150" placeholder="Ej: Cuentas SOAT octubre"></div>
+              <div class="field"><label class="fl">Correo remitente</label><input id="paq-rem" data-libre maxlength="120" placeholder="correo@ips.com"></div>
+            </div>
+          </div>
+
+          <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-bottom:12px;">
+            <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tx2);margin-bottom:8px;letter-spacing:.5px;">AGREGAR CUENTAS AL PAQUETE</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label class="fl">Pegar listado (una cuenta por línea: FACTURA ; VALOR ; FECHA EXPEDICIÓN ; FECHA EVENTO opcional)</label>
+                <textarea id="paq-txt" data-libre rows="5" placeholder="FECR89574&#9;1250000&#9;08/10/2026&#9;15/09/2026&#10;FECR89575&#9;830000&#9;09/10/2026" style="width:100%;font-family:var(--mono);font-size:11px;"></textarea>
+                <button class="btn btn-sm bp" style="margin-top:6px;" onclick="paqAgregarTexto()">➕ Agregar del texto</button>
+              </div>
+              <div>
+                <label class="fl">O cargar Excel / CSV (columnas: factura, valor, fecha expedición, fecha evento)</label>
+                <input type="file" id="paq-file" accept=".xlsx,.xls,.csv" onchange="paqCargarExcel(this.files[0]);this.value='';">
+                <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">
+                  <div class="field" style="margin:0;"><label class="fl">Factura</label><input id="paq-m-fac" maxlength="20" style="width:130px;"></div>
+                  <div class="field" style="margin:0;"><label class="fl">Valor</label><input id="paq-m-val" data-libre maxlength="15" style="width:110px;"></div>
+                  <div class="field" style="margin:0;"><label class="fl">F. expedición factura</label><input id="paq-m-fex" type="date"></div>
+                  <div class="field" style="margin:0;"><label class="fl">Fecha evento</label><input id="paq-m-fev" type="date"></div>
+                  <button class="btn btn-sm bs" onclick="paqAgregarManual()">➕ Agregar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="paq-prev"></div>
+          <div id="paq-res"></div>
+        </div>
+
+        <!-- LISTA -->
+        <div id="paq-v-lista" style="display:none;"><div id="paq-lista"></div></div>
+
+        <!-- CONTROL DE PLAZO -->
+        <div id="paq-v-plazo" style="display:none;"><div id="paq-plazo"></div></div>
+
+        <!-- DETALLE / REVISIÓN -->
+        <div id="paq-v-det" style="display:none;"><div id="paq-det"></div></div>
+      </div>
+
       <div class="page hidden" id="p-hist">
         <div class="ptitle">📜 Historial / Auditoría</div>
-        <div class="psub">Trazabilidad completa de cambios de estado de todas las reclamaciones</div>
+        <div class="psub">Por defecto muestra solo movimientos de <strong>Gestión Interna</strong> (los cambios reales de estado de la cuenta). Cambia "Tipo de evento" para ver también ADRES, Glosa, Migración o Corrección.</div>
 
         <!-- Filtros -->
         <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-bottom:14px;">
@@ -2295,10 +2353,12 @@ select option{background:var(--sur2);}
             </div>
             <div class="field">
               <label class="fl">Tipo de evento</label>
-              <select id="h-tipo">
+              <select id="h-tipo" onchange="aplicarFiltrosHist()">
                 <option value="">Todos</option>
-                <option value="gestion">📋 Gestión Interna</option>
+                <option value="gestion" selected>📋 Gestión Interna</option>
+                <option value="paquete">📦 Paquetes de recepción</option>
                 <option value="adres">🏛 Respuesta ADRES</option>
+                <option value="glosa">📝 Glosa</option>
                 <option value="migracion">🔄 Migración</option>
                 <option value="correccion">🔧 Corrección</option>
               </select>
@@ -3672,7 +3732,7 @@ function renderLista(){
       <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:24px;">#${r.id.slice(-4)}</div>
       <div style="flex:1;cursor:pointer;" onclick="selRec('${r.id}')">
         <div style="font-weight:500;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          ${r.factura} ${canEdit?`<button onclick="event.stopPropagation();editarFactura('${r.id}','${(r.factura||'').replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--tx3);padding:0;" title="Editar número de factura">✏️</button>`:''} <span class="badge bb2">${r.consec}</span> ${gBadge} ${aBadge} ${rondasBadge} ${glosasBadge} ${loteTag} ${radNum} ${vBadge} ${chqBadge} ${asigBadge}
+          ${r.factura} ${canEdit?`<button onclick="event.stopPropagation();editarFactura('${r.id}','${(r.factura||'').replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--tx3);padding:0;" title="Editar número de factura">✏️</button>`:''} <span class="badge bb2">${r.consec}</span> ${gBadge} ${aBadge} ${rondasBadge} ${glosasBadge} ${loteTag} ${r.paquete?.radicadoInterno?`<span title="Paquete de recepción · ${r.paquete.radicadoCuenta||''}" style="background:rgba(163,113,247,.15);color:#a371f7;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;">📦 ${r.paquete.radicadoInterno}</span>`:''} ${radNum} ${vBadge} ${chqBadge} ${asigBadge}
         </div>
         <div style="font-size:11px;color:var(--tx2);margin-top:2px;">
           IPS:${r.codHab} · ${items} ítems ·
@@ -8025,6 +8085,7 @@ window.go=(id)=>{
   const ni=g('n-'+id); if(ni) ni.classList.add('active');
   if(id==='nueva') prepNueva();
   if(id==='lista'){ renderLista(); }
+  if(id==='paq'){ paqLoad(); paqTab('nuevo'); }
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
   if(id==='hist')  loadHistorial();
@@ -9282,7 +9343,7 @@ function renderHistorialEstado(rec){
     const cat = h.tipo === 'gestion' ? EST_GESTION : h.tipo === 'adres' ? EST_ADRES : null;
     const infA = cat?.[h.a];
     const color = infA?.col || 'var(--tx)';
-    const icono = h.tipo === 'migracion' ? '🔄' : h.tipo === 'adres' ? '🏛' : '📋';
+    const icono = h.tipo === 'migracion' ? '🔄' : h.tipo === 'adres' ? '🏛' : h.tipo === 'paquete' ? '📦' : '📋';
     return `<div style="padding:8px 12px;border-bottom:1px solid var(--brd);font-size:11px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
         <span style="font-size:13px;">${icono}</span>
@@ -9467,24 +9528,43 @@ window.aplicarFiltrosHist = () => {
   _s('h-count', `${rows.length.toLocaleString('es-CO')} evento${rows.length===1?'':'s'} · de ${HIST_CACHE.length.toLocaleString('es-CO')} totales`);
 
   // KPIs
-  const kpis = { gestion:0, adres:0, migracion:0, correccion:0 };
-  rows.forEach(r => { if(kpis[r.tipo] !== undefined) kpis[r.tipo]++; });
   const kpiEl = g('h-kpis');
+  const tipoActivo = gv('h-tipo');
   if(kpiEl){
-    kpiEl.innerHTML = `
-      <div class="stat"><div class="sv">${rows.length.toLocaleString('es-CO')}</div><div class="sl">Total Eventos</div></div>
-      <div class="stat"><div class="sv" style="color:#79c0ff;">${kpis.gestion}</div><div class="sl">📋 Gestión</div></div>
-      <div class="stat"><div class="sv" style="color:#3fb950;">${kpis.adres}</div><div class="sl">🏛 ADRES</div></div>
-      <div class="stat"><div class="sv" style="color:#e3b341;">${kpis.migracion}</div><div class="sl">🔄 Migración</div></div>
-      <div class="stat"><div class="sv" style="color:#db6d28;">${kpis.correccion}</div><div class="sl">🔧 Corrección</div></div>
-    `;
+    if(tipoActivo === 'gestion'){
+      // Informe enfocado en Gestión (vista por defecto): el desglose útil aquí
+      // es por ESTADO DE GESTIÓN (los movimientos reales de la cuenta), no por
+      // tipo de evento — ya está fijo en "gestión".
+      const porEstado = { por_procesar:0, pendiente:0, devuelta_ips:0, radicada:0, anulada:0 };
+      rows.forEach(r => { if(porEstado[r.a] !== undefined) porEstado[r.a]++; });
+      kpiEl.innerHTML = `
+        <div class="stat"><div class="sv">${rows.length.toLocaleString('es-CO')}</div><div class="sl">Total movimientos de Gestión</div></div>
+        <div class="stat"><div class="sv" style="color:${EST_GESTION.por_procesar.col};">${porEstado.por_procesar}</div><div class="sl">${EST_GESTION.por_procesar.icon} Por Procesar</div></div>
+        <div class="stat"><div class="sv" style="color:${EST_GESTION.pendiente.col};">${porEstado.pendiente}</div><div class="sl">${EST_GESTION.pendiente.icon} Pendiente</div></div>
+        <div class="stat"><div class="sv" style="color:${EST_GESTION.devuelta_ips.col};">${porEstado.devuelta_ips}</div><div class="sl">${EST_GESTION.devuelta_ips.icon} Devuelta IPS</div></div>
+        <div class="stat"><div class="sv" style="color:${EST_GESTION.radicada.col};">${porEstado.radicada}</div><div class="sl">${EST_GESTION.radicada.icon} Radicada</div></div>
+        <div class="stat"><div class="sv" style="color:${EST_GESTION.anulada.col};">${porEstado.anulada}</div><div class="sl">${EST_GESTION.anulada.icon} Anulada</div></div>
+      `;
+    } else {
+      // "Todos" u otro tipo específico: desglose general por tipo de evento.
+      const kpis = { gestion:0, adres:0, glosa:0, migracion:0, correccion:0 };
+      rows.forEach(r => { if(kpis[r.tipo] !== undefined) kpis[r.tipo]++; });
+      kpiEl.innerHTML = `
+        <div class="stat"><div class="sv">${rows.length.toLocaleString('es-CO')}</div><div class="sl">Total Eventos</div></div>
+        <div class="stat"><div class="sv" style="color:#79c0ff;">${kpis.gestion}</div><div class="sl">📋 Gestión</div></div>
+        <div class="stat"><div class="sv" style="color:#3fb950;">${kpis.adres}</div><div class="sl">🏛 ADRES</div></div>
+        <div class="stat"><div class="sv" style="color:#d2a8ff;">${kpis.glosa}</div><div class="sl">📝 Glosa</div></div>
+        <div class="stat"><div class="sv" style="color:#e3b341;">${kpis.migracion}</div><div class="sl">🔄 Migración</div></div>
+        <div class="stat"><div class="sv" style="color:#db6d28;">${kpis.correccion}</div><div class="sl">🔧 Corrección</div></div>
+      `;
+    }
   }
 
   // Tabla (solo primeras 500 filas para no saturar el DOM; el Excel exporta todo)
   const tb = g('h-tbody');
   if(!tb) return;
   const slice = rows.slice(0, 500);
-  const iconoTipo = { gestion:'📋', adres:'🏛', migracion:'🔄', correccion:'🔧' };
+  const iconoTipo = { gestion:'📋', adres:'🏛', glosa:'📝', migracion:'🔄', correccion:'🔧' };
 
   tb.innerHTML = slice.map(r => {
     const fh = r.fechaObj ? r.fechaObj.toLocaleString('es-CO') : '—';
@@ -9521,7 +9601,10 @@ window.aplicarFiltrosHist = () => {
 
 window.limpiarFiltrosHist = () => {
   ['h-desde','h-hasta','h-factura'].forEach(id => { const e = g(id); if(e) e.value=''; });
-  ['h-tipo','h-usuario','h-destino'].forEach(id => { const e = g(id); if(e) e.value=''; });
+  ['h-usuario','h-destino'].forEach(id => { const e = g(id); if(e) e.value=''; });
+  // "Limpiar" vuelve al alcance por defecto del informe (solo Gestión), no a "Todos":
+  // los tipos adres/migracion/correccion/glosa son técnicos y no son el foco de este informe.
+  if(g('h-tipo')) g('h-tipo').value='gestion';
   aplicarFiltrosHist();
 };
 
@@ -14412,6 +14495,7 @@ document.addEventListener('input', ev=>{
   const el=ev.target;
   if(!['INPUT','TEXTAREA'].includes(el.tagName)) return;
   if(['date','time','number','checkbox','radio','file','password','email'].includes(el.type)) return;
+  if(el.hasAttribute('data-libre')) return; // texto libre (observaciones, listados pegados)
   const pos=el.selectionStart, orig=el.value;
   const clean=orig.toUpperCase().replace(REGEX_NO_PERM,'');
   if(clean!==orig){ el.value=clean; const d=orig.length-clean.length; try{el.setSelectionRange(Math.max(0,pos-d),Math.max(0,pos-d));}catch(e){} }
@@ -14421,6 +14505,7 @@ document.addEventListener('keypress',ev=>{
   const el=ev.target;
   if(!['INPUT','TEXTAREA'].includes(el.tagName)) return;
   if(['date','time','number','checkbox','radio','file','password','email'].includes(el.type)) return;
+  if(el.hasAttribute('data-libre')) return;
   const ch=ev.key; if(ch.length>1) return;
   if(REGEX_NO_PERM.test(ch.toUpperCase())){ev.preventDefault();}
   REGEX_NO_PERM.lastIndex=0;
@@ -14833,6 +14918,613 @@ window.guardarFechasEvento = async () => {
 
   toast(`✔ ${ok} fecha${ok===1?'':'s'} actualizada${ok===1?'':'s'}${err>0?` · ${err} errores`:''}`, ok>0 ? 'ok' : 'e');
   g('btn-fchevt-guardar').disabled = false;
+};
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   📦 PAQUETES DE RECEPCIÓN
+   La IPS envía un correo con N cuentas → se crea UN paquete con radicado
+   interno (RI-AAAA-0001), cada cuenta recibe sub-radicado (RI-AAAA-0001-001),
+   se descarga el Excel de acuse y luego se revisa cuenta por cuenta
+   (radicación / devolución / pendiente + observación + trazabilidad).
+   Colección Firestore: "paquetes". En cada reclamación: campo "paquete".
+   ═══════════════════════════════════════════════════════════════════════ */
+/* ── Días hábiles Colombia (lunes–viernes, sin festivos; Ley Emiliani + Semana Santa) ── */
+const PLAZO_HABILES = 22; // plazo de la norma para radicar, contado desde la fecha de expedición de la factura
+const _festCache = {};
+function festivosCO(y){
+  if(_festCache[y]) return _festCache[y];
+  const iso = d => new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const f = (m,d) => new Date(y,m-1,d);
+  const sumar = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+  const alLunes = d => { const w=d.getDay(); return w===1?d:sumar(d,(8-w)%7); };
+  // Domingo de Pascua (algoritmo de Gauss/Meeus)
+  const a=y%19,b=Math.floor(y/100),c=y%100,dd=Math.floor(b/4),e=b%4,ff=Math.floor((b+8)/25),gg=Math.floor((b-ff+1)/3);
+  const h=(19*a+b-dd-gg+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const mes=Math.floor((h+l-7*m+114)/31), dia=((h+l-7*m+114)%31)+1;
+  const pascua = f(mes,dia);
+  const set = new Set([
+    f(1,1),f(5,1),f(7,20),f(8,7),f(12,8),f(12,25),                       // fijos
+    alLunes(f(1,6)),alLunes(f(3,19)),alLunes(f(6,29)),alLunes(f(8,15)),   // trasladables (Emiliani)
+    alLunes(f(10,12)),alLunes(f(11,1)),alLunes(f(11,11)),
+    sumar(pascua,-3),sumar(pascua,-2),                                    // Jueves y Viernes Santo
+    alLunes(sumar(pascua,39)),alLunes(sumar(pascua,60)),alLunes(sumar(pascua,68)) // Ascensión, Corpus Christi, Sagrado Corazón
+  ].map(iso));
+  return _festCache[y] = set;
+}
+const _isoD = d => new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+const _parseD = iso => { const [y,m,d]=String(iso).slice(0,10).split('-').map(Number); return new Date(y,m-1,d); };
+function esHabil(d){ const w=d.getDay(); return w!==0 && w!==6 && !festivosCO(d.getFullYear()).has(_isoD(d)); }
+// Fecha límite = N días hábiles contando el día de expedición como día 1 (si es hábil;
+// si se expide en sábado, domingo o festivo, el día 1 es el siguiente día hábil)
+function sumarHabiles(iso, n){
+  const d = _parseD(iso); let c = esHabil(d) ? 1 : 0;
+  while(c<n){ d.setDate(d.getDate()+1); if(esHabil(d)) c++; }
+  return _isoD(d);
+}
+// Días hábiles entre hoy y el límite: >0 faltan, 0 vence hoy, <0 vencido hace N días hábiles
+function habilesHasta(limiteIso, desdeIso){
+  const hoy = desdeIso ? _parseD(desdeIso) : new Date(); hoy.setHours(0,0,0,0);
+  const lim = _parseD(limiteIso);
+  if(lim.getTime()===hoy.getTime()) return 0;
+  let n = 0; const d = new Date(hoy);
+  if(lim>hoy){ while(d<lim){ d.setDate(d.getDate()+1); if(esHabil(d)) n++; } return n; }
+  while(d>lim){ if(esHabil(d)) n--; d.setDate(d.getDate()-1); }
+  return n;
+}
+function plazoInfo(fexpIso, radFechaIso, desdeIso){
+  if(!fexpIso) return null;
+  const limite = sumarHabiles(fexpIso, PLAZO_HABILES);
+  if(radFechaIso){
+    const ok = String(radFechaIso).slice(0,10) <= limite;
+    return {limite, radicada:true, ok, txt: ok?'Radicada dentro del plazo':'Radicada FUERA de plazo', col: ok?'#3fb950':'#f85149', dias:null};
+  }
+  const dias = habilesHasta(limite, desdeIso);
+  let col='#3fb950', txt=`${dias} d. hábiles restantes`;
+  if(dias<0){ col='#f85149'; txt=`VENCIDA hace ${-dias} d. hábiles`; }
+  else if(dias===0){ col='#f85149'; txt='Vence HOY'; }
+  else if(dias<=5){ col='#f85149'; }
+  else if(dias<=10){ col='#e3b341'; }
+  return {limite, radicada:false, dias, txt, col};
+}
+const PAQ_DEC = {
+  sin_revisar: {lbl:'Sin revisar',        col:'#8b949e', ico:'⏳'},
+  radicacion:  {lbl:'Pasa a radicación',  col:'#3fb950', ico:'📬'},
+  devolucion:  {lbl:'Devolución',         col:'#db6d28', ico:'↩'},
+  pendiente:   {lbl:'Pendiente',          col:'#e3b341', ico:'⏸'},
+};
+let PAQS = [], PAQ_NEW = [], PAQ_CUR = null, PAQ_SEL = new Set(), PAQ_EDIT = {}, PAQ_TRAZ = new Set();
+const escH = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hoyISO = () => { const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+const fmtM = n => '$ ' + (Number(n)||0).toLocaleString('es-CO');
+const fmtF = iso => { if(!iso) return '—'; const [y,m,d]=String(iso).slice(0,10).split('-'); return (y&&m&&d)?`${d}/${m}/${y}`:iso; };
+const paqIpsNom = cod => (CLIENTES_IPS.find(c=>c.nit===cod)||{}).razon || cod || '—';
+
+window.paqTab = (t) => {
+  ['nuevo','lista','det','plazo'].forEach(k => { const v=g('paq-v-'+k); if(v) v.style.display = (k===t)?'block':'none'; });
+  ['nuevo','lista','plazo'].forEach(k => { const b=g('paq-t-'+k); if(b) b.className = 'btn btn-sm ' + ((k===t || (t==='det'&&k==='lista'))?'bp':'bs'); });
+  if(t==='lista') paqRenderLista();
+  if(t==='plazo') paqRenderPlazo();
+};
+
+window.paqLoad = async () => {
+  const sel = g('paq-ips');
+  if(sel && !sel.options.length){
+    sel.innerHTML = CLIENTES_IPS.map(c=>`<option value="${c.nit}">${escH(c.razon)} (${c.nit})</option>`).join('');
+  }
+  if(sel && CLIENTE_ACTIVO && CLIENTE_ACTIVO.nit!=='*') sel.value = CLIENTE_ACTIVO.nit;
+  const f = g('paq-fec'); if(f && !f.value) f.value = hoyISO();
+  paqRenderNuevo();
+  await paqCargarLista();
+};
+
+async function paqCargarLista(){
+  try{
+    const snap = await getDocs(collection(db,'paquetes'));
+    PAQS = snap.docs.map(d=>({id:d.id,...d.data()}));
+    PAQS.sort((a,b)=> (b.radicadoInterno||'').localeCompare(a.radicadoInterno||''));
+  }catch(e){
+    PAQS = [];
+    toast('No se pudo leer la colección "paquetes": '+e.message+' (revisa las reglas de Firestore).','e');
+  }
+  paqRenderLista();
+}
+
+/* ─────────── Parseo de entradas ─────────── */
+function paqNumero(v){
+  let s = String(v ?? '').replace(/[$\s]/g,'');
+  if(!s) return 0;
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g,'');
+  else s = s.replace(',','.');
+  const n = parseFloat(s); return isNaN(n)?0:Math.round(n);
+}
+function paqFecha(v){
+  const s = String(v ?? '').trim(); if(!s) return '';
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/); if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return '';
+}
+function paqAgregarCuentas(lista){
+  let n=0;
+  lista.forEach(c=>{
+    const fac = String(c.factura||'').trim().toUpperCase().replace(/\s+/g,'');
+    if(!fac) return;
+    PAQ_NEW.push({factura:fac, valor:paqNumero(c.valor), fechaExpedicion:paqFecha(c.fechaExpedicion), fechaEvento:paqFecha(c.fechaEvento)}); n++;
+  });
+  paqRenderNuevo();
+  return n;
+}
+window.paqAgregarTexto = () => {
+  const t = g('paq-txt')?.value || '';
+  const filas = t.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
+    const p = l.split(/\t|;|\|/).map(x=>x.trim());
+    return {factura:p[0], valor:p[1], fechaExpedicion:p[2], fechaEvento:p[3]};
+  });
+  const n = paqAgregarCuentas(filas);
+  if(!n){ toast('No se encontraron cuentas en el texto.','w'); return; }
+  g('paq-txt').value=''; toast(`✔ ${n} cuenta(s) agregadas al paquete`,'ok');
+};
+window.paqAgregarManual = () => {
+  const fac = gv('paq-m-fac'); if(!fac){ toast('Digita la factura.','w'); return; }
+  paqAgregarCuentas([{factura:fac, valor:gv('paq-m-val'), fechaExpedicion:g('paq-m-fex')?.value, fechaEvento:g('paq-m-fev')?.value}]);
+  ['paq-m-fac','paq-m-val','paq-m-fex','paq-m-fev'].forEach(i=>{ const e=g(i); if(e) e.value=''; });
+  g('paq-m-fac')?.focus();
+};
+window.paqCargarExcel = async (file) => {
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Cargando librería Excel… intenta de nuevo en unos segundos.','w'); return; }
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), {type:'array', cellDates:true});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, dateNF:'yyyy-mm-dd', defval:''});
+    if(!rows.length){ toast('El archivo está vacío.','w'); return; }
+    const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+    const h = rows[0].map(norm);
+    const iF = h.findIndex(x=>/^(factura|nfactura|numfactura|numerofactura|nrofactura)$/.test(x));
+    const iV = h.findIndex(x=>/(valor|total|monto|vr)/.test(x));
+    const iE = h.findIndex(x=>/(fechaevento|fechaocurrencia|fechaaccidente)/.test(x));
+    const iX = h.findIndex(x=>/(expedicion|emision|fechafactura|fecfactura)/.test(x));
+    const conEnc = iF>=0;
+    const cF = conEnc?iF:0, cV = conEnc?(iV>=0?iV:1):1, cX = conEnc?(iX>=0?iX:(iE===2?-1:2)):2, cE = conEnc?(iE>=0?iE:(iX===3?-1:3)):3;
+    const filas = rows.slice(conEnc?1:0).map(r=>({factura:r[cF], valor:r[cV], fechaExpedicion:cX>=0?r[cX]:'', fechaEvento:cE>=0?r[cE]:''}));
+    const n = paqAgregarCuentas(filas);
+    toast(n?`✔ ${n} cuenta(s) leídas de ${file.name}`:'No se encontraron cuentas en el archivo.', n?'ok':'w');
+  }catch(e){ toast('No se pudo leer el archivo: '+e.message,'e'); }
+};
+window.paqQuitar = (i) => { PAQ_NEW.splice(i,1); paqRenderNuevo(); };
+window.paqLimpiarNuevo = () => { PAQ_NEW=[]; const r=g('paq-res'); if(r) r.innerHTML=''; paqRenderNuevo(); };
+
+/* ─────────── Vista previa del paquete ─────────── */
+function paqAnalizar(){
+  const vistas = new Set();
+  const porFac = {}; RECS_ALL.forEach(r=>{ porFac[String(r.factura||'').toUpperCase()] = r; });
+  return PAQ_NEW.map((c,i)=>{
+    const ex = porFac[c.factura];
+    let est = 'nueva';
+    if(vistas.has(c.factura)) est = 'repetida';
+    else if(ex) est = 'existe';
+    vistas.add(c.factura);
+    return {...c, i, est, ex};
+  });
+}
+function plazoCelda(fexp, radFecha){
+  const pi = plazoInfo(fexp, radFecha);
+  if(!pi) return '<span style="color:var(--tx3);">Sin fecha</span>';
+  return `${fmtF(pi.limite)}<div style="font-size:10px;color:${pi.col};font-weight:600;">${pi.txt}</div>`;
+}
+function paqRenderNuevo(){
+  const cont = g('paq-prev'); if(!cont) return;
+  if(!PAQ_NEW.length){ cont.innerHTML = '<div style="padding:18px;text-align:center;color:var(--tx3);font-size:12px;border:1px dashed var(--brd);border-radius:8px;">Aún no hay cuentas en el paquete. Pega el listado del correo o carga el Excel.</div>'; return; }
+  const an = paqAnalizar();
+  const nNueva = an.filter(a=>a.est==='nueva').length, nEx = an.filter(a=>a.est==='existe').length, nRep = an.filter(a=>a.est==='repetida').length;
+  const total = an.filter(a=>a.est!=='repetida').reduce((s,a)=>s+a.valor,0);
+  const sinFecha = an.filter(a=>a.est==='nueva' && !a.fechaEvento).length;
+  const sinExp = an.filter(a=>a.est!=='repetida' && !a.fechaExpedicion).length;
+  const vencidas = an.filter(a=>a.est!=='repetida' && a.fechaExpedicion && (plazoInfo(a.fechaExpedicion)?.dias??1) < 0).length;
+  const badge = a => a.est==='nueva' ? '<span style="color:#3fb950;">● Nueva</span>'
+    : a.est==='existe' ? `<span style="color:#e3b341;" title="Ya estaba registrada; se vincula al paquete sin duplicarla">● Ya existe (consec ${escH(a.ex.consec)} · ${escH(EST_GESTION[getEstadoGestion(a.ex)]?.lbl||'')})</span>`
+    : '<span style="color:#f85149;">● Repetida en la lista (se omite)</span>';
+  cont.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <div class="stat"><div class="sv">${an.length-nRep}</div><div class="sl">Cuentas en el paquete</div></div>
+      <div class="stat"><div class="sv" style="color:#3fb950;">${nNueva}</div><div class="sl">Nuevas a crear</div></div>
+      <div class="stat"><div class="sv" style="color:#e3b341;">${nEx}</div><div class="sl">Ya existían</div></div>
+      <div class="stat"><div class="sv">${fmtM(total)}</div><div class="sl">Valor total</div></div>
+    </div>
+    ${sinExp?`<div class="alert aw" style="margin-bottom:10px;">⚠ ${sinExp} cuenta(s) sin <strong>fecha de expedición</strong>: sin ella no se puede controlar el plazo de ${PLAZO_HABILES} días hábiles para radicar.</div>`:''}
+    ${vencidas?`<div class="alert ae" style="margin-bottom:10px;">⛔ ${vencidas} cuenta(s) ya superaron los ${PLAZO_HABILES} días hábiles desde su expedición. Revísalas antes de aceptarlas.</div>`:''}
+    ${sinFecha?`<div class="alert aw" style="margin-bottom:10px;">⚠ ${sinFecha} cuenta(s) nueva(s) sin fecha de evento. Se crean igual; complétalas luego en <strong>Fechas de Evento (masivo)</strong> para controlar vencimientos.</div>`:''}
+    <div style="max-height:340px;overflow:auto;border:1px solid var(--brd);border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--sur2);position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;">#</th><th style="padding:6px 8px;text-align:left;">Factura</th><th style="padding:6px 8px;text-align:right;">Valor</th><th style="padding:6px 8px;text-align:left;">F. expedición</th><th style="padding:6px 8px;text-align:left;">Límite radicación (${PLAZO_HABILES} d.h.)</th><th style="padding:6px 8px;text-align:left;">Fecha evento</th><th style="padding:6px 8px;text-align:left;">Estado</th><th></th></tr></thead>
+        <tbody>${an.map((a,k)=>`<tr style="border-top:1px solid var(--brd);${a.est==='repetida'?'opacity:.5;':''}"><td style="padding:5px 8px;">${k+1}</td><td style="padding:5px 8px;font-family:var(--mono);">${escH(a.factura)}</td><td style="padding:5px 8px;text-align:right;">${fmtM(a.valor)}</td><td style="padding:5px 8px;">${fmtF(a.fechaExpedicion)}</td><td style="padding:5px 8px;">${plazoCelda(a.fechaExpedicion)}</td><td style="padding:5px 8px;">${fmtF(a.fechaEvento)}</td><td style="padding:5px 8px;">${badge(a)}</td><td style="padding:5px 8px;"><button class="btn btn-sm bs" onclick="paqQuitar(${a.i})">✕</button></td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button class="btn bp" onclick="paqCrear()">✔ Crear paquete y generar radicado interno</button>
+      <button class="btn bs" onclick="paqLimpiarNuevo()">Limpiar lista</button>
+    </div>`;
+}
+
+/* ─────────── Crear paquete ─────────── */
+window.paqCrear = async () => {
+  const cod = g('paq-ips')?.value, fec = g('paq-fec')?.value;
+  if(!cod){ toast('Selecciona la IPS.','w'); return; }
+  if(!fec){ toast('Indica la fecha de recepción.','w'); return; }
+  const an = paqAnalizar().filter(a=>a.est!=='repetida');
+  if(!an.length){ toast('El paquete no tiene cuentas.','w'); return; }
+  confirm2('Crear paquete de recepción', `Se registrarán ${an.length} cuenta(s) de ${paqIpsNom(cod)} (${an.filter(a=>a.est==='nueva').length} nuevas, ${an.filter(a=>a.est==='existe').length} ya existentes) y se generará el radicado interno. ¿Continuar?`, async () => {
+    loader(true);
+    try{
+      // Siguiente radicado interno del año (lectura fresca para evitar choques)
+      const anio = new Date().getFullYear();
+      const snap = await getDocs(collection(db,'paquetes'));
+      let maxSeq = 0;
+      snap.docs.forEach(d=>{ const m=String(d.data().radicadoInterno||'').match(/^RI-(\d{4})-(\d+)$/); if(m && +m[1]===anio) maxSeq=Math.max(maxSeq,+m[2]); });
+      const seq = maxSeq+1;
+      const radPaq = `RI-${anio}-${String(seq).padStart(4,'0')}`;
+      // Consecutivo por IPS (misma regla que "Nueva reclamación")
+      let nextCons = Math.max(0, ...RECS_ALL.filter(r=>(r.codHab||'')===cod).map(r=>parseInt(r.consec)||0)) + 1;
+      const ahora = new Date().toISOString();
+      const usuario = {usuario:USER.uid, usuarioNombre:USER.nombre||USER.email||''};
+      const ops = []; // {tipo:'set'|'update', ref, data}
+      const cuentas = [];
+      an.forEach((a,k)=>{
+        const radCta = `${radPaq}-${String(k+1).padStart(3,'0')}`;
+        const infoPaq = {id:null, radicadoInterno:radPaq, radicadoCuenta:radCta, item:k+1, fechaRecepcion:fec, decision:'sin_revisar', obs:''};
+        const ev = {fecha:ahora, tipo:'paquete', de:'', a:'recibida', motivo:`Recibida en paquete ${radPaq} (${radCta}) · correo del ${fmtF(fec)}${g('paq-asunto')?.value?' · '+g('paq-asunto').value.trim():''}`, paquete:radPaq, ...usuario};
+        let recId, consec;
+        if(a.est==='existe'){
+          recId = a.ex.id; consec = a.ex.consec;
+          const fexpPrev = a.ex.fechaExpedicion || a.fechaExpedicion || null;
+          ops.push({tipo:'update', ref:doc(db,'reclamaciones',recId), data:{ paquete:infoPaq, ...(fexpPrev?{fechaExpedicion:fexpPrev, fechaLimiteRad:sumarHabiles(fexpPrev,PLAZO_HABILES)}:{}), historial:[...(Array.isArray(a.ex.historial)?a.ex.historial:[]), {...ev, motivo:ev.motivo+' · cuenta que ya existía en el sistema'}], actualizado:serverTimestamp() }});
+        } else {
+          const ref = doc(collection(db,'reclamaciones')); recId = ref.id; consec = String(nextCons++).padStart(4,'0');
+          const data = { factura:a.factura, consec, codHab:cod, ips:paqIpsNom(cod), fechaEvento:a.fechaEvento||null, fechaEgreso:null,
+            fechaExpedicion:a.fechaExpedicion||null, fechaLimiteRad:a.fechaExpedicion?sumarHabiles(a.fechaExpedicion,PLAZO_HABILES):null,
+            furips1:{c1:'', c2:a.factura, c3:consec, c4:cod, c22:a.fechaEvento||'', c12:''}, furips2:[],
+            valorRecibido:a.valor, estadoGestion:'por_procesar', paquete:infoPaq, historial:[ev],
+            creadoPor:USER.uid, creadoPorNombre:USER.nombre||USER.email||'Sin nombre', creado:serverTimestamp(), actualizado:serverTimestamp() };
+          if(USER.rol==='digitador') data.asignadoA = USER.uid;
+          ops.push({tipo:'set', ref, data});
+        }
+        infoPaq.id = null;
+        cuentas.push({item:k+1, radicadoCuenta:radCta, recId, factura:a.factura, consec, valor:a.valor, fechaEvento:a.fechaEvento||'', fechaExpedicion:(a.ex?.fechaExpedicion||a.fechaExpedicion||''), preexistente:a.est==='existe',
+          estadoPrevio: a.est==='existe' ? (EST_GESTION[getEstadoGestion(a.ex)]?.lbl||'') : '', decision:'sin_revisar', obs:'', fechaRev:null, revisor:''});
+      });
+      const refPaq = doc(collection(db,'paquetes'));
+      ops.forEach(o=>{ if(o.data.paquete) o.data.paquete.id = refPaq.id; });
+      // Escritura por lotes (máx. 400 operaciones); el paquete se escribe al final
+      for(let i=0;i<ops.length;i+=400){
+        const b = writeBatch(db);
+        ops.slice(i,i+400).forEach(o=> o.tipo==='set' ? b.set(o.ref,o.data) : b.update(o.ref,o.data));
+        await b.commit();
+      }
+      const paqData = { radicadoInterno:radPaq, anio, seq, codHab:cod, ipsNombre:paqIpsNom(cod), fechaRecepcion:fec,
+        asunto:(g('paq-asunto')?.value||'').trim(), remitente:(g('paq-rem')?.value||'').trim(),
+        estado:'recibido', cuentas, totalCuentas:cuentas.length, valorTotal:cuentas.reduce((s,c)=>s+c.valor,0),
+        creadoPor:USER.uid, creadoPorNombre:USER.nombre||USER.email||'', creado:serverTimestamp(), actualizado:serverTimestamp() };
+      await setDoc(refPaq, paqData);
+      loader(false);
+      const paqLocal = {id:refPaq.id, ...paqData, creado:{seconds:Date.now()/1000}};
+      PAQS.unshift(paqLocal);
+      paqExcelAcuse(paqLocal);
+      g('paq-res').innerHTML = `<div class="alert as" style="margin-top:12px;">✔ Paquete creado: <strong style="font-family:var(--mono);">${radPaq}</strong> · ${cuentas.length} cuenta(s). Se descargó el Excel de acuse para responder el correo.
+        <div style="margin-top:8px;display:flex;gap:8px;"><button class="btn btn-sm bp" onclick="paqExcelAcuseId('${refPaq.id}')">📊 Descargar de nuevo el acuse</button><button class="btn btn-sm bs" onclick="paqAbrir('${refPaq.id}')">Abrir para revisar →</button></div></div>`;
+      PAQ_NEW = []; paqRenderNuevo();
+      toast(`✔ Paquete ${radPaq} creado`,'ok');
+    }catch(e){
+      loader(false); console.error(e);
+      toast('Error al crear el paquete: '+e.message,'e');
+    }
+  });
+};
+
+/* ─────────── Excel de acuse ─────────── */
+function paqEncabezado(p, titulo){
+  return [[titulo],[''],
+    ['Radicado interno', p.radicadoInterno],
+    ['IPS', `${p.ipsNombre||paqIpsNom(p.codHab)} (${p.codHab})`],
+    ['Fecha de recepción', fmtF(p.fechaRecepcion)],
+    ['Asunto del correo', p.asunto||''],
+    ['Remitente', p.remitente||''],
+    ['Cuentas recibidas', p.cuentas.length],
+    ['Valor total recibido', p.cuentas.reduce((s,c)=>s+(c.valor||0),0)],
+    ['']];
+}
+function paqXlsxGuardar(wb, nombre){
+  if(typeof XLSX==='undefined'){ toast('La librería Excel aún no cargó, intenta de nuevo.','w'); return; }
+  XLSX.writeFile(wb, nombre);
+}
+function paqExcelAcuse(p){
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  const enc = paqEncabezado(p,'ACUSE DE RECIBO DE CUENTAS');
+  const cab = ['Ítem','Radicado interno cuenta','Factura','Consecutivo','Valor','Fecha expedición factura',`Fecha límite radicación (${PLAZO_HABILES} días hábiles)`,'Días hábiles restantes al recibir','Fecha evento','Observación de recepción'];
+  const filas = p.cuentas.map(c=>{
+    const pi = plazoInfo(c.fechaExpedicion, null, p.fechaRecepcion);
+    return [c.item,c.radicadoCuenta,c.factura,c.consec,c.valor,fmtF(c.fechaExpedicion),pi?fmtF(pi.limite):'Sin fecha de expedición',pi?pi.dias:'',fmtF(c.fechaEvento), c.preexistente?`Ya registrada anteriormente (estado: ${c.estadoPrevio||'—'})`:'Recibida'];
+  });
+  const ws = XLSX.utils.aoa_to_sheet([...enc, cab, ...filas]);
+  ws['!cols'] = [{wch:22},{wch:26},{wch:16},{wch:12},{wch:14},{wch:18},{wch:24},{wch:18},{wch:14},{wch:46}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Acuse de recibo');
+  paqXlsxGuardar(wb, `Acuse_${p.radicadoInterno}_${(p.codHab||'')}.xlsx`);
+}
+window.paqExcelAcuseId = (id) => { const p=PAQS.find(x=>x.id===id); if(p) paqExcelAcuse(p); };
+
+/* ─────────── Lista de paquetes ─────────── */
+function paqConteo(p){
+  const c = {sin_revisar:0, radicacion:0, devolucion:0, pendiente:0};
+  (p.cuentas||[]).forEach(x=>{ c[x.decision||'sin_revisar']++; });
+  return c;
+}
+function paqEstadoLbl(p){
+  const c = paqConteo(p), n=(p.cuentas||[]).length;
+  if(c.sin_revisar===n) return {t:'Recibido', col:'#8b949e'};
+  if(c.sin_revisar>0 || c.pendiente>0) return {t:'En revisión', col:'#e3b341'};
+  return {t:'Revisado', col:'#3fb950'};
+}
+window.paqRenderLista = () => {
+  const cont = g('paq-lista'); if(!cont) return;
+  if(!PAQS.length){ cont.innerHTML = '<div style="padding:24px;text-align:center;color:var(--tx3);font-size:12px;">Aún no hay paquetes registrados.</div>'; return; }
+  cont.innerHTML = `<div style="border:1px solid var(--brd);border-radius:8px;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:var(--sur2);"><th style="padding:7px 9px;text-align:left;">Radicado interno</th><th style="padding:7px 9px;text-align:left;">IPS</th><th style="padding:7px 9px;text-align:left;">Recibido</th><th style="padding:7px 9px;text-align:left;">Asunto</th><th style="padding:7px 9px;text-align:right;">Cuentas</th><th style="padding:7px 9px;text-align:left;">Revisión</th><th style="padding:7px 9px;text-align:left;">Estado</th><th></th></tr></thead>
+    <tbody>${PAQS.map(p=>{ const c=paqConteo(p), e=paqEstadoLbl(p); return `<tr style="border-top:1px solid var(--brd);cursor:pointer;" onclick="paqAbrir('${p.id}')">
+      <td style="padding:6px 9px;font-family:var(--mono);font-weight:700;">${escH(p.radicadoInterno)}</td>
+      <td style="padding:6px 9px;">${escH(p.ipsNombre||paqIpsNom(p.codHab))}</td>
+      <td style="padding:6px 9px;">${fmtF(p.fechaRecepcion)}</td>
+      <td style="padding:6px 9px;color:var(--tx2);">${escH(p.asunto||'')}</td>
+      <td style="padding:6px 9px;text-align:right;">${(p.cuentas||[]).length}</td>
+      <td style="padding:6px 9px;font-size:11px;"><span style="color:#3fb950;">📬 ${c.radicacion}</span> · <span style="color:#db6d28;">↩ ${c.devolucion}</span> · <span style="color:#e3b341;">⏸ ${c.pendiente}</span> · <span style="color:#8b949e;">⏳ ${c.sin_revisar}</span></td>
+      <td style="padding:6px 9px;"><span style="color:${e.col};font-weight:600;">${e.t}</span></td>
+      <td style="padding:6px 9px;"><button class="btn btn-sm bs" onclick="event.stopPropagation();paqAbrir('${p.id}')">Revisar →</button></td></tr>`; }).join('')}</tbody></table></div>`;
+};
+
+/* ─────────── Revisión del paquete ─────────── */
+window.paqAbrir = (id) => {
+  const p = PAQS.find(x=>x.id===id); if(!p){ toast('Paquete no encontrado.','w'); return; }
+  PAQ_CUR = p; PAQ_SEL = new Set(); PAQ_TRAZ = new Set();
+  PAQ_EDIT = {}; (p.cuentas||[]).forEach((c,i)=>{ PAQ_EDIT[i] = {decision:c.decision||'sin_revisar', obs:c.obs||'', fexp:c.fechaExpedicion||''}; });
+  paqTab('det'); paqRenderDet();
+};
+function paqRecDe(c){ return RECS_ALL.find(r=>r.id===c.recId); }
+window.paqRenderDet = () => {
+  const p = PAQ_CUR; const cont = g('paq-det'); if(!p||!cont) return;
+  const puede = puedeCambiarEstado();
+  const cont2 = {sin_revisar:0, radicacion:0, devolucion:0, pendiente:0};
+  Object.values(PAQ_EDIT).forEach(e=>{ cont2[e.decision]++; });
+  const cambios = p.cuentas.filter((c,i)=> (PAQ_EDIT[i].decision!==(c.decision||'sin_revisar')) || (PAQ_EDIT[i].obs||'')!==(c.obs||'') || (PAQ_EDIT[i].fexp||'')!==(c.fechaExpedicion||'')).length;
+  const opts = sel => Object.entries(PAQ_DEC).map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${v.ico} ${v.lbl}</option>`).join('');
+  cont.innerHTML = `
+    <button class="btn btn-sm bs" onclick="paqTab('lista')">← Volver a paquetes</button>
+    <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:12px 14px;margin:10px 0;">
+      <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;">
+        <div><div style="font-size:10px;color:var(--tx3);">RADICADO INTERNO</div><div style="font-family:var(--mono);font-size:16px;font-weight:700;">${escH(p.radicadoInterno)}</div></div>
+        <div><div style="font-size:10px;color:var(--tx3);">IPS</div><div>${escH(p.ipsNombre||paqIpsNom(p.codHab))}</div></div>
+        <div><div style="font-size:10px;color:var(--tx3);">RECIBIDO</div><div>${fmtF(p.fechaRecepcion)}</div></div>
+        <div style="flex:1;min-width:160px;"><div style="font-size:10px;color:var(--tx3);">ASUNTO / REMITENTE</div><div>${escH(p.asunto||'—')} ${p.remitente?'· '+escH(p.remitente):''}</div></div>
+        <div style="font-size:12px;"><span style="color:#3fb950;">📬 ${cont2.radicacion}</span> · <span style="color:#db6d28;">↩ ${cont2.devolucion}</span> · <span style="color:#e3b341;">⏸ ${cont2.pendiente}</span> · <span style="color:#8b949e;">⏳ ${cont2.sin_revisar}</span></div>
+      </div>
+    </div>
+    ${puede?'':'<div class="alert aw" style="margin-bottom:10px;">Solo admin o superadmin pueden guardar la revisión. Puedes consultar el paquete y la trazabilidad.</div>'}
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+      <div class="field" style="margin:0;"><label class="fl">Aplicar a las ${PAQ_SEL.size} seleccionadas</label><select id="paq-b-dec">${opts('radicacion')}</select></div>
+      <div class="field" style="margin:0;flex:1;min-width:220px;"><label class="fl">Observación (se copia a cada cuenta)</label><input id="paq-b-obs" data-libre maxlength="300" placeholder="Ej: Falta soporte de historia clínica"></div>
+      <button class="btn btn-sm bp" onclick="paqAplicarMasivo()" ${puede?'':'disabled'}>Aplicar a seleccionadas</button>
+      <span style="flex:1;"></span>
+      <button class="btn btn-sm bs" onclick="paqExcelRespuesta()">📊 Excel respuesta a la IPS</button>
+      <button class="btn btn-sm bs" onclick="paqExcelTraz()">📊 Excel trazabilidad</button>
+      <button class="btn bp" onclick="paqGuardarRevision()" ${(puede&&cambios)?'':'disabled'}>💾 Guardar revisión${cambios?` (${cambios})`:''}</button>
+    </div>
+    <div style="border:1px solid var(--brd);border-radius:8px;overflow:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--sur2);">
+        <th style="padding:6px 8px;"><input type="checkbox" onchange="paqSelTodas(this.checked)" ${PAQ_SEL.size===p.cuentas.length?'checked':''}></th>
+        <th style="padding:6px 8px;text-align:left;">Radicado cuenta</th><th style="padding:6px 8px;text-align:left;">Factura</th><th style="padding:6px 8px;text-align:right;">Valor</th>
+        <th style="padding:6px 8px;text-align:left;">F. expedición</th><th style="padding:6px 8px;text-align:left;">Plazo ${PLAZO_HABILES} d.h.</th>
+        <th style="padding:6px 8px;text-align:left;">Decisión</th><th style="padding:6px 8px;text-align:left;">Observación</th><th></th></tr></thead>
+      <tbody>${p.cuentas.map((c,i)=>{
+        const e = PAQ_EDIT[i], d = PAQ_DEC[e.decision], rec = paqRecDe(c);
+        const cambiado = e.decision!==(c.decision||'sin_revisar') || (e.obs||'')!==(c.obs||'') || (e.fexp||'')!==(c.fechaExpedicion||'');
+        const radF = rec?.radicado?.fecha || null;
+        const estAct = rec ? (EST_GESTION[getEstadoGestion(rec)]?.lbl||'') : '(cuenta eliminada)';
+        return `<tr style="border-top:1px solid var(--brd);${cambiado?'background:rgba(227,179,65,.07);':''}">
+          <td style="padding:5px 8px;"><input type="checkbox" ${PAQ_SEL.has(i)?'checked':''} onchange="paqSel(${i},this.checked)"></td>
+          <td style="padding:5px 8px;font-family:var(--mono);font-size:11px;">${escH(c.radicadoCuenta)}${c.preexistente?' <span title="Ya existía en el sistema" style="color:#e3b341;">●</span>':''}</td>
+          <td style="padding:5px 8px;font-family:var(--mono);">${escH(c.factura)} <span class="badge bb2">${escH(c.consec)}</span><div style="font-size:10px;color:var(--tx3);">Estado actual: ${escH(estAct)}</div></td>
+          <td style="padding:5px 8px;text-align:right;">${fmtM(c.valor)}</td>
+          <td style="padding:5px 8px;"><input type="date" value="${escH(e.fexp||'')}" onchange="paqSetFexp(${i},this.value)" ${puede?'':'disabled'} style="width:130px;"></td>
+          <td style="padding:5px 8px;font-size:11px;">${plazoCelda(e.fexp, radF)}</td>
+          <td style="padding:5px 8px;"><select onchange="paqSetDec(${i},this.value)" style="color:${d.col};font-weight:600;" ${puede?'':'disabled'}>${opts(e.decision)}</select></td>
+          <td style="padding:5px 8px;"><input data-libre value="${escH(e.obs)}" maxlength="300" oninput="paqSetObs(${i},this.value)" onchange="paqObsListo()" placeholder="${e.decision==='devolucion'||e.decision==='pendiente'?'Obligatoria':'Observación'}" style="width:100%;min-width:200px;" ${puede?'':'disabled'}></td>
+          <td style="padding:5px 8px;"><button class="btn btn-sm bs" onclick="paqToggleTraz(${i})">${PAQ_TRAZ.has(i)?'▲':'▼'} Trazabilidad</button></td></tr>
+          ${PAQ_TRAZ.has(i)?`<tr><td></td><td colspan="8" style="padding:6px 8px 12px;">${paqTrazHTML(c)}</td></tr>`:''}`;
+      }).join('')}</tbody></table></div>`;
+};
+window.paqSel = (i,v) => { v?PAQ_SEL.add(i):PAQ_SEL.delete(i); paqRenderDet(); };
+window.paqSelTodas = (v) => { PAQ_SEL = v ? new Set(PAQ_CUR.cuentas.map((_,i)=>i)) : new Set(); paqRenderDet(); };
+window.paqSetFexp = (i,v) => { PAQ_EDIT[i].fexp = v; paqRenderDet(); };
+window.paqSetDec = (i,v) => { PAQ_EDIT[i].decision = v; paqRenderDet(); };
+window.paqSetObs = (i,v) => { PAQ_EDIT[i].obs = v; /* sin re-render mientras se escribe, para no perder el foco */ };
+window.paqObsListo = () => paqRenderDet();
+window.paqToggleTraz = (i) => { PAQ_TRAZ.has(i)?PAQ_TRAZ.delete(i):PAQ_TRAZ.add(i); paqRenderDet(); };
+window.paqAplicarMasivo = () => {
+  if(!PAQ_SEL.size){ toast('Selecciona al menos una cuenta.','w'); return; }
+  const dec = g('paq-b-dec').value, obs = (g('paq-b-obs').value||'').trim();
+  if((dec==='devolucion'||dec==='pendiente') && !obs){ toast('Escribe la observación para devolución o pendiente.','w'); return; }
+  PAQ_SEL.forEach(i=>{ PAQ_EDIT[i] = {...PAQ_EDIT[i], decision:dec, obs: obs || PAQ_EDIT[i].obs}; });
+  paqRenderDet();
+};
+function paqTrazHTML(c){
+  const rec = paqRecDe(c);
+  const hist = rec && Array.isArray(rec.historial) ? [...rec.historial].reverse() : [];
+  if(!hist.length) return '<div style="color:var(--tx3);font-size:11px;">Sin eventos registrados.</div>';
+  return `<div style="border-left:2px solid var(--brd);padding-left:10px;">${hist.map(h=>{
+    const ico = h.tipo==='paquete'?'📦':h.tipo==='adres'?'🏛':h.tipo==='glosa'?'📝':'📋';
+    const flujo = (h.de||h.a) ? `${escH(EST_GESTION[h.de]?.lbl||EST_ADRES[h.de]?.lbl||h.de||'—')} → <strong>${escH(EST_GESTION[h.a]?.lbl||EST_ADRES[h.a]?.lbl||PAQ_DEC[h.a]?.lbl||h.a||'—')}</strong>` : '';
+    return `<div style="font-size:11px;margin-bottom:6px;"><span style="color:var(--tx3);font-family:var(--mono);">${h.fecha?new Date(h.fecha).toLocaleString('es-CO'):'—'}</span> ${ico} ${flujo}
+      ${h.motivo?`<div style="color:var(--tx2);font-style:italic;">“${escH(h.motivo)}”</div>`:''}<div style="color:var(--tx3);font-size:10px;">👤 ${escH(h.usuarioNombre||h.usuario||'?')}${h.paquete?` · ${escH(h.paquete)}`:''}</div></div>`; }).join('')}</div>`;
+}
+
+window.paqGuardarRevision = async () => {
+  if(!puedeCambiarEstado()){ toast('Solo admin o superadmin pueden guardar la revisión.','e'); return; }
+  const p = PAQ_CUR; if(!p) return;
+  const cambios = [];
+  for(let i=0;i<p.cuentas.length;i++){
+    const c = p.cuentas[i], e = PAQ_EDIT[i];
+    const obs = (e.obs||'').trim();
+    const fexp = e.fexp || '';
+    if(e.decision===(c.decision||'sin_revisar') && obs===(c.obs||'') && fexp===(c.fechaExpedicion||'')) continue;
+    if((e.decision==='devolucion'||e.decision==='pendiente') && !obs){
+      toast(`La cuenta ${c.factura} necesita observación para "${PAQ_DEC[e.decision].lbl}".`,'w'); return;
+    }
+    cambios.push({i,c,e:{decision:e.decision,obs,fexp}});
+  }
+  if(!cambios.length){ toast('No hay cambios por guardar.','w'); return; }
+  loader(true);
+  try{
+    const ahora = new Date().toISOString();
+    const usuario = {usuario:USER.uid, usuarioNombre:USER.nombre||USER.email||''};
+    const nuevasCuentas = p.cuentas.map(c=>({...c}));
+    const ops = []; const omitidas = [];
+    for(const {i,c,e} of cambios){
+      const rec = paqRecDe(c);
+      const nc = nuevasCuentas[i];
+      nc.decision = e.decision; nc.obs = e.obs; nc.fechaRev = ahora; nc.revisor = usuario.usuarioNombre; nc.fechaExpedicion = e.fexp;
+      if(!rec){ omitidas.push(`${c.factura} (cuenta eliminada)`); continue; }
+      const actual = getEstadoGestion(rec);
+      const upd = { paquete:{...(rec.paquete||{}), id:p.id, radicadoInterno:p.radicadoInterno, radicadoCuenta:c.radicadoCuenta, decision:e.decision, obs:e.obs, fechaRev:ahora}, actualizado:serverTimestamp() };
+      if((rec.fechaExpedicion||'') !== e.fexp){ upd.fechaExpedicion = e.fexp || null; upd.fechaLimiteRad = e.fexp ? sumarHabiles(e.fexp, PLAZO_HABILES) : null; }
+      const hist = Array.isArray(rec.historial) ? [...rec.historial] : [];
+      const lbl = PAQ_DEC[e.decision].lbl;
+      // Estado de gestión según la decisión (solo si la cuenta aún no pasó a ADRES ni fue anulada)
+      let nuevo = null;
+      if(e.decision==='pendiente') nuevo = 'pendiente';
+      else if(e.decision==='devolucion') nuevo = 'devuelta_ips';
+      else if(e.decision==='radicacion' || e.decision==='sin_revisar') nuevo = 'por_procesar';
+      const bloqueada = (actual==='radicada' || actual==='anulada');
+      if(nuevo && !bloqueada && nuevo!==actual){
+        upd.estadoGestion = nuevo;
+        if(nuevo==='pendiente') upd.motivoPendiente = e.obs;
+        if(nuevo==='devuelta_ips') upd.motivoDevolucion = e.obs;
+        if(nuevo==='por_procesar'){ upd.motivoPendiente=''; upd.motivoDevolucion=''; }
+        hist.push({fecha:ahora, tipo:'gestion', de:actual, a:nuevo, motivo:`Paquete ${p.radicadoInterno} (${c.radicadoCuenta}): ${lbl}${e.obs?' — '+e.obs:''}`, paquete:p.radicadoInterno, ...usuario});
+      } else {
+        if(bloqueada) omitidas.push(`${c.factura} (ya está ${EST_GESTION[actual].lbl}; se registró la decisión sin cambiar su estado)`);
+        hist.push({fecha:ahora, tipo:'paquete', de:'recibida', a:e.decision, motivo:`Revisión del paquete ${p.radicadoInterno} (${c.radicadoCuenta}): ${lbl}${e.obs?' — '+e.obs:''}`, paquete:p.radicadoInterno, ...usuario});
+      }
+      upd.historial = hist;
+      ops.push({ref:doc(db,'reclamaciones',rec.id), data:upd});
+    }
+    for(let k=0;k<ops.length;k+=400){
+      const b = writeBatch(db); ops.slice(k,k+400).forEach(o=>b.update(o.ref,o.data)); await b.commit();
+    }
+    const cnt = {sin_revisar:0}; nuevasCuentas.forEach(c=>{ cnt[c.decision]=(cnt[c.decision]||0)+1; });
+    const estado = cnt.sin_revisar===nuevasCuentas.length ? 'recibido' : (cnt.sin_revisar||cnt.pendiente) ? 'en_revision' : 'revisado';
+    await updateDoc(doc(db,'paquetes',p.id), {cuentas:nuevasCuentas, estado, actualizado:serverTimestamp()});
+    p.cuentas = nuevasCuentas; p.estado = estado;
+    loader(false);
+    toast(`✔ Revisión guardada (${cambios.length} cuenta${cambios.length>1?'s':''})`,'ok');
+    if(omitidas.length) toast('Aviso: '+omitidas.slice(0,3).join(' · '),'w');
+    paqAbrir(p.id);
+  }catch(e){ loader(false); console.error(e); toast('Error al guardar la revisión: '+e.message,'e'); }
+};
+
+
+/* ─────────── Control del plazo de radicación (22 días hábiles desde la expedición) ─────────── */
+let PAQ_PLAZO_INCL = false;
+function paqFilasPlazo(){
+  const filas = [];
+  RECS_ALL.forEach(r=>{
+    if(!r.fechaExpedicion) return;
+    const est = getEstadoGestion(r);
+    if(est==='anulada') return;
+    const radF = est==='radicada' ? (r.radicado?.fecha || '') : '';
+    if(est==='radicada' && !PAQ_PLAZO_INCL) return;
+    const pi = plazoInfo(r.fechaExpedicion, est==='radicada' ? (radF||_isoD(new Date())) : null);
+    if(!pi) return;
+    filas.push({r, est, pi, paq:r.paquete?.radicadoInterno||''});
+  });
+  filas.sort((a,b)=> (a.pi.radicada===b.pi.radicada ? 0 : a.pi.radicada?1:-1) || a.pi.limite.localeCompare(b.pi.limite));
+  return filas;
+}
+window.paqTogglePlazoIncl = (v) => { PAQ_PLAZO_INCL = v; paqRenderPlazo(); };
+window.paqRenderPlazo = () => {
+  const cont = g('paq-plazo'); if(!cont) return;
+  const filas = paqFilasPlazo();
+  const pend = filas.filter(f=>!f.pi.radicada);
+  const venc = pend.filter(f=>f.pi.dias<0).length, hoy = pend.filter(f=>f.pi.dias===0).length;
+  const crit = pend.filter(f=>f.pi.dias>0 && f.pi.dias<=5).length, med = pend.filter(f=>f.pi.dias>5 && f.pi.dias<=10).length;
+  const sinExp = RECS_ALL.filter(r=>!r.fechaExpedicion && ['por_procesar','pendiente','devuelta_ips'].includes(getEstadoGestion(r))).length;
+  cont.innerHTML = `
+    <div class="alert ai" style="margin-bottom:10px;">La norma da <strong>${PLAZO_HABILES} días hábiles</strong> contados desde la <strong>fecha de expedición de la factura</strong> para radicar. Se cuentan lunes a viernes, sin festivos colombianos; el día de expedición cuenta como día 1.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <div class="stat"><div class="sv" style="color:#f85149;">${venc}</div><div class="sl">Vencidas</div></div>
+      <div class="stat"><div class="sv" style="color:#f85149;">${hoy}</div><div class="sl">Vencen hoy</div></div>
+      <div class="stat"><div class="sv" style="color:#f85149;">${crit}</div><div class="sl">1–5 d. hábiles</div></div>
+      <div class="stat"><div class="sv" style="color:#e3b341;">${med}</div><div class="sl">6–10 d. hábiles</div></div>
+      <div class="stat"><div class="sv" style="color:var(--tx3);">${sinExp}</div><div class="sl">Sin fecha de expedición</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+      <label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${PAQ_PLAZO_INCL?'checked':''} onchange="paqTogglePlazoIncl(this.checked)"> Incluir ya radicadas (cumplimiento)</label>
+      <span style="flex:1;"></span>
+      <button class="btn btn-sm bs" onclick="paqExcelPlazo()">📊 Descargar Excel</button>
+    </div>
+    ${!filas.length?'<div style="padding:24px;text-align:center;color:var(--tx3);font-size:12px;">No hay cuentas con fecha de expedición pendientes de radicar.</div>':`
+    <div style="max-height:520px;overflow:auto;border:1px solid var(--brd);border-radius:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--sur2);position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;">Factura</th><th style="padding:6px 8px;text-align:left;">IPS</th><th style="padding:6px 8px;text-align:left;">Paquete</th><th style="padding:6px 8px;text-align:left;">Estado</th><th style="padding:6px 8px;text-align:left;">F. expedición</th><th style="padding:6px 8px;text-align:left;">Límite radicación</th><th style="padding:6px 8px;text-align:left;">Plazo</th></tr></thead>
+      <tbody>${filas.map(f=>`<tr style="border-top:1px solid var(--brd);"><td style="padding:5px 8px;font-family:var(--mono);">${escH(f.r.factura)} <span class="badge bb2">${escH(f.r.consec)}</span></td>
+        <td style="padding:5px 8px;">${escH(paqIpsNom(f.r.codHab))}</td><td style="padding:5px 8px;font-family:var(--mono);font-size:11px;">${escH(f.paq||'—')}</td>
+        <td style="padding:5px 8px;">${escH(EST_GESTION[f.est]?.lbl||f.est)}</td><td style="padding:5px 8px;">${fmtF(f.r.fechaExpedicion)}</td>
+        <td style="padding:5px 8px;">${fmtF(f.pi.limite)}</td><td style="padding:5px 8px;color:${f.pi.col};font-weight:600;">${f.pi.txt}</td></tr>`).join('')}</tbody></table></div>`}`;
+};
+window.paqExcelPlazo = () => {
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  const filas = paqFilasPlazo();
+  const cab = ['Factura','Consecutivo','IPS','Paquete','Estado','Fecha expedición',`Límite radicación (${PLAZO_HABILES} d. hábiles)`,'Plazo'];
+  const ws = XLSX.utils.aoa_to_sheet([cab, ...filas.map(f=>[f.r.factura,f.r.consec,paqIpsNom(f.r.codHab),f.paq,EST_GESTION[f.est]?.lbl||f.est,fmtF(f.r.fechaExpedicion),fmtF(f.pi.limite),f.pi.txt])]);
+  ws['!cols']=[{wch:16},{wch:12},{wch:28},{wch:16},{wch:16},{wch:16},{wch:22},{wch:28}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Plazo 22 dias habiles');
+  paqXlsxGuardar(wb, `Plazo_radicacion_${hoyISO()}.xlsx`);
+};
+
+/* ─────────── Excel de respuesta y de trazabilidad ─────────── */
+window.paqExcelRespuesta = () => {
+  const p = PAQ_CUR; if(!p) return;
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  const c = paqConteo(p);
+  const enc = paqEncabezado(p,'RESPUESTA A LA IPS — REVISIÓN DE CUENTAS RECIBIDAS');
+  const resumen = [['Pasa a radicación', c.radicacion],['Devolución', c.devolucion],['Pendiente', c.pendiente],['Sin revisar', c.sin_revisar],['']];
+  const cab = ['Ítem','Radicado interno cuenta','Factura','Consecutivo','Valor','Fecha expedición',`Límite radicación (${PLAZO_HABILES} d. hábiles)`,'Resultado de la revisión','Observación','Fecha revisión'];
+  const orden = {devolucion:0, pendiente:1, radicacion:2, sin_revisar:3};
+  const filas = [...p.cuentas].sort((a,b)=>orden[a.decision||'sin_revisar']-orden[b.decision||'sin_revisar'] || a.item-b.item)
+    .map(x=>{ const pi=plazoInfo(x.fechaExpedicion); return [x.item,x.radicadoCuenta,x.factura,x.consec,x.valor,fmtF(x.fechaExpedicion),pi?fmtF(pi.limite):'Sin fecha',PAQ_DEC[x.decision||'sin_revisar'].lbl,x.obs||'',x.fechaRev?new Date(x.fechaRev).toLocaleString('es-CO'):'']; });
+  const ws = XLSX.utils.aoa_to_sheet([...enc, ...resumen, cab, ...filas]);
+  ws['!cols'] = [{wch:22},{wch:26},{wch:16},{wch:12},{wch:14},{wch:16},{wch:22},{wch:22},{wch:60},{wch:20}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Respuesta');
+  // Una hoja por resultado, lista para pegar en el correo
+  [['devolucion','Devoluciones'],['pendiente','Pendientes'],['radicacion','Pasan a radicación']].forEach(([k,n])=>{
+    const f = p.cuentas.filter(x=>x.decision===k).map(x=>{ const pi=plazoInfo(x.fechaExpedicion); return [x.radicadoCuenta,x.factura,x.valor,fmtF(x.fechaExpedicion),pi?fmtF(pi.limite):'',x.obs||'']; });
+    if(f.length){ const w = XLSX.utils.aoa_to_sheet([['Radicado cuenta','Factura','Valor','Fecha expedición','Límite radicación','Observación'],...f]); w['!cols']=[{wch:26},{wch:16},{wch:14},{wch:16},{wch:16},{wch:60}]; XLSX.utils.book_append_sheet(wb,w,n); }
+  });
+  paqXlsxGuardar(wb, `Respuesta_${p.radicadoInterno}_${p.codHab}.xlsx`);
+};
+window.paqExcelTraz = () => {
+  const p = PAQ_CUR; if(!p) return;
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  const filas = [];
+  p.cuentas.forEach(c=>{
+    const rec = paqRecDe(c);
+    const hist = rec && Array.isArray(rec.historial) ? rec.historial : [];
+    if(!hist.length) filas.push([p.radicadoInterno,c.radicadoCuenta,c.factura,'','','','','']);
+    hist.forEach(h=>filas.push([p.radicadoInterno,c.radicadoCuenta,c.factura,h.fecha?new Date(h.fecha).toLocaleString('es-CO'):'',h.tipo||'',
+      EST_GESTION[h.de]?.lbl||EST_ADRES[h.de]?.lbl||h.de||'', EST_GESTION[h.a]?.lbl||EST_ADRES[h.a]?.lbl||PAQ_DEC[h.a]?.lbl||h.a||'', h.motivo||'', h.usuarioNombre||'']));
+  });
+  const cab = ['Radicado paquete','Radicado cuenta','Factura','Fecha','Tipo','De','A','Observación','Usuario'];
+  const ws = XLSX.utils.aoa_to_sheet([cab, ...filas.map(f=>f.length===8?[...f,'']:f)]);
+  ws['!cols'] = [{wch:16},{wch:26},{wch:16},{wch:20},{wch:10},{wch:18},{wch:20},{wch:70},{wch:22}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
+  paqXlsxGuardar(wb, `Trazabilidad_${p.radicadoInterno}_${p.codHab}.xlsx`);
 };
 
 </script>
