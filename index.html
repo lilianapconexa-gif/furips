@@ -15338,7 +15338,7 @@ window.paqRenderDet = () => {
           <td style="padding:5px 8px;"><select onchange="paqSetDec(${i},this.value)" style="color:${d.col};font-weight:600;" ${puede?'':'disabled'}>${opts(e.decision)}</select></td>
           <td style="padding:5px 8px;"><input data-libre value="${escH(e.obs)}" maxlength="300" oninput="paqSetObs(${i},this.value)" onchange="paqObsListo()" placeholder="${e.decision==='devolucion'||e.decision==='pendiente'?'Obligatoria':'Observación'}" style="width:100%;min-width:200px;" ${puede?'':'disabled'}></td>
           <td style="padding:5px 8px;"><button class="btn btn-sm bs" onclick="paqToggleTraz(${i})">${PAQ_TRAZ.has(i)?'▲':'▼'} Trazabilidad</button></td></tr>
-          ${PAQ_TRAZ.has(i)?`<tr><td></td><td colspan="8" style="padding:6px 8px 12px;">${paqTrazHTML(c)}</td></tr>`:''}`;
+          ${PAQ_TRAZ.has(i)?`<tr><td></td><td colspan="8" style="padding:6px 8px 12px;"><button class="btn btn-sm bs" style="margin-bottom:8px;" onclick="paqExcelTraz(${i})">📊 Descargar trazabilidad completa (interna + ADRES)</button>${paqAdresHTML(c)}${paqTrazHTML(c)}</td></tr>`:''}`;
       }).join('')}</tbody></table></div>`;
 };
 window.paqSel = (i,v) => { v?PAQ_SEL.add(i):PAQ_SEL.delete(i); paqRenderDet(); };
@@ -15355,6 +15355,12 @@ window.paqAplicarMasivo = () => {
   PAQ_SEL.forEach(i=>{ PAQ_EDIT[i] = {...PAQ_EDIT[i], decision:dec, obs: obs || PAQ_EDIT[i].obs}; });
   paqRenderDet();
 };
+function paqAdresHTML(c){
+  const ra = paqResumenAdres(paqRecDe(c));
+  if(!ra || (!ra.rad.numero && !ra.rondas.length)) return '<div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">🏛 ADRES: aún no radicada.</div>';
+  return `<div style="font-size:11px;margin-bottom:8px;padding:6px 9px;border:1px solid var(--brd);border-radius:6px;">🏛 <strong>ADRES</strong> · Lote ${escH(ra.rad.lote||'—')} · N° ${escH(ra.rad.numero||'—')} · Radicada ${fmtF(ra.rad.fecha)}${ra.valorRad!==''?' · '+fmtM(ra.valorRad):''}
+    ${ra.rondas.map(r=>`<div style="color:var(--tx2);margin-left:14px;">Ronda ${r.ronda||''}: <strong>${escH(EST_ADRES[r.estado]?.lbl||r.estado||'')}</strong> · ${fmtF(r.fecha)}${r.valorAprobado?' · aprobado '+fmtM(r.valorAprobado):''}${r.obs?' — '+escH(r.obs):''}</div>`).join('')}</div>`;
+}
 function paqTrazHTML(c){
   const rec = paqRecDe(c);
   const hist = rec && Array.isArray(rec.historial) ? [...rec.historial].reverse() : [];
@@ -15509,22 +15515,72 @@ window.paqExcelRespuesta = () => {
   });
   paqXlsxGuardar(wb, `Respuesta_${p.radicadoInterno}_${p.codHab}.xlsx`);
 };
-window.paqExcelTraz = () => {
+// Gestión ante ADRES de una reclamación: radicación, rondas de respuesta, glosas y pagos
+async function paqCargarGlosasPagos(){
+  let glosas = (typeof GLOSAS_DB!=='undefined' && GLOSAS_DB.length) ? GLOSAS_DB : null;
+  if(!glosas){ try{ const sn = await getDocs(collection(db,'glosas')); glosas = sn.docs.map(d=>({id:d.id,...d.data()})); }catch(e){ glosas = []; } }
+  let pagos = [];
+  try{ const sn = await getDocs(collection(db,'pagos')); pagos = sn.docs.map(d=>({id:d.id,...d.data()})); }catch(e){ /* solo superadmin puede leer pagos */ }
+  return {glosas, pagos};
+}
+function paqResumenAdres(rec){
+  if(!rec) return null;
+  const rad = rec.radicado || {};
+  const rondas = Array.isArray(rec.respuestasAdres) ? rec.respuestasAdres : [];
+  return {rad, rondas, valorRad: rec.valorRadicadoConfirmado ?? rad.valor ?? rad.valorRadicado ?? ''};
+}
+window.paqExcelTraz = async (soloIdx) => {
   const p = PAQ_CUR; if(!p) return;
   if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
-  const filas = [];
-  p.cuentas.forEach(c=>{
+  loader(true);
+  const {glosas, pagos} = await paqCargarGlosasPagos();
+  loader(false);
+  const lblE = k => EST_GESTION[k]?.lbl||EST_ADRES[k]?.lbl||PAQ_DEC[k]?.lbl||k||'';
+  const mov = [], adres = [], glo = [], pag = [];
+  p.cuentas.forEach((c,i)=>{
+    if(soloIdx!==undefined && soloIdx!==i) return;
     const rec = paqRecDe(c);
     const hist = rec && Array.isArray(rec.historial) ? rec.historial : [];
-    if(!hist.length) filas.push([p.radicadoInterno,c.radicadoCuenta,c.factura,'','','','','']);
-    hist.forEach(h=>filas.push([p.radicadoInterno,c.radicadoCuenta,c.factura,h.fecha?new Date(h.fecha).toLocaleString('es-CO'):'',h.tipo||'',
-      EST_GESTION[h.de]?.lbl||EST_ADRES[h.de]?.lbl||h.de||'', EST_GESTION[h.a]?.lbl||EST_ADRES[h.a]?.lbl||PAQ_DEC[h.a]?.lbl||h.a||'', h.motivo||'', h.usuarioNombre||'']));
+    const radF = rec?.radicado?.fecha || null;
+    const pi = plazoInfo(c.fechaExpedicion, radF);
+    const base = [p.radicadoInterno, c.radicadoCuenta, c.factura, c.consec, c.valor, fmtF(p.fechaRecepcion), fmtF(c.fechaExpedicion), pi?fmtF(pi.limite):'', PAQ_DEC[c.decision||'sin_revisar'].lbl];
+    // 1) Movimientos (internos y ADRES) en orden cronológico
+    if(!hist.length) mov.push([...base,'','','','','','']);
+    hist.forEach(h=>mov.push([...base, h.fecha?new Date(h.fecha).toLocaleString('es-CO'):'',
+      h.tipo==='adres'?'ADRES':h.tipo==='gestion'?'Gestión interna':h.tipo==='paquete'?'Paquete':h.tipo==='glosa'?'Glosa':(h.tipo||''),
+      lblE(h.de), lblE(h.a), h.motivo||'', h.usuarioNombre||'']));
+    // 2) Gestión ADRES: radicación + una fila por ronda de respuesta
+    const ra = paqResumenAdres(rec);
+    const cumpl = pi ? pi.txt : 'Sin fecha de expedición';
+    if(ra && (ra.rad.numero || ra.rondas.length)){
+      const baseA = [p.radicadoInterno, c.radicadoCuenta, c.factura, c.consec, fmtF(c.fechaExpedicion), pi?fmtF(pi.limite):'', ra.rad.lote||'', ra.rad.numero||'', fmtF(ra.rad.fecha), ra.valorRad, cumpl];
+      if(!ra.rondas.length) adres.push([...baseA,'','','','','']);
+      ra.rondas.forEach(r=>adres.push([...baseA, r.ronda||'', lblE(r.estado), fmtF(r.fecha), r.valorAprobado??'', r.obs||'']));
+    } else {
+      adres.push([p.radicadoInterno, c.radicadoCuenta, c.factura, c.consec, fmtF(c.fechaExpedicion), pi?fmtF(pi.limite):'', '', '', '', '', 'Aún no radicada ante ADRES','','','','','']);
+    }
+    // 3) Glosas
+    glosas.filter(x=>String(x.factura||'').toUpperCase()===String(c.factura).toUpperCase()).forEach(x=>glo.push([
+      p.radicadoInterno, c.radicadoCuenta, c.factura, x.radicado||'', x.consolidado||'', fmtF(x.fechaRecepcion), x.codElemento||'', x.descElemento||'', x.descGlosa||'', x.vrGlosado||0,
+      x.respuesta||'pendiente', x.vrAceptado||0, x.vrNoAceptado||0, x.textoResp||x.anotacion||'']));
+    // 4) Pagos
+    pagos.filter(x=>x.recId===c.recId || String(x.factura||'').toUpperCase()===String(c.factura).toUpperCase()).forEach(x=>pag.push([
+      p.radicadoInterno, c.radicadoCuenta, c.factura, fmtF(x.fecha), x.tipo||'', x.vrReclamado||0, x.vrPagado||0, x.vrGlosado||0, x.ref||'', x.obs||'']));
   });
-  const cab = ['Radicado paquete','Radicado cuenta','Factura','Fecha','Tipo','De','A','Observación','Usuario'];
-  const ws = XLSX.utils.aoa_to_sheet([cab, ...filas.map(f=>f.length===8?[...f,'']:f)]);
-  ws['!cols'] = [{wch:16},{wch:26},{wch:16},{wch:20},{wch:10},{wch:18},{wch:20},{wch:70},{wch:22}];
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
-  paqXlsxGuardar(wb, `Trazabilidad_${p.radicadoInterno}_${p.codHab}.xlsx`);
+  const wb = XLSX.utils.book_new();
+  const add = (nombre, cab, filas, anchos) => { const ws = XLSX.utils.aoa_to_sheet([cab, ...filas]); ws['!cols']=anchos.map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws, nombre); };
+  add('Movimientos',
+    ['Radicado paquete','Radicado cuenta','Factura','Consecutivo','Valor','Fecha recepción','Fecha expedición',`Límite radicación (${PLAZO_HABILES} d. hábiles)`,'Decisión paquete','Fecha y hora','Origen','De','A','Observación','Usuario'],
+    mov, [16,26,16,12,14,16,16,22,20,22,16,18,20,70,22]);
+  add('Gestión ADRES',
+    ['Radicado paquete','Radicado cuenta','Factura','Consecutivo','Fecha expedición','Límite radicación','Lote ADRES','N° radicado','Fecha radicación','Valor radicado','Cumplimiento plazo','Ronda','Respuesta ADRES','Fecha respuesta','Valor aprobado','Observación'],
+    adres, [16,26,16,12,16,16,16,16,16,14,28,8,18,16,14,50]);
+  add('Glosas',
+    ['Radicado paquete','Radicado cuenta','Factura','Radicado ADRES','Consolidado','Fecha recepción glosa','Cód. elemento','Descripción elemento','Glosa','Valor glosado','Respuesta IPS','Valor aceptado','Valor no aceptado','Texto respuesta'],
+    glo, [16,26,16,16,14,16,14,36,50,14,14,14,16,50]);
+  add('Pagos', ['Radicado paquete','Radicado cuenta','Factura','Fecha','Tipo','Valor reclamado','Valor pagado','Valor glosado','Referencia','Observación'], pag, [16,26,16,14,12,16,14,14,18,40]);
+  const sufijo = soloIdx!==undefined ? p.cuentas[soloIdx].radicadoCuenta : `${p.radicadoInterno}_${p.codHab}`;
+  paqXlsxGuardar(wb, `Trazabilidad_${sufijo}.xlsx`);
 };
 
 </script>
