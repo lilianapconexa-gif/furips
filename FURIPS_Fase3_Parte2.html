@@ -608,7 +608,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
             </div>
             <div class="field" id="fur-ff-siras">
               <span class="fl"><span class="fn">C28</span>Radicado SIRAS<span class="cnd" id="fur-siras-req">●</span></span>
-              <input id="fur-siras" maxlength="30" placeholder="Número de radicado SIRAS" oninput="this.value=this.value.trim();furSirasEstado();furFp()" autocomplete="off">
+              <input id="fur-siras" maxlength="20" placeholder="Número de radicado SIRAS" oninput="this.value=this.value.replace(/[^A-Za-z0-9]/g,'');furSirasEstado();furFp()" autocomplete="off">
               <span class="hint">Oblig. si Naturaleza = 01 (AT) y fecha ocurrencia ≥ 01/06/2023</span>
             </div>
             <div class="field" id="fur-ff-agot_tope">
@@ -873,6 +873,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
     <button class="btn bs" id="fur-btn-prev" onclick="furNav(-1)" disabled>← Anterior</button>
     <button class="btn bs" id="fur-btn-next" onclick="furNav(1)">Siguiente →</button>
     <div style="flex:1;"></div>
+    <button class="btn bs" onclick="furVerificar()" style="font-size:12px;border-color:#1a7f37;color:#1a7f37;">✅ Verificar Circular</button>
     <button class="btn bs" onclick="furVerJSON()" style="font-size:12px;">🔍 Ver JSON</button>
     <button class="btn bp" onclick="guardarFUR()" style="background:var(--green);border-color:var(--green);">💾 Guardar FUR en nube</button>
     <button class="btn bs" onclick="descargarFURjson()" style="font-size:12px;">⬇ Descargar .json</button>
@@ -5577,6 +5578,198 @@ function buildFURJsonLote(nit, listaDatos) {
   }];
 }
 
+// ══════════ VALIDADOR CONTRA CIRCULAR 003 DE 2026 (longitudes, formatos, enumeraciones) ══════════
+// [grupo, clave JSON, id campo (fur-*), no. campo, tipo, máx, valores permitidos]
+const DOCV='CC,CE,CD,PA,PE,RC,TI,CN,DE,PT,SC,AS,MS'.split(',');
+const FUR_SPEC = [
+ ['Datos_de_la_victima','Tipo_documento_identidad_victima','tipo_doc_v',3,'enum',2,DOCV],
+ ['Datos_de_la_victima','Numero_documento_identidad_victima','num_doc_v',4,'alnum',20],
+ ['Datos_de_la_victima','Tipo_de_poblacion_especial','pob_especial',5,'enum',2,['01','02','10','14','16','17','22','25']],
+ ['Datos_de_la_victima','Primer_nombre_victima','nomb1_v',6,'texto',30],
+ ['Datos_de_la_victima','Segundo_nombre_victima','nomb2_v',7,'texto',30],
+ ['Datos_de_la_victima','Primer_apellido_victima','apell1_v',8,'texto',30],
+ ['Datos_de_la_victima','Segundo_apellido_victima','apell2_v',9,'texto',30],
+ ['Datos_de_la_victima','Direccion_residencia_victima','dir_v',10,'dir',100],
+ ['Datos_de_la_victima','Codigo_municipio_residencia_victima','mpio_v',11,'mpio',5],
+ ['Datos_de_la_victima','Telefono_victima','tel_v',12,'num',10],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Naturaleza_del_evento','nat_evento',13,'enum',2,'01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,25,26,27'.split(',')],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Descripcion_del_otro_evento','desc_otro',14,'texto',40],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Condicion_victima','cond_v',15,'enum',2,['01','02','03','04']],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Fecha_de_ocurrencia_evento','fec_ocurr',16,'fecha',10],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Zona_de_ocurrencia_evento','zona_ocurr',17,'enum',2,['01','02']],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Codigo_municipio_ocurrencia_evento','mpio_ocurr',18,'mpio',5],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Direccion_de_ocurrencia_evento','dir_ocurr',19,'dir',100],
+ ['Datos_del_sitio_donde_ocurrio_el_evento','Descripcion_corta_de_lo_ocurrido_en_el_evento','desc_evento',20,'desc',1000],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Estado_de_aseguramiento','est_aseg',21,'enum',1,['2','3','4','6','7','8']],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Placa_vehiculo','placa_v',22,'alnum',10],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Tipo_de_Vehiculo','tipo_v',23,'enum',2,'01,02,03,04,05,06,07,08,09,10,14,17,19,20,21,22,23'.split(',')],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Codigo_de_la_aseguradora','cod_aseg',24,'alnum',6],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Cobro_por_agotamiento_tope_Aseguradora','agot_tope',29,'enum',1,['0','1']],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Numero_de_poliza_SOAT','num_poliza',25,'alnum',20],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Fecha_de_inicio_de_vigencia_de_la_poliza','vig_ini',26,'fecha',10],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Fecha_final_de_vigencia_de_la_poliza','vig_fin',27,'fecha',10],
+ ['Datos_del_Vehiculo_Involucrado_en_el_Accidente_de_Transito','Numero_de_radicado_SIRAS','siras',28,'alnum',20],
+ ['Datos_del_propietario_del_vehiculo','Tipo_de_documento_de_identidad_del_propietario','td_prop',30,'enum',2,'CC,CE,CD,PA,PE,DE,PT,NI'.split(',')],
+ ['Datos_del_propietario_del_vehiculo','Numero_de_documento_de_identidad_del_propietario','nd_prop',31,'alnum',20],
+ ['Datos_del_propietario_del_vehiculo','Primer_nombre_del_propietario_o_razon_social','n1_prop',32,'texto',30],
+ ['Datos_del_propietario_del_vehiculo','Segundo_nombre_del_propietario','n2_prop',33,'texto',30],
+ ['Datos_del_propietario_del_vehiculo','Primer_apellido_del_propietario','a1_prop',34,'texto',30],
+ ['Datos_del_propietario_del_vehiculo','Segundo_apellido_del_propietario','a2_prop',35,'texto',30],
+ ['Datos_del_propietario_del_vehiculo','Direccion_de_residencia_del_propietario','dir_prop',36,'dir',100],
+ ['Datos_del_propietario_del_vehiculo','Telefono_de_residencia_del_propietario','tel_prop',37,'num',10],
+ ['Datos_del_propietario_del_vehiculo','Codigo_del_municipio_de_residencia_del_propietario','mpio_prop',38,'mpio',5],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Tipo_de_documento_de_identidad_del_conductor','td_cond',39,'enum',2,'TI,CC,CE,CD,PA,PE,DE,PT,SC,AS,MS'.split(',')],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Numero_de_documento_de_identidad_del_conductor','nd_cond',40,'alnum',20],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Primer_nombre_del_conductor','n1_cond',41,'texto',30],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Segundo_nombre_del_conductor','n2_cond',42,'texto',30],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Primer_apellido_del_conductor','a1_cond',43,'texto',30],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Segundo_apellido_del_conductor','a2_cond',44,'texto',30],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Codigo_del_municipio_de_residencia_del_conductor','mpio_cond',45,'mpio',5],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Direccion_de_residencia_del_conductor','dir_cond',46,'dir',100],
+ ['Datos_del_conductor_del_vehiculo_involucrado','Telefono_de_residencia_del_conductor','tel_cond',47,'num',10],
+ ['Datos_Relacionados_con_la_Atencion_de_La_Victima','Uso_material_de_osteosintesis_en_la_atencion','osteosint',48,'enum',1,['1','2']],
+ ['Datos_Relacionados_con_la_Atencion_de_La_Victima','Es_atencion_inicial_paciente_remitido_o_control','tipo_aten',49,'enum',1,'1,2,3,4,5,6,7,8'.split(',')],
+ ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_remite','cod_rem',null,'num',12],
+ ['Datos_de_remision','TIPO_de_documento_Profesional_que_recibe','td_prof',54,'enum',2,'CC,CE,CD,PA,PE,DE,PT'.split(',')],
+ ['Datos_de_remision','Numero_de_documento_Profesional_que_recibe','nd_prof',null,'alnum',20],
+ ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_recibe','cod_rec_ts',null,'num',12],
+ ['Datos_de_remision','Fecha_de_aceptacion','fec_acept',null,'fecha',10],
+ ['Datos_de_remision','Hora_aceptacion','hora_acept',null,'hora',5],
+ ['Datos_de_remision','Placa_ambulancia_que_realiza_el_traslado_secundario','placa_as',null,'alnum',7],
+ ['Datos_de_remision','Tipo_de_servicio_del_transporte_secundario','tipo_ts',51,'enum',1,['1','2']],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Placa_ambulancia_que_realiza_el_traslado','placa_ap',null,'alnum',7],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario','cod_rec_tp',null,'num',12],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion','dir_desde',null,'dir',100],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS','dir_hasta',null,'dir',100],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Tipo_de_servicio_del_transporte','tipo_tp',58,'enum',1,['1','2']]
+];
+const FUR_RE = {
+  num:/^[0-9]+$/, alnum:/^[A-Za-z0-9]+$/, texto:/^[A-Za-zÀ-ÿñÑ0-9 ]+$/,
+  dir:/^[A-Za-zÀ-ÿñÑ0-9 #\-.()\/]+$/, hora:/^([01]\d|2[0-3]):[0-5]\d$/
+};
+function furFechaOK(v){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if(!m) return false;
+  const dt = new Date(+m[1], +m[2]-1, +m[3]);
+  return dt.getFullYear()==+m[1] && dt.getMonth()==+m[2]-1 && dt.getDate()==+m[3];
+}
+// Valida UNA entrada (ya en formato JSON). Devuelve [{campo,no,id,msg,nivel}]
+function furValidarEntry(e, etiqueta){
+  const out = [];
+  const add = (s, msg, nivel) => out.push({campo:s[1], no:s[3], id:s[2], msg, nivel:nivel||'e', etiqueta});
+  const val = {};
+  FUR_SPEC.forEach(s => {
+    const v0 = (e[s[0]]||{})[s[1]];
+    const v = (v0===null || v0===undefined) ? '' : String(v0);
+    val[s[2]] = v;
+    if(v==='') return;
+    const [,, , , kind, max, en] = s;
+    if(v.length > max) add(s, `Tiene ${v.length} caracteres; la Circular permite máximo ${max}.`);
+    if(v !== v.trim() || /\s{2,}/.test(v)) add(s, 'Tiene espacios al inicio/final o dobles.');
+    if(kind==='enum' && !en.includes(v)) add(s, `Valor "${v}" no permitido. Opciones: ${en.join(', ')}.`);
+    else if(kind==='num' && !FUR_RE.num.test(v)) add(s, 'Solo debe llevar dígitos (sin espacios, guiones ni puntos).');
+    else if(kind==='alnum' && !FUR_RE.alnum.test(v)) add(s, 'Solo letras y números, sin espacios ni símbolos.');
+    else if(kind==='texto' && !FUR_RE.texto.test(v)) add(s, 'Contiene caracteres no permitidos (comas, símbolos).');
+    else if(kind==='dir' && !FUR_RE.dir.test(v)) add(s, 'Dirección con caracteres no permitidos (solo # - . ( ) /).');
+    else if(kind==='fecha' && !furFechaOK(v)) add(s, 'Fecha inválida; debe ser AAAA-MM-DD.');
+    else if(kind==='hora' && !FUR_RE.hora.test(v)) add(s, 'Hora inválida; debe ser HH:MM (24 h).');
+    else if(kind==='mpio'){
+      if(!/^\d{5}$/.test(v)) add(s, 'El municipio debe ser código DIVIPOLA de 5 dígitos.');
+      else if(!(MPIOS[v.slice(0,2)] && MPIOS[v.slice(0,2)][v.slice(2)])) add(s, `Municipio ${v} no existe en DIVIPOLA.`);
+    }
+    else if(kind==='desc'){
+      if(v.length < 100) add(s, `Mínimo 100 caracteres (tiene ${v.length}).`);
+      if(/[,\t\r\n]/.test(v)) add(s, 'No debe llevar comas ni saltos de línea.');
+    }
+    if(kind==='texto' && /,/.test(v)) add(s, 'No debe llevar comas.');
+  });
+  const S = id => FUR_SPEC.find(s => s[2]===id);
+  const req = (id, msg) => { if(!val[id]) add(S(id), msg); };
+  const nat = val.nat_evento, est = val.est_aseg;
+  req('tipo_doc_v','Obligatorio.'); req('num_doc_v','Obligatorio.');
+  req('desc_evento','Obligatoria (100 a 1000 caracteres).');
+  if(nat==='17') req('desc_otro','Obligatoria cuando la naturaleza es 17 (Otro).');
+  if(nat && nat!=='17' && val.desc_otro) add(S('desc_otro'),'Solo se diligencia cuando la naturaleza es 17.');
+  if(nat==='01'){
+    req('est_aseg','Obligatorio en accidente de tránsito.');
+    if(['2','4','6','7'].includes(est)) req('placa_v','Placa obligatoria para este estado de aseguramiento.');
+    if(['3','8'].includes(est) && val.placa_v) add(S('placa_v'),'Debe ir vacía para estado de aseguramiento 3 u 8.');
+    if(['4','6'].includes(est)){
+      req('cod_aseg','Código de aseguradora obligatorio para este estado.');
+      req('num_poliza','Número de póliza obligatorio para este estado.');
+    }
+    if(['2','3','4','7','8'].includes(est) && val.agot_tope && val.agot_tope!=='0') add(S('agot_tope'),'Debe ser 0 para este estado de aseguramiento.');
+    const f = val.fec_ocurr;
+    if(f && f > '2023-06-01') req('siras','Radicado SIRAS obligatorio (evento posterior al 01/06/2023).');
+  } else if(nat && val.agot_tope) add(S('agot_tope'),'Debe ir vacío cuando la naturaleza no es 01.');
+  if(val.vig_ini && val.vig_fin && furFechaOK(val.vig_ini) && furFechaOK(val.vig_fin) && val.vig_fin < val.vig_ini)
+    add(S('vig_fin'),'La vigencia final es anterior a la inicial.');
+  const hoy = new Date().toISOString().slice(0,10);
+  if(val.fec_ocurr && val.fec_ocurr > hoy) add(S('fec_ocurr'),'La fecha de ocurrencia está en el futuro.');
+  if(val.td_prop==='NI' && val.dir_prop==='' ) {} 
+  return out;
+}
+function furValidarActual(){ return furValidarEntry(buildFURReclamacionEntry(buildFURData()), 'Formulario actual'); }
+// Valida el formulario completo (NIT + entrada). Devuelve lista de errores.
+function furValidarTodo(){
+  const errs = furValidarActual();
+  const nit = g('fur-nit')?.value?.trim() || '';
+  if(nit.length>10 || !/^\d*$/.test(nit)) errs.unshift({campo:'NIT_PRESTADOR',no:1,id:'nit',msg:'NIT solo dígitos, máximo 10 (la IPS usa máx. 9).',nivel:'e'});
+  return errs;
+}
+window.furIrCampo = (id) => {
+  const el = g('fur-'+id); if(!el) return;
+  const sec = el.closest('[id^="fur-s"]');
+  const n = sec ? parseInt(sec.id.replace('fur-s',''),10) : NaN;
+  if(!isNaN(n)) furGoSec(n);
+  setTimeout(()=>{ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); el.style.outline='2px solid #d33'; setTimeout(()=>el.style.outline='',2500);}catch(_){ } },150);
+  const p = g('fur-verif-panel'); if(p) p.remove();
+};
+// Corrige automáticamente lo que se puede corregir sin cambiar el sentido del dato
+window.furAutoAjustar = (silencioso) => {
+  let n = 0;
+  FUR_SPEC.forEach(s => {
+    const el = g('fur-'+s[2]); if(!el || el.tagName==='SELECT') return;
+    const o = el.value; let v = o;
+    const kind = s[4];
+    v = v.replace(/\s+/g,' ').trim();
+    if(kind==='num') v = v.replace(/\D/g,'');
+    else if(kind==='alnum') v = v.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    else if(kind==='texto') v = v.replace(/[^A-Za-zÀ-ÿñÑ0-9 ]/g,'').replace(/\s+/g,' ').trim();
+    else if(kind==='dir') v = v.replace(/[^A-Za-zÀ-ÿñÑ0-9 #\-.()\/]/g,'').toUpperCase();
+    else if(kind==='desc') v = v.replace(/[,\t\r\n]+/g,' ').replace(/\s+/g,' ').trim();
+    if(v.length > s[5] && ['num','alnum','texto','dir','desc'].includes(kind)) v = v.slice(0,s[5]).trim();
+    if(v !== o){ el.value = v; n++; }
+  });
+  if(!silencioso) toast(n ? `✔ Se ajustaron ${n} campo(s) a la Circular` : 'Nada que ajustar', n?'ok':'w');
+  return n;
+};
+window.furVerificar = () => {
+  furAutoAjustar(true);
+  const errs = furValidarTodo();
+  const old = g('fur-verif-panel'); if(old) old.remove();
+  const p = document.createElement('div');
+  p.id = 'fur-verif-panel';
+  p.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:flex;align-items:center;justify-content:center;';
+  const filas = errs.map(x => `<div style="padding:6px 8px;border-bottom:1px solid #ddd;font-size:12px;">
+    <b>C${x.no||'?'} · ${x.campo}</b><br><span style="color:#b00;">${x.msg}</span>
+    <button class="btn bs" style="font-size:11px;padding:2px 8px;margin-left:6px;" onclick="furIrCampo('${x.id}')">Ir al campo</button></div>`).join('');
+  p.innerHTML = `<div style="background:var(--bg,#fff);color:var(--tx,#111);max-width:640px;width:94vw;max-height:88vh;overflow:auto;border-radius:10px;padding:18px;">
+    <div style="font-weight:700;font-size:15px;margin-bottom:8px;">🔍 Verificación contra Circular 003 de 2026</div>
+    ${errs.length ? `<div style="font-size:12px;margin-bottom:8px;color:#b00;">${errs.length} observación(es) que causarían devolución. Corrígelas antes de radicar:</div>${filas}`
+      : '<div style="padding:14px;color:#1a7f37;font-weight:600;">✔ Todo cumple longitudes, formatos y valores de la Circular. Listo para radicar.</div>'}
+    <div style="text-align:right;margin-top:12px;"><button class="btn bs" onclick="document.getElementById('fur-verif-panel').remove()">Cerrar</button></div></div>`;
+  document.body.appendChild(p);
+  return errs;
+};
+window.furValidarTodo=furValidarTodo; window.furSerValidar=null;
+// Puerta común: ajusta, valida y bloquea si hay errores
+function furPuerta(){
+  furAutoAjustar(true);
+  const errs = furValidarTodo();
+  if(errs.length){ toast(`⚠ ${errs.length} campo(s) no cumplen la Circular; revisa el panel.`,'w'); furVerificar(); return false; }
+  return true;
+}
+
 // ── Ver JSON ──
 window.furVerJSON = () => {
   const json = buildFURJson();
@@ -5614,6 +5807,7 @@ window.guardarFUR = async () => {
     return;
   }
 
+  if(!furPuerta()) return;
   loader(true);
 
   // Limpiar datos: Firestore no acepta undefined ni serverTimestamp dentro de subcampos
@@ -5666,6 +5860,7 @@ window.descargarFURjson = () => {
     furIrSiras();
     return;
   }
+  if(!furPuerta()) return;
   const json = buildFURJson();
   const filename = `FUR_${nit}.json`;
   const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
@@ -5726,6 +5921,7 @@ window.abrirSelectorLote = async (tipo) => {
       [['depto_v','mpio_v','residencia víctima'],['depto_ocurr','mpio_ocurr','ocurrencia'],['depto_prop','mpio_prop','propietario'],['depto_cond','mpio_cond','conductor']].forEach(([dk,mk,lbl])=>{
         if(d[dk] && d[mk] && !(MPIOS[d[dk]] && MPIOS[d[dk]][d[mk]])) out.push(`Municipio de ${lbl} no válido (${d[dk]}${d[mk]})`);
       });
+      try{ furValidarEntry(buildFURReclamacionEntry(d), r.factura).forEach(x=>out.push(`C${x.no||'?'} ${x.campo}: ${x.msg}`)); }catch(_){ }
       const falt = (typeof FUR_REQS!=='undefined' ? FUR_REQS : []).filter(k => !String(d[k]??'').trim());
       if(falt.length) out.push(`Faltan ${falt.length} campo(s) obligatorios (${falt.slice(0,4).map(k=>k.toUpperCase()).join(', ')}${falt.length>4?'…':''})`);
     } else {
@@ -5735,6 +5931,7 @@ window.abrirSelectorLote = async (tipo) => {
       const sinVal = filas.filter(x => !(parseFloat(x.cantidad)>0) || !(parseFloat(x.vrUnitFact)>0)).length;
       if(sinCod) out.push(`${sinCod} servicio(s) sin código`);
       if(sinVal) out.push(`${sinVal} servicio(s) sin cantidad o valor`);
+      furSerValidar(r).slice(0,5).forEach(x=>out.push(x));
     }
     return out;
   };
@@ -6243,6 +6440,22 @@ window.furserCargarXML = async (files) => {
   toast(`✔ ${REC.fur_ser.length} ítems cargados desde XML DIAN`,'ok');
 };
 
+
+// ── Validación SER según Circular 003 (longitudes máximas) ──
+function furSerValidar(rec){
+  const out=[]; const f=rec.fur_ser||[];
+  const lim=[['tipo',1,'Tipo de servicio'],['codQx',6,'Código Qx'],['consecQx',2,'Consecutivo Qx'],['codigoServicio',20,'Código del servicio'],['codigoCUPS',6,'CUPS'],['descripcion',200,'Descripción'],['cantidad',15,'Cantidad'],['vrUnitFact',15,'Valor unitario facturado'],['vrUnitRec',15,'Valor unitario reclamado']];
+  f.forEach((r,i)=>{
+    lim.forEach(([k,m,n])=>{ const v=String(r[k]??''); if(v.length>m) out.push(`Servicio ${i+1}: ${n} tiene ${v.length} caracteres (máx ${m})`); });
+    if(/,/.test(String(r.descripcion||''))) out.push(`Servicio ${i+1}: la descripción lleva comas`);
+    [['totalFact','Total facturado'],['totalRec','Total reclamado']].forEach(([k,n])=>{ if(String(r[k]??'').length>15) out.push(`Servicio ${i+1}: ${n} excede 15 caracteres`); });
+    ['cantidad','vrUnitFact','vrUnitRec'].forEach(k=>{ const v=String(r[k]??''); if(v && !/^\d+(\.\d+)?$/.test(v)) out.push(`Servicio ${i+1}: ${k} debe ser numérico sin separadores`); });
+  });
+  const nit=String(nitIPS(rec,g('fur-nit')?.value)||''); if(nit.length>10) out.push('NIT excede 10 caracteres');
+  if(String(rec.factura||'').length>20) out.push('Número de factura excede 20 caracteres');
+  return out;
+}
+window.furSerValidar=furSerValidar;
 // Construir JSON oficial FUR SER
 // ── Construye la entrada de UNA factura para el JSON FUR SER (Servicios) ──
 // Reutilizable tanto para la descarga individual como para el lote.
@@ -6334,6 +6547,7 @@ window.guardarFURSER = async () => {
 window.descargarFURSERjson = () => {
   const nit  = nitIPS(REC, g('fur-nit')?.value);
   if(!nit){ toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1) de la pestaña FUR.','w'); return; }
+  const _pv=furSerValidar(REC); if(_pv.length){ alert('No cumple la Circular 003:\n\n'+_pv.slice(0,15).join('\n')); return; }
   const json = buildFURSERJson();
   const filename = `SER_${nit}.json`;
   const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
@@ -6667,6 +6881,7 @@ document.addEventListener('input', e=>{
   if(['number','checkbox','radio','file'].includes(el.type)) return;
   if(IDS_FECHA.has(el.id)) return;
   if(IDS_HORA.has(el.id))  return;
+  if(/^fur-dir_/.test(el.id)) return;
   const pos = el.selectionStart;
   const original = el.value;
   const cleaned = original.toUpperCase().replace(REGEX_TEXTO, '');
@@ -6683,6 +6898,7 @@ document.addEventListener('keypress', e=>{
   if(['number','checkbox','radio','file'].includes(el.type)) return;
   if(IDS_FECHA.has(el.id)) return;
   if(IDS_HORA.has(el.id))  return;
+  if(/^fur-dir_/.test(el.id)) return;
   const char = e.key;
   if(char.length > 1) return;
   REGEX_TEXTO.lastIndex = 0;
