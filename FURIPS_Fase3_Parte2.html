@@ -5762,6 +5762,43 @@ window.furVerificar = () => {
   return errs;
 };
 window.furValidarTodo=furValidarTodo; window.furSerValidar=null;
+
+// ══ Validación EN EL MISMO CAMPO: contador n/máx + mensaje debajo del input ══
+function furMsgCampo(id){
+  const s = FUR_SPEC.find(x => x[2]===id); if(!s) return;
+  const el = g('fur-'+id); if(!el) return;
+  let box = g('fur-vm-'+id);
+  if(!box){
+    box = document.createElement('div'); box.id = 'fur-vm-'+id;
+    box.style.cssText = 'font-size:11px;margin-top:2px;font-family:var(--mono,monospace);';
+    (el.closest('.field') || el.parentNode).appendChild(box);
+  }
+  const v = (el.value||'').trim();
+  if(!v){ box.textContent = `0/${s[5]}`; box.style.color = '#888'; return; }
+  const errs = furValidarActual().filter(x => x.id===id).map(x => x.msg);
+  // Teléfonos: un celular/fijo completo lleva 10 dígitos
+  if(!errs.length && (id==='tel_v'||id==='tel_prop'||id==='tel_cond') && v.length<10){
+    box.textContent = `${v.length}/10 · ⚠ incompleto: faltan ${10-v.length} dígito(s) (celular = 10)`; box.style.color = '#b26a00'; return;
+  }
+  if(errs.length){ box.textContent = `${v.length}/${s[5]} · ✖ ${errs[0]}`; box.style.color = '#c62828'; }
+  else { box.textContent = `${v.length}/${s[5]} · ✔`; box.style.color = '#1a7f37'; }
+}
+function furActivarMsgs(){
+  FUR_SPEC.forEach(s => {
+    const el = g('fur-'+s[2]); if(!el || el.dataset.vm) return;
+    el.dataset.vm = '1';
+    if(el.tagName!=='SELECT' && ['num','alnum','dir','texto','desc'].includes(s[4]) && !el.getAttribute('maxlength')) el.setAttribute('maxlength', s[5]);
+    el.addEventListener('input', () => {
+      if(s[4]==='num'){ const n = el.value.replace(/\D/g,''); if(n!==el.value) el.value = n; }
+      else if(s[4]==='alnum'){ const n = el.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase(); if(n!==el.value) el.value = n; }
+      furMsgCampo(s[2]);
+    });
+    el.addEventListener('change', () => { furMsgCampo(s[2]); });
+    furMsgCampo(s[2]);
+  });
+}
+window.furRefrescarMsgs = () => FUR_SPEC.forEach(s => furMsgCampo(s[2]));
+setTimeout(furActivarMsgs, 0);
 // Puerta común: ajusta, valida y bloquea si hay errores
 function furPuerta(){
   furAutoAjustar(true);
