@@ -3457,7 +3457,7 @@ function f2Row(i,r={}){
     <td><input value="${r.factura||''}" onchange="u2(${i},'factura',this.value)" maxlength="20"></td>
     <td><input value="${r.consec||''}" onchange="u2(${i},'consec',this.value)" maxlength="20"></td>
     <td style="min-width:170px;position:relative;">
-      <input value="${r.codigo||''}" oninput="u2(${i},'codigo',this.value);window.f2BuscarSOAT(${i},this.value)" maxlength="15" placeholder="Código" style="width:100%;margin-bottom:2px;">
+      <input value="${r.codigo||''}" oninput="u2(${i},'codigo',this.value);this.style.borderColor=this.value.trim()?'':'var(--warn)';window.f2BuscarSOAT(${i},this.value)" maxlength="15" placeholder="${r.codigo?'Código':'⚠ Digita el código'}" style="width:100%;margin-bottom:2px;${r.codigo?'':'border:2px solid var(--warn);'}">
       <input placeholder="🔍 buscar en catálogos......" oninput="window.soatKw(this.value,${i},'f2-kw-res-${i}')" id="f2-kw-${i}" style="width:100%;font-size:10px;" autocomplete="off">
       <div id="f2-kw-res-${i}" style="display:none;position:absolute;z-index:500;background:var(--sur);border:1px solid var(--brd);border-radius:6px;max-height:200px;overflow-y:auto;width:min(420px,90vw);box-shadow:0 4px 16px rgba(0,0,0,.2);left:0;top:100%;"></div>
       <div id="soat-f2-${i}" style="font-size:9px;color:var(--green);font-family:var(--mono);min-height:12px;">${soatHint}</div>
@@ -3738,6 +3738,31 @@ window.f2Add=()=>f2AddRow();
 // ═══════════════════════════════════════════════════════════════════════
 
 // Parsea un XML de factura DIAN y devuelve { factura, items:[] }
+
+// ── Coincidencia de un servicio con el tarifario SOAT por DESCRIPCIÓN ──
+// Para facturadores que no envían el código CUPS/SOAT en el XML (solo UNSPSC).
+// Solo asigna cuando la coincidencia es clara y única; si hay duda deja el código vacío.
+const normDescSoat = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean);
+let _soatIdx = null;
+const buscarSoatPorDescripcion = (descripcion) => {
+  if(typeof SOAT_READY === 'undefined' || !SOAT_READY) return null;
+  if(!_soatIdx || _soatIdx.n !== Object.keys(SOAT_DB).length){
+    _soatIdx = {n:Object.keys(SOAT_DB).length, lista:Object.entries(SOAT_DB).filter(([k,v]) => v.desc && (v.v2026||v.v2025)).map(([k,v]) => ({cod:k, w:new Set(normDescSoat(v.desc))})).filter(x => x.w.size>=2)};
+  }
+  const tw = new Set(normDescSoat(descripcion));
+  if(tw.size < 2) return null;
+  const sc = [];
+  for(const x of _soatIdx.lista){
+    let inter = 0; x.w.forEach(w => { if(tw.has(w)) inter++; });
+    if(!inter) continue;
+    const cont = inter / x.w.size, jac = inter / (x.w.size + tw.size - inter);
+    sc.push({cod:x.cod, s:0.5*cont + 0.5*jac});
+  }
+  sc.sort((a,b) => b.s - a.s);
+  if(!sc.length || sc[0].s < 0.75) return null;
+  if(sc[1] && sc[0].s - sc[1].s < 0.1) return null;   // ambiguo: que lo elija la persona
+  return sc[0].cod;
+};
 const parsearXMLDIAN = (xmlString) => {
   const parser = new DOMParser();
   const reInvoice = /<(?:[A-Za-z0-9_.-]+:)?(Invoice|CreditNote|DebitNote)[\s>]/;
@@ -3814,14 +3839,34 @@ const parsearXMLDIAN = (xmlString) => {
     const item = hijo(line,'Item') || qns(line,'Item');
     const desc = item ? (hijo(item,'Description') || qns(item,'Description')) : null;
 
-    // Código: SellersItemIdentification → StandardItemIdentification → AdditionalItemIdentification
-    let codigo = '';
-    for(const nodo of ['SellersItemIdentification','StandardItemIdentification','AdditionalItemIdentification','ManufacturersItemIdentification']){
-      const n = item ? hijo(item,nodo) : null;
-      const sid = n ? hijo(n,'ID') : null;
-      const t = sid ? sid.textContent.trim() : '';
-      if(t && t !== '0' && t !== '999'){ codigo = t; break; }
+    // Código: se reúnen TODOS los identificadores del ítem (Sellers, Standard, Additional,
+    // Manufacturers; puede haber varios Additional) y se elige el más confiable:
+    //  · el que existe en el tarifario SOAT (código CUPS/ISS) gana siempre;
+    //  · luego el que declara esquema CUPS/SOAT/ISS (schemeName/schemeID);
+    //  · si no hay señal, se respeta el orden histórico (Sellers → Standard → Additional → Manufacturers).
+    const candidatos = [];
+    if(item){
+      [['SellersItemIdentification',4],['StandardItemIdentification',3],['AdditionalItemIdentification',2],['ManufacturersItemIdentification',1]].forEach(([nodo,base])=>{
+        [...item.children].filter(c => c.localName === nodo).forEach(n => {
+          const sid = hijo(n,'ID');
+          const t = sid ? sid.textContent.trim() : '';
+          if(!t || t === '0' || t === '999') return;
+          const esquema = ['schemeName','schemeID','schemeAgencyName','name'].map(at => sid.getAttribute(at)||'').join(' ').toLowerCase();
+          // UNSPSC es una clasificación genérica de productos (ej. 85000000 / 51000000), NO un código de servicio
+          if(/unspsc|autoriza|gtin|ean|upc/.test(esquema)) return;
+          let score = base;
+          const cod6 = /^\d+$/.test(t) ? t.padStart(6,'0') : t;
+          if(typeof SOAT_READY !== 'undefined' && SOAT_READY && (SOAT_DB[t] || SOAT_DB[cod6])) score += 100;
+          if(/cups|soat|iss|tarifa/.test(esquema)) score += 50;
+          candidatos.push({t, score, nodo, esquema});
+        });
+      });
     }
+    candidatos.sort((x,y) => y.score - x.score);
+    let codigo = candidatos.length ? candidatos[0].t : '';
+    let codigoAuto = false;
+    const codigosAlt = candidatos.slice(1).map(c => c.t).filter(t => t !== codigo);
+    if(!codigo){ const porDesc = buscarSoatPorDescripcion(desc ? desc.textContent : ''); if(porDesc){ codigo = porDesc; codigoAuto = true; } }
 
     const priceNode = hijo(line,'Price') || qns(line,'Price');
     const priceAmt = priceNode ? (hijo(priceNode,'PriceAmount') || qns(priceNode,'PriceAmount')) : null;
@@ -3836,6 +3881,8 @@ const parsearXMLDIAN = (xmlString) => {
 
     items.push(corregirItemDesdeCatalogos({
       codigo: codigo,
+      codigosAlt: codigosAlt,
+      codigoAuto: codigoAuto,
       descripcion: descripcion.slice(0,100),
       cantidad: String(cantidad),
       vrUnitario: String(vrUnitario),
@@ -3989,7 +4036,11 @@ const cargarXMLsDIAN = async (fileList) => {
   REC.furips2 = itemsParaCargar;
   renderF2();
 
-  const msg = `✔ ${totalItems} ítems cargados desde XML (factura ${REC.factura})`;
+  const nSinCod = itemsParaCargar.filter(i => !String(i.codigo||'').trim()).length;
+  const nAuto = itemsParaCargar.filter(i => i.codigoAuto).length;
+  const msg = `✔ ${totalItems} ítems cargados desde XML (factura ${REC.factura})` +
+    (nAuto ? ` · ${nAuto} código(s) SOAT asignados por descripción (verifícalos)` : '') +
+    (nSinCod ? ` · ⚠ ${nSinCod} sin código (el XML solo trae UNSPSC): complétalos buscando por descripción` : '');
   toast(msg, 'ok');
   if(status){ status.innerHTML=msg; status.style.color='var(--green)'; }
 
