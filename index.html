@@ -15696,25 +15696,21 @@ window.paqExcelTraz = async (soloIdx) => {
     const rondasTxt = rondas.map(r=>`Ronda ${r.ronda||''}: ${lblE(r.estado)} ${fmtF(r.fecha)}${r.valorAprobado?' aprobado '+paqM(r.valorAprobado):''}${r.obs?' — '+r.obs:''}`).join('  ||  ');
     const glosTxt = gl.map(x=>`${x.radicado||''} ${x.descGlosa||''} ${paqM(x.vrGlosado||0)} (${x.respuesta||'pendiente'})`).join('  ||  ');
     const pagTxt = pg.map(x=>`${fmtF(x.fecha)} ${x.tipo||''} pagado ${paqM(x.vrPagado||0)}${x.ref?' ref '+x.ref:''}`).join('  ||  ');
+    const decTxt = [PAQ_DEC[c.decision||'sin_revisar'].lbl, c.obs?('— '+c.obs):'', c.fechaRev?('('+fh(c.fechaRev)+(c.revisor?' · '+c.revisor:'')+')'):''].filter(Boolean).join(' ');
+    const radTxt = (ra?.rad?.numero||ra?.rad?.lote) ? `Lote ${ra.rad.lote||'—'} · N° ${ra.rad.numero||'—'} · Radicada ${fmtF(ra.rad.fecha)}${ra.valorRad!==''?' · '+paqM(ra.valorRad):''}` : 'No radicada ante ADRES';
+    const respTxt = rondas.length ? rondasTxt : (ra?.rad?.numero?'Radicada, sin respuesta':'');
+    const gpTxt = [gl.length?`Glosas: ${gl.length} · glosado ${paqM(sum(gl,'vrGlosado'))} · aceptado ${paqM(sum(gl,'vrAceptado'))}  [${glosTxt}]`:'', pg.length?`Pagos: ${pg.length} · pagado ${paqM(sum(pg,'vrPagado'))}  [${pagTxt}]`:''].filter(Boolean).join('  ||  ');
     filas.push([
-      p.radicadoInterno, c.radicadoCuenta, c.factura, c.consec, paqM(c.valor), fmtF(p.fechaRecepcion), fmtF(c.fechaExpedicion),
-      pi?fmtF(pi.limite):'', pi?pi.txt:'Sin fecha de expedición',
+      p.radicadoInterno, c.radicadoCuenta, `${c.factura} (${c.consec})`, paqM(c.valor), fmtF(p.fechaRecepcion), fmtF(c.fechaExpedicion),
+      pi ? `${fmtF(pi.limite)} · ${pi.txt}` : 'Sin fecha de expedición',
       rec ? (EST_GESTION[getEstadoGestion(rec)]?.lbl||'') : '(cuenta eliminada)',
-      PAQ_DEC[c.decision||'sin_revisar'].lbl, c.obs||'', c.fechaRev?fh(c.fechaRev):'', c.revisor||'',
-      ra?.rad?.lote||'', ra?.rad?.numero||'', ra?.rad?.fecha?fmtF(ra.rad.fecha):'', ra&&ra.valorRad!==''?paqM(ra.valorRad):'',
-      ult?lblE(ult.estado):(ra?.rad?.numero?'Radicada, sin respuesta':'No radicada ante ADRES'), ult?fmtF(ult.fecha):'', ult&&ult.valorAprobado?paqM(ult.valorAprobado):'',
-      rondasTxt,
-      gl.length, paqM(sum(gl,'vrGlosado')), paqM(sum(gl,'vrAceptado')), glosTxt,
-      pg.length, paqM(sum(pg,'vrPagado')), pagTxt,
-      histTxt
+      decTxt, radTxt, respTxt, gpTxt, histTxt
     ]);
   });
-  const cab = ['Radicado paquete','Radicado cuenta','Factura','Consecutivo','Valor recibido','Fecha recepción','Fecha expedición',`Límite radicación (${PLAZO_HABILES} d. hábiles)`,'Plazo',
-    'Estado actual','Decisión paquete','Observación decisión','Fecha revisión','Revisó',
-    'Lote ADRES','N° radicado ADRES','Fecha radicación ADRES','Valor radicado','Última respuesta ADRES','Fecha respuesta','Valor aprobado','Rondas ADRES',
-    'N° glosas','Valor glosado','Valor aceptado','Detalle glosas','N° pagos','Valor pagado','Detalle pagos','Historial completo'];
+  const cab = ['Radicado paquete','Radicado cuenta','Factura (consecutivo)','Valor recibido','Fecha recepción','Fecha expedición',`Límite radicación (${PLAZO_HABILES} d. hábiles) y plazo`,
+    'Estado actual','Decisión del paquete / observación','Radicación ADRES','Respuestas ADRES','Glosas y pagos','Historial completo'];
   const ws = XLSX.utils.aoa_to_sheet([cab, ...filas]);
-  ws['!cols'] = [16,26,16,12,16,16,16,22,26,20,20,40,20,20,14,16,16,16,26,16,16,60,9,16,16,60,9,16,60,120].map(w=>({wch:w}));
+  ws['!cols'] = [16,26,24,16,16,16,36,20,50,50,60,70,120].map(w=>({wch:w}));
   ws['!freeze'] = {xSplit:3,ySplit:1};
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
   const sufijo = soloIdx!==undefined ? p.cuentas[soloIdx].radicadoCuenta : `${p.radicadoInterno}_${p.codHab}`;
