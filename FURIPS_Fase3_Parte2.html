@@ -298,6 +298,9 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
       <button class="btn bs" style="font-size:12px;background:var(--acc);color:#fff;border-color:var(--acc);" onclick="document.getElementById('f2-xml-input').click()" title="Carga uno o varios XML de factura DIAN. Los ítems reemplazan la tabla F2 actual.">📂 Cargar XML DIAN</button>
       <input type="file" id="f2-xml-input" accept=".xml,.zip" multiple style="display:none" onchange="window.cargarXMLsDIAN(this.files)">
       <span style="font-size:10px;color:var(--tx3);">Acepta .xml o .zip con XMLs</span>
+      <span style="color:var(--tx3);font-size:11px;margin:0 4px;">│</span>
+      <span style="font-size:11px;" title="Códigos que ya digitaste una vez: se aplican solos en las próximas facturas">🧠 Memoria compartida: <strong id="mem-count">0</strong> <span id="mem-nube" style="font-size:10px;"></span></span>
+
     </div>
     <div id="f2-xml-status" style="margin-top:6px;font-size:11px;display:none;"></div>
     <div id="f2-ajuste-soat" style="margin-top:8px;display:none;"></div>
@@ -939,7 +942,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── HELPERS GLOBALES (deben definirse antes de cualquier uso) ──
 const g   = id => document.getElementById(id);
@@ -3461,6 +3464,8 @@ function f2Row(i,r={}){
       <input placeholder="🔍 buscar en catálogos......" oninput="window.soatKw(this.value,${i},'f2-kw-res-${i}')" id="f2-kw-${i}" style="width:100%;font-size:10px;" autocomplete="off">
       <div id="f2-kw-res-${i}" style="display:none;position:absolute;z-index:500;background:var(--sur);border:1px solid var(--brd);border-radius:6px;max-height:200px;overflow-y:auto;width:min(420px,90vw);box-shadow:0 4px 16px rgba(0,0,0,.2);left:0;top:100%;"></div>
       <div id="soat-f2-${i}" style="font-size:9px;color:var(--green);font-family:var(--mono);min-height:12px;">${soatHint}</div>
+      ${r.codigo && r.codOrigen==='memoria' ? `<div style="font-size:9px;color:#58a6ff;">🧠 de la memoria</div>` : (r.codigo && r.codOrigen==='descripcion' ? '<div style="font-size:9px;color:var(--warn);">≈ por descripción: verifica</div>' : '')}
+      ${(!r.codigo && r.sugerencias && r.sugerencias.length) ? '<div style="margin-top:3px;">'+r.sugerencias.map(sg => `<div onclick="window.soatPick(${i},'${String(sg.cod).replace(/'/g,'')}')" title="${String(sg.desc).replace(/"/g,'')}" style="cursor:pointer;font-size:9px;border:1px dashed var(--acc);border-radius:4px;padding:2px 5px;margin-top:2px;background:rgba(88,166,255,.07);">💡 <strong style="font-family:var(--mono)">${sg.cod}</strong> ${String(sg.desc).replace(/</g,'').slice(0,34)} <span style="color:var(--tx3)">${sg.cat}</span></div>`).join('')+'</div>' : ''}
     </td>
     <td><input value="${r.descripcion||''}" onchange="u2(${i},'descripcion',this.value)" maxlength="100" style="min-width:110px"></td>
     <td><input type="number" value="${r.cantidad||''}" oninput="u2c(${i},'cantidad',this.value)" min="0" style="min-width:55px"></td>
@@ -3590,6 +3595,9 @@ const soatKw = (q, i, dropId) => {
 
 const soatPick = (i, codigo) => {
   if(!REC?.furips2?.[i]) return;
+  { const r0 = REC.furips2[i], hit0 = buscarEnCatalogos(codigo);
+    memAprender(r0.descOrig || r0.descripcion, codigo, hit0 ? hit0.tipo : '');
+    r0.sugerencias = []; r0.codigoAuto = false; r0.codOrigen = 'manual'; r0.descOrig = r0.descOrig || r0.descripcion; }
   REC.furips2[i].codigo = codigo;
   // Limpiar solo descripción para que se auto-rellene desde el catálogo
   // NO limpiar vrUnitario: el valor lo pone el XML o el usuario
@@ -3612,6 +3620,7 @@ window.cupsKw = (q, targetId, dropId) => {
 function u2(i,f,v){
   if(!REC?.furips2?.[i]) return;
   REC.furips2[i][f]=v;
+  if(f==='codigo'){ REC.furips2[i].codigoAuto = false; REC.furips2[i].codOrigen = 'manual'; }
   // Si se cambió vrUnitario manualmente, recalcular totales
   if(f === 'vrUnitario' || f === 'cantidad'){
     const q=parseFloat(REC.furips2[i].cantidad)||0;
@@ -3763,6 +3772,106 @@ const buscarSoatPorDescripcion = (descripcion) => {
   if(sc[1] && sc[0].s - sc[1].s < 0.1) return null;   // ambiguo: que lo elija la persona
   return sc[0].cod;
 };
+// ═══ MEMORIA DE CÓDIGOS: lo que se digita una vez no se vuelve a digitar ═══
+// Guarda descripción normalizada → código/tipo (en este navegador). Se aplica sola al cargar XML.
+const MEM_KEY = 'furips_mem_codigos_v1';
+let _mem = null;
+const memNorm = d => normDescSoat(d).join(' ');
+const memTodo = () => { if(_mem) return _mem; try{ _mem = JSON.parse(localStorage.getItem(MEM_KEY)||'{}') || {}; }catch(e){ _mem = {}; } return _mem; };
+const memPersistir = () => { try{ localStorage.setItem(MEM_KEY, JSON.stringify(_mem||{})); }catch(e){} memContador(); };
+let _memNube = null;   // null = conectando, true = compartida, false = solo local
+const memContador = () => {
+  const e = document.getElementById('mem-count'); if(e) e.textContent = Object.keys(memTodo()).length;
+  const n = document.getElementById('mem-nube');
+  if(n){ n.textContent = _memNube ? '☁ compartida con todos los digitadores' : (_memNube===false ? '💾 solo en este equipo (sin acceso a la nube)' : '… conectando'); n.style.color = _memNube ? 'var(--green)' : (_memNube===false ? 'var(--warn)' : 'var(--tx3)'); }
+};
+// Identificador estable del documento en Firestore (dos hashes de 32 bits)
+const memId = k => { let a = 5381, b = 0; for(let i=0;i<k.length;i++){ const c = k.charCodeAt(i); a = ((a*33) ^ c) >>> 0; b = (c + (b<<6) + (b<<16) - b) >>> 0; } return 'm' + a.toString(36) + b.toString(36) + k.length; };
+const memSubir = (k, v) => {
+  try{
+    if(!auth.currentUser) return;
+    setDoc(doc(db,'memoria_codigos', memId(k)), {k, c:v.c, t:v.t||'', d:v.d||'', n:v.n||1, por:auth.currentUser.email||'', ts:serverTimestamp()})
+      .catch(err => { _memNube = false; memContador(); console.warn('memoria_codigos:', err.code||err.message); });
+  }catch(e){}
+};
+let _memUnsub = null;
+const memSincronizar = () => {
+  if(_memUnsub) return;
+  try{
+    _memUnsub = onSnapshot(collection(db,'memoria_codigos'), snap => {
+      const m = memTodo(); const enNube = new Set();
+      snap.docs.forEach(d => { const x = d.data(); if(x && x.k && x.c){ enNube.add(x.k); m[x.k] = {c:x.c, t:x.t||'', d:x.d||'', n:x.n||1}; } });
+      // lo que solo existía en este equipo se comparte (primera conexión)
+      if(_memNube !== true) Object.keys(m).forEach(k => { if(!enNube.has(k)) memSubir(k, m[k]); });
+      snap.docChanges().forEach(ch => { if(ch.type==='removed'){ const x = ch.doc.data(); if(x && x.k) delete m[x.k]; } });
+      _memNube = true; memPersistir();
+    }, err => { _memUnsub = null; _memNube = false; memContador(); console.warn('memoria_codigos:', err.code||err.message); });
+  }catch(e){ _memNube = false; memContador(); }
+};
+onAuthStateChanged(auth, u => { if(u) memSincronizar(); else { _memNube = false; memContador(); } });
+window.memOlvidar = async (desc, lado, i) => {
+  const k = memNorm(desc); if(!k) return;
+  delete memTodo()[k]; memPersistir();
+  try{ if(auth.currentUser) await deleteDoc(doc(db,'memoria_codigos', memId(k))); }catch(e){}
+  const r = lado==='ser' ? REC.fur_ser?.[i] : REC.furips2?.[i];
+  if(r){ if(lado==='ser') r.codigoServicio=''; else r.codigo=''; r.codOrigen=''; r.codigoAuto=false; r.sugerencias = sugerirCodigos(r.descOrig||r.descripcion,3); }
+  lado==='ser' ? furserRender() : renderF2();
+  toast('🧠 Código olvidado para todos los digitadores','ok');
+};
+const memAprender = (desc, cod, tipo) => {
+  const k = memNorm(desc), c = String(cod||'').trim();
+  if(!k || k.split(' ').length < 2 || !c) return;
+  const m = memTodo(); const prev = m[k];
+  m[k] = { c, t: tipo || (prev && prev.c===c ? prev.t : '') || '', d: String(desc).slice(0,80), n: (prev && prev.c===c ? (prev.n||1)+1 : 1) };
+  memPersistir(); memSubir(k, m[k]);
+};
+const memBuscar = desc => {
+  const k = memNorm(desc); if(!k) return null;
+  const m = memTodo(); if(m[k]) return m[k];
+  const tw = new Set(k.split(' ')); let best = null, bs = 0;
+  for(const kk in m){
+    const w = kk.split(' '); let inter = 0; w.forEach(x => { if(tw.has(x)) inter++; });
+    const j = inter / (w.length + tw.size - inter);
+    if(j > bs){ bs = j; best = m[kk]; }
+  }
+  return bs >= 0.85 ? best : null;
+};
+window.memExportar = () => {
+  const blob = new Blob([JSON.stringify(memTodo(), null, 1)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'memoria_codigos_furips.json'; a.click();
+};
+window.memImportar = async (files) => {
+  try{
+    const o = JSON.parse(await files[0].text()); const m = memTodo(); let n = 0;
+    Object.entries(o).forEach(([k,v]) => { if(v && v.c){ m[k] = v; memSubir(k, v); n++; } });
+    memPersistir(); toast(`🧠 Memoria importada: ${n} descripciones`, 'ok');
+  }catch(e){ toast('Archivo de memoria inválido: '+e.message, 'e'); }
+};
+// Sugerencias: mejores candidatos de todos los catálogos para una descripción sin código
+let _sugIdx = null;
+const sugerirCodigos = (descripcion, n=3) => {
+  const tw = new Set(normDescSoat(descripcion)); if(!tw.size) return [];
+  const nSoat = (typeof SOAT_READY!=='undefined' && SOAT_READY) ? Object.keys(SOAT_DB).length : 0;
+  const nExt = (typeof CAT_EXTRA_READY!=='undefined' && CAT_EXTRA_READY) ? Object.keys(CAT_MED).length + Object.keys(CAT_INS).length + Object.keys(CAT_OST).length : 0;
+  if(!_sugIdx || _sugIdx.k !== nSoat+'/'+nExt){
+    const lista = [];
+    if(nSoat) Object.entries(SOAT_DB).forEach(([k,v]) => { if(v.desc && (v.v2026||v.v2025)) lista.push({cod:k, desc:v.desc, tipo:'2', cat:'SOAT', w:new Set(normDescSoat(v.desc))}); });
+    if(nExt){
+      [[CAT_MED,'1','CUM'],[CAT_INS,'5','Insumo'],[CAT_OST,'7','Osteosíntesis']].forEach(([cat,t,nom]) => Object.entries(cat).forEach(([k,v]) => lista.push({cod:k, desc:String(v), tipo:t, cat:nom, w:new Set(normDescSoat(v))})));
+    }
+    _sugIdx = {k:nSoat+'/'+nExt, lista};
+  }
+  const sc = [];
+  for(const x of _sugIdx.lista){
+    if(!x.w.size) continue; let inter = 0; x.w.forEach(w => { if(tw.has(w)) inter++; });
+    if(!inter) continue;
+    const s2 = 0.5*(inter/x.w.size) + 0.5*(inter/(x.w.size + tw.size - inter));
+    if(s2 >= 0.3) sc.push({cod:x.cod, desc:x.desc, tipo:x.tipo, cat:x.cat, s:s2});
+  }
+  sc.sort((a,b) => b.s - a.s);
+  return sc.slice(0,n);
+};
+window.memAprender = memAprender; window.sugerirCodigos = sugerirCodigos;
 const parsearXMLDIAN = (xmlString) => {
   const parser = new DOMParser();
   const reInvoice = /<(?:[A-Za-z0-9_.-]+:)?(Invoice|CreditNote|DebitNote)[\s>]/;
@@ -3866,7 +3975,14 @@ const parsearXMLDIAN = (xmlString) => {
     let codigo = candidatos.length ? candidatos[0].t : '';
     let codigoAuto = false;
     const codigosAlt = candidatos.slice(1).map(c => c.t).filter(t => t !== codigo);
-    if(!codigo){ const porDesc = buscarSoatPorDescripcion(desc ? desc.textContent : ''); if(porDesc){ codigo = porDesc; codigoAuto = true; } }
+    const descXml = desc ? desc.textContent.trim() : '';
+    let codOrigen = codigo ? 'xml' : '', tipoMem = '';
+    if(!codigo){
+      const mm = memBuscar(descXml);
+      if(mm){ codigo = mm.c; tipoMem = mm.t || ''; codigoAuto = true; codOrigen = 'memoria'; }
+    }
+    if(!codigo){ const porDesc = buscarSoatPorDescripcion(descXml); if(porDesc){ codigo = porDesc; codigoAuto = true; codOrigen = 'descripcion'; } }
+    const sugerencias = codigo ? [] : sugerirCodigos(descXml, 3);
 
     const priceNode = hijo(line,'Price') || qns(line,'Price');
     const priceAmt = priceNode ? (hijo(priceNode,'PriceAmount') || qns(priceNode,'PriceAmount')) : null;
@@ -3883,12 +3999,15 @@ const parsearXMLDIAN = (xmlString) => {
       codigo: codigo,
       codigosAlt: codigosAlt,
       codigoAuto: codigoAuto,
+      codOrigen: codOrigen,
+      sugerencias: sugerencias,
+      descOrig: descripcion.slice(0,200),
       descripcion: descripcion.slice(0,100),
       cantidad: String(cantidad),
       vrUnitario: String(vrUnitario),
       totalFact: String(totalFact),
       totalRec:  String(totalFact),
-      tipo: '',
+      tipo: tipoMem,
     }));
   }
 
@@ -4039,8 +4158,8 @@ const cargarXMLsDIAN = async (fileList) => {
   const nSinCod = itemsParaCargar.filter(i => !String(i.codigo||'').trim()).length;
   const nAuto = itemsParaCargar.filter(i => i.codigoAuto).length;
   const msg = `✔ ${totalItems} ítems cargados desde XML (factura ${REC.factura})` +
-    (nAuto ? ` · ${nAuto} código(s) SOAT asignados por descripción (verifícalos)` : '') +
-    (nSinCod ? ` · ⚠ ${nSinCod} sin código (el XML solo trae UNSPSC): complétalos buscando por descripción` : '');
+    (nAuto ? ` · ${nAuto} código(s) asignados solos (memoria o coincidencia por descripción): verifícalos` : '') +
+    (nSinCod ? ` · ⚠ ${nSinCod} sin código: elige una de las sugerencias 💡 o busca; el sistema lo recordará para la próxima factura` : '');
   toast(msg, 'ok');
   if(status){ status.innerHTML=msg; status.style.color='var(--green)'; }
 
@@ -6263,6 +6382,8 @@ function furserRow(i, r={}){
         id="fsr-kw-${i}" style="width:100%;font-size:10px;" autocomplete="off">
       <div id="fsr-kw-res-${i}" style="display:none;position:absolute;z-index:500;background:var(--sur);border:1px solid var(--brd);border-radius:6px;max-height:200px;overflow-y:auto;width:min(420px,90vw);box-shadow:0 4px 16px rgba(0,0,0,.2);left:0;top:100%;"></div>
       <div id="soat-fsr-${i}" style="font-size:9px;color:var(--green);font-family:var(--mono);min-height:12px;">${soatHint}</div>
+      ${r.codigoServicio && r.codOrigen==='memoria' ? `<div style="font-size:9px;color:#58a6ff;">🧠 de la memoria</div>` : (r.codigoServicio && r.codOrigen==='descripcion' ? '<div style="font-size:9px;color:var(--warn);">≈ por descripción: verifica</div>' : '')}
+      ${(!r.codigoServicio && r.sugerencias && r.sugerencias.length) ? '<div style="margin-top:3px;">'+r.sugerencias.map((sg,k) => `<div onclick="window.furserAplicarSug(${i},${k})" title="${String(sg.desc).replace(/"/g,'')}" style="cursor:pointer;font-size:9px;border:1px dashed var(--acc);border-radius:4px;padding:2px 5px;margin-top:2px;background:rgba(88,166,255,.07);">💡 <strong style="font-family:var(--mono)">${sg.cod}</strong> ${String(sg.desc).replace(/</g,'').slice(0,34)} <span style="color:var(--tx3)">${sg.cat}</span></div>`).join('')+'</div>' : ''}
     </td>
     <td>
       <input value="${r.descripcion||''}" onchange="furserU(${i},'descripcion',this.value)"
@@ -6422,7 +6543,15 @@ window.soatKw = (q, i, dropId, esFurSer=false) => {
   }).join('');
 };
 
+window.furserAplicarSug = (i, k) => {
+  const r = REC.fur_ser?.[i], sg = r?.sugerencias?.[k]; if(!r || !sg) return;
+  memAprender(r.descOrig || r.descripcion, sg.cod, sg.tipo);
+  r.codigoServicio = sg.cod; r.tipo = r.tipo || sg.tipo; r.sugerencias = []; r.codOrigen = 'manual';
+  if(sg.tipo==='2') r.codigoCUPS = r.codigoCUPS || cupsDeMapa(sg.cod);
+  furserRender();
+};
 window.furserSelCodigo = (i, cod, desc, val) => {
+  { const r0 = REC.fur_ser?.[i]; if(r0){ const h0 = buscarEnCatalogos(cod); memAprender(r0.descOrig || r0.descripcion, cod, h0 ? h0.tipo : ''); r0.sugerencias = []; r0.codOrigen = 'manual'; } }
   const drop = g('fsr-kw-res-'+i); if(drop) drop.style.display='none';
   const kw   = g('fsr-kw-'+i);    if(kw)   kw.value = '';
   if(!REC.fur_ser?.[i]) return;
@@ -6561,9 +6690,13 @@ window.furserCargarXML = async (files) => {
     vrUnitRec:      String(r.vrUnitario||''),
     totalFact:      String((parseFloat(r.cantidad)||0)*(parseFloat(r.vrUnitario)||0)),
     totalRec:       String((parseFloat(r.cantidad)||0)*(parseFloat(r.vrUnitario)||0)),
+    descOrig:       r.descOrig || r.descripcion || '',
+    sugerencias:    r.sugerencias || [],
+    codOrigen:      r.codOrigen || '',
   }));
   furserRender();
-  toast(`✔ ${REC.fur_ser.length} ítems cargados desde XML DIAN`,'ok');
+  const nSin = REC.fur_ser.filter(x => !String(x.codigoServicio||'').trim()).length;
+  toast(`✔ ${REC.fur_ser.length} ítems cargados desde XML DIAN` + (nSin ? ` · ⚠ ${nSin} sin código: usa las sugerencias 💡 (el sistema lo recuerda)` : ''),'ok');
 };
 
 
@@ -7596,6 +7729,21 @@ window.debugCleanN = function() {
 window.getAnoTarifa = getAnoTarifa;
 window.soatLookup = soatLookup;
 window.buscarEnCatalogos = buscarEnCatalogos;
+// Aprender cuando se digita el código a mano (F2 y SER)
+document.addEventListener('change', e => {
+  try{
+    const t = e.target, oi = t && t.getAttribute ? (t.getAttribute('oninput')||'') : '';
+    const tr = t && t.closest ? t.closest('tr') : null; if(!tr) return;
+    if(/^r2\d+$/.test(tr.id) && oi.includes("'codigo'")){
+      const r = REC.furips2[parseInt(tr.id.slice(2))]; const h = r && r.codigo ? buscarEnCatalogos(r.codigo) : null;
+      if(h) memAprender(r.descOrig || r.descripcion, r.codigo, h.tipo);
+    } else if(/^fsr\d+$/.test(tr.id) && oi.includes("'codigoServicio'")){
+      const r = REC.fur_ser[parseInt(tr.id.slice(3))]; const h = r && r.codigoServicio ? buscarEnCatalogos(r.codigoServicio) : null;
+      if(h) memAprender(r.descOrig || r.descripcion, r.codigoServicio, h.tipo);
+    }
+  }catch(_){}
+}, true);
+setTimeout(memContador, 800);
 window.buscarPorDescripcion = buscarPorDescripcion;
 window.corregirItemDesdeCatalogos = corregirItemDesdeCatalogos;
 window.parsearXMLDIAN = parsearXMLDIAN;
