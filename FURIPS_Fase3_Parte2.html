@@ -5680,18 +5680,18 @@ const FUR_SPEC = [
  ['Datos_del_conductor_del_vehiculo_involucrado','Telefono_de_residencia_del_conductor','tel_cond',47,'num',10],
  ['Datos_Relacionados_con_la_Atencion_de_La_Victima','Uso_material_de_osteosintesis_en_la_atencion','osteosint',48,'enum',1,['1','2']],
  ['Datos_Relacionados_con_la_Atencion_de_La_Victima','Es_atencion_inicial_paciente_remitido_o_control','tipo_aten',49,'enum',1,'1,2,3,4,5,6,7,8'.split(',')],
- ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_remite','cod_rem',null,'num',12],
+ ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_remite','cod_rem',52,'num',12],
  ['Datos_de_remision','TIPO_de_documento_Profesional_que_recibe','td_prof',54,'enum',2,'CC,CE,CD,PA,PE,DE,PT'.split(',')],
- ['Datos_de_remision','Numero_de_documento_Profesional_que_recibe','nd_prof',null,'alnum',20],
- ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_recibe','cod_rec_ts',null,'num',12],
- ['Datos_de_remision','Fecha_de_aceptacion','fec_acept',null,'fecha',10],
- ['Datos_de_remision','Hora_aceptacion','hora_acept',null,'hora',5],
- ['Datos_de_remision','Placa_ambulancia_que_realiza_el_traslado_secundario','placa_as',null,'alnum',7],
+ ['Datos_de_remision','Numero_de_documento_Profesional_que_recibe','nd_prof',55,'alnum',20],
+ ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_recibe','cod_rec_ts',53,'num',12],
+ ['Datos_de_remision','Fecha_de_aceptacion','fec_acept',56,'fecha',10],
+ ['Datos_de_remision','Hora_aceptacion','hora_acept',57,'hora',5],
+ ['Datos_de_remision','Placa_ambulancia_que_realiza_el_traslado_secundario','placa_as',50,'alnum',7],
  ['Datos_de_remision','Tipo_de_servicio_del_transporte_secundario','tipo_ts',51,'enum',1,['1','2']],
- ['Datos_Transporte_y_movilizacion_de_la_victima','Placa_ambulancia_que_realiza_el_traslado','placa_ap',null,'alnum',7],
- ['Datos_Transporte_y_movilizacion_de_la_victima','Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario','cod_rec_tp',null,'num',12],
- ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion','dir_desde',null,'dir',100],
- ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS','dir_hasta',null,'dir',100],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Placa_ambulancia_que_realiza_el_traslado','placa_ap',59,'alnum',7],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario','cod_rec_tp',60,'num',12],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion','dir_desde',61,'dir',100],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS','dir_hasta',62,'dir',100],
  ['Datos_Transporte_y_movilizacion_de_la_victima','Tipo_de_servicio_del_transporte','tipo_tp',58,'enum',1,['1','2']]
 ];
 const FUR_RE = {
@@ -5734,29 +5734,55 @@ function furValidarEntry(e, etiqueta){
     if(kind==='texto' && /,/.test(v)) add(s, 'No debe llevar comas.');
   });
   const S = id => FUR_SPEC.find(s => s[2]===id);
-  const req = (id, msg) => { if(!val[id]) add(S(id), msg); };
-  const nat = val.nat_evento, est = val.est_aseg;
-  req('tipo_doc_v','Obligatorio.'); req('num_doc_v','Obligatorio.');
-  req('desc_evento','Obligatoria (100 a 1000 caracteres).');
+  const req = (id, msg) => { if(!val[id]) add(S(id), msg||'Obligatorio.'); };
+  const vacio = (id, msg) => { if(val[id]) add(S(id), msg); };
+  const nat = val.nat_evento, est = val.est_aseg, ta = val.tipo_aten;
+  const esAT = nat==='01';
+  // ── Siempre obligatorios ──
+  ['tipo_doc_v','num_doc_v','nomb1_v','apell1_v','nat_evento','fec_ocurr','zona_ocurr','desc_evento','osteosint','tipo_aten'].forEach(k => req(k));
+  // ── Naturaleza del evento ──
   if(nat==='17') req('desc_otro','Obligatoria cuando la naturaleza es 17 (Otro).');
-  if(nat && nat!=='17' && val.desc_otro) add(S('desc_otro'),'Solo se diligencia cuando la naturaleza es 17.');
-  if(nat==='01'){
+  else vacio('desc_otro','Solo se diligencia cuando la naturaleza es 17.');
+  if(esAT){
     req('est_aseg','Obligatorio en accidente de tránsito.');
     if(['2','4','6','7'].includes(est)) req('placa_v','Placa obligatoria para este estado de aseguramiento.');
-    if(['3','8'].includes(est) && val.placa_v) add(S('placa_v'),'Debe ir vacía para estado de aseguramiento 3 u 8.');
+    if(['3','8'].includes(est)) vacio('placa_v','Debe ir vacía para estado de aseguramiento 3 u 8.');
     if(['4','6'].includes(est)){
-      req('cod_aseg','Código de aseguradora obligatorio para este estado.');
-      req('num_poliza','Número de póliza obligatorio para este estado.');
+      ['cod_aseg','num_poliza','vig_ini','vig_fin'].forEach(k => req(k,'Obligatorio para estado de aseguramiento 4 o 6.'));
+    } else {
+      ['cod_aseg','num_poliza','vig_ini','vig_fin'].forEach(k => vacio(k,'Debe ir vacío cuando el estado de aseguramiento no es 4 ni 6.'));
     }
-    if(['2','3','4','7','8'].includes(est) && val.agot_tope && val.agot_tope!=='0') add(S('agot_tope'),'Debe ser 0 para este estado de aseguramiento.');
-    const f = val.fec_ocurr;
-    if(f && f > '2023-06-01') req('siras','Radicado SIRAS obligatorio (evento posterior al 01/06/2023).');
-  } else if(nat && val.agot_tope) add(S('agot_tope'),'Debe ir vacío cuando la naturaleza no es 01.');
+    if(['2','3','4','7','8'].includes(est)){ if(val.agot_tope!=='0') add(S('agot_tope'),'Debe diligenciarse con 0 (NO) para este estado de aseguramiento.'); }
+    else if(est==='6') req('agot_tope','Obligatorio (0 o 1) para estado de aseguramiento 6.');
+    if(val.fec_ocurr && val.fec_ocurr > '2023-06-01') req('siras','Radicado SIRAS obligatorio (evento posterior al 01/06/2023).');
+    // Propietario
+    if(['2','4','6','8'].includes(est)){
+      ['td_prop','nd_prop','n1_prop','a1_prop'].forEach(k => req(k,'Obligatorio para este estado de aseguramiento.'));
+      if(val.td_prop==='NI'){
+        ['dir_prop','tel_prop','mpio_prop'].forEach(k => vacio(k,'Debe ir vacío cuando el tipo de documento del propietario es NI.'));
+      } else ['dir_prop','tel_prop','mpio_prop'].forEach(k => req(k,'Obligatorio para este estado de aseguramiento.'));
+    }
+    // Conductor
+    if(['2','4','6','7','8'].includes(est)){
+      ['td_cond','nd_cond','n1_cond','a1_cond','mpio_cond','dir_cond','tel_cond'].forEach(k => req(k,'Obligatorio para este estado de aseguramiento.'));
+    }
+  } else {
+    ['placa_v','tipo_v','agot_tope','cod_aseg','num_poliza','vig_ini','vig_fin'].forEach(k => vacio(k,'Debe ir vacío cuando la naturaleza del evento no es 01 (accidente de tránsito).'));
+  }
+  // Teléfonos: celular = 10 dígitos que inician en 3; fijo = 60 + indicativo (1) + 7 dígitos
+  ['tel_v','tel_prop','tel_cond'].forEach(k => {
+    const v = val[k]; if(!v || !/^\d+$/.test(v)) return;
+    if(v.length!==10) add(S(k), `Tiene ${v.length} dígitos; debe tener 10 (celular que inicia en 3, o fijo 60 + indicativo + 7 dígitos).`);
+    else if(!(v[0]==='3' || v.startsWith('60'))) add(S(k), 'Un celular debe iniciar en 3 y un fijo en 60.');
+  });
+  // Remisión (tipo de atención 3, 7 u 8)
+  if(['3','7','8'].includes(ta)) ['cod_rem','td_prof','nd_prof','cod_rec_ts','fec_acept','hora_acept','placa_as','tipo_ts'].forEach(k => req(k,'Obligatorio cuando el tipo de atención incluye transporte secundario (3, 7 u 8).'));
+  // Transporte primario (tipo de atención 2, 6 u 8)
+  if(['2','6','8'].includes(ta)) ['tipo_tp','placa_ap','cod_rec_tp','dir_desde','dir_hasta'].forEach(k => req(k,'Obligatorio cuando el tipo de atención incluye transporte primario (2, 6 u 8).'));
   if(val.vig_ini && val.vig_fin && furFechaOK(val.vig_ini) && furFechaOK(val.vig_fin) && val.vig_fin < val.vig_ini)
     add(S('vig_fin'),'La vigencia final es anterior a la inicial.');
   const hoy = new Date().toISOString().slice(0,10);
   if(val.fec_ocurr && val.fec_ocurr > hoy) add(S('fec_ocurr'),'La fecha de ocurrencia está en el futuro.');
-  if(val.td_prop==='NI' && val.dir_prop==='' ) {} 
   return out;
 }
 function furValidarActual(){ return furValidarEntry(buildFURReclamacionEntry(buildFURData()), 'Formulario actual'); }
@@ -5791,6 +5817,14 @@ window.furAutoAjustar = (silencioso) => {
     if(v.length > s[5] && ['num','alnum','texto','dir','desc'].includes(kind)) v = v.slice(0,s[5]).trim();
     if(v !== o){ el.value = v; n++; }
   });
+  // Cobro por agotamiento de tope: 0 cuando el estado es 2,3,4,7,8; vacío si la naturaleza no es 01
+  {
+    const nat = g('fur-nat_evento')?.value, est = g('fur-est_aseg')?.value, ag = g('fur-agot_tope');
+    if(ag){
+      if(nat==='01' && ['2','3','4','7','8'].includes(est) && ag.value!=='0'){ ag.value='0'; n++; }
+      else if(nat && nat!=='01' && ag.value){ ag.value=''; n++; }
+    }
+  }
   if(!silencioso) toast(n ? `✔ Se ajustaron ${n} campo(s) a la Circular` : 'Nada que ajustar', n?'ok':'w');
   return n;
 };
@@ -5812,7 +5846,7 @@ window.furVerificar = () => {
   document.body.appendChild(p);
   return errs;
 };
-window.furValidarTodo=furValidarTodo; window.furSerValidar=null;
+window.furValidarTodo=furValidarTodo; window.furValidarEntry=furValidarEntry; window.buildFURReclamacionEntry=buildFURReclamacionEntry; window.furSerValidar=null;
 
 // ══ Validación EN EL MISMO CAMPO: contador n/máx + mensaje debajo del input ══
 function furMsgCampo(id){
@@ -6302,6 +6336,10 @@ window.furserUC = (i,f,v) => {
   furserTots();
 };
 
+// CUPS válido para ADRES: exactamente 6 caracteres alfanuméricos. La homologación SOAT→CUPS trae
+// valores de 2, 5 y 7 caracteres que ADRES rechaza: se descartan para que se digite a mano.
+const cupsValido = c => /^[0-9A-Za-z]{6}$/.test(String(c||'').trim());
+const cupsDeMapa = cod => { const c = String((typeof SOAT_CUPS_MAP!=='undefined' && SOAT_CUPS_MAP[String(cod||'').trim()])||'').trim(); return cupsValido(c) ? c : ''; };
 // Buscar código en catálogos (SOAT, CUM, Insumos, Osteosíntesis)
 window.furserBuscarCodigo = (i, codigo) => {
   const el = g('soat-fsr-'+i); if(!el) return;
@@ -6309,7 +6347,7 @@ window.furserBuscarCodigo = (i, codigo) => {
   if(!raw){ el.textContent=''; return; }
 
   // Auto-completar CUPS desde homologacion SOAT->CUPS (15.626 registros)
-  const cups = SOAT_CUPS_MAP[raw] || '';
+  const cups = cupsDeMapa(raw);
   if(cups && REC.fur_ser?.[i]){
     if(!REC.fur_ser[i].codigoCUPS){
       REC.fur_ser[i].codigoCUPS = cups;
@@ -6321,13 +6359,13 @@ window.furserBuscarCodigo = (i, codigo) => {
   // Buscar en SOAT (descripcion + valor)
   const hit = (typeof soatLookup==='function' && SOAT_READY) ? soatLookup(raw) : null;
   if(hit){
-    const cupsTag = cups ? ` <span style="color:#58a6ff;font-weight:700;">CUPS: ${cups}</span>` : ' <span style="color:var(--tx3);font-size:9px;">sin CUPS</span>';
+    const cupsTag = cups ? ` <span style="color:#58a6ff;font-weight:700;">CUPS: ${cups}</span>` : ' <span style="color:var(--warn);font-size:10px;font-weight:700;">sin CUPS válido: digítalo (6 caracteres)</span>';
     el.innerHTML=`<span style="color:var(--green)">&#10004;</span> <strong>[SOAT]</strong> ${hit.desc.slice(0,42)} &middot; $${hit.valor.toLocaleString('es-CO')}${cupsTag}`;
     if(REC.fur_ser?.[i]){
       if(!REC.fur_ser[i].descripcion){
-        REC.fur_ser[i].descripcion = hit.desc.slice(0,200);
+        REC.fur_ser[i].descripcion = furSerLimpiarDesc(hit.desc);
         const d = document.querySelector(`#fsr${i} td:nth-child(6) input`);
-        if(d) d.value = hit.desc.slice(0,200);
+        if(d) d.value = furSerLimpiarDesc(hit.desc);
       }
       if(!REC.fur_ser[i].tipo) REC.fur_ser[i].tipo='2';
     }
@@ -6482,7 +6520,7 @@ window.furserDescomponer = () => {
       codQx: c,
       consecQx: consec,
       codigoServicio: codigo,
-      descripcion: hit ? hit.desc.slice(0,200) : desc,
+      descripcion: hit ? furSerLimpiarDesc(hit.desc) : desc,
       cantidad: '1',
       vrUnitFact: hit ? String(hit.valor) : '',
       vrUnitRec:  hit ? String(hit.valor) : '',
@@ -6516,7 +6554,7 @@ window.furserCargarXML = async (files) => {
     codQx:          '',
     consecQx:       '',
     codigoServicio: r.codigo||'',
-    codigoCUPS:     ((r.tipo||'')==='2' || (!r.tipo && SOAT_READY && SOAT_DB[r.codigo])) ? (SOAT_CUPS_MAP[r.codigo]||'') : '',
+    codigoCUPS:     ((r.tipo||'')==='2' || (!r.tipo && SOAT_READY && SOAT_DB[r.codigo])) ? cupsDeMapa(r.codigo) : '',
     descripcion:    furSerLimpiarDesc(r.descripcion),
     cantidad:       String(r.cantidad||''),
     vrUnitFact:     String(r.vrUnitario||''),
@@ -6529,27 +6567,54 @@ window.furserCargarXML = async (files) => {
 };
 
 
-// ── Validación SER según Circular 003 (longitudes máximas) ──
+// ── Validación SER según Circular 003 y reglas de ADRES. Devuelve errores que bloquean la descarga. ──
 function furSerValidar(rec){
   const out=[]; const f=rec.fur_ser||[];
-  const lim=[['tipo',1,'Tipo de servicio'],['codQx',6,'Código Qx'],['consecQx',2,'Consecutivo Qx'],['codigoServicio',20,'Código del servicio'],['codigoCUPS',6,'CUPS'],['descripcion',200,'Descripción'],['cantidad',15,'Cantidad'],['vrUnitFact',15,'Valor unitario facturado'],['vrUnitRec',15,'Valor unitario reclamado']];
+  const soatOk = typeof SOAT_READY!=='undefined' && SOAT_READY;
+  const cupsOk = typeof CUPS_READY!=='undefined' && CUPS_READY;
   f.forEach((r,i)=>{
-    lim.forEach(([k,m,n])=>{ const v=String(r[k]??''); if(v.length>m) out.push(`Servicio ${i+1}: ${n} tiene ${v.length} caracteres (máx ${m})`); });
-    const t=String(r.tipo||'').trim(), cu=String(r.codigoCUPS||'').trim();
-    if(!['1','2','3','4','5','6','7','8'].includes(t)) out.push(`Servicio ${i+1}: falta el Tipo de servicio (C3)`);
-    if(['2','3','4'].includes(t) && !cu) out.push(`Servicio ${i+1}: el CUPS (C7) es obligatorio para tipo ${t}`);
-    if(!String(r.codigoServicio||'').trim()) out.push(`Servicio ${i+1}: falta el código del servicio (C6)`);
-    if(t==='2' && typeof SOAT_READY!=='undefined' && SOAT_READY && r.codigoServicio && !SOAT_DB[String(r.codigoServicio).trim()]) out.push(`Servicio ${i+1}: el código ${r.codigoServicio} no es un código SOAT; no coincide con tipo 2 (procedimientos)`);
-    if(['1','5','6','7','8'].includes(t) && typeof CUPS_READY!=='undefined' && CUPS_READY && r.codigoServicio && CUPS_DB[String(r.codigoServicio).trim()] && !(typeof SOAT_DB!=='undefined' && SOAT_DB[String(r.codigoServicio).trim()])) out.push(`Servicio ${i+1}: ${r.codigoServicio} es un código CUPS (procedimiento), no de tipo ${t}; debe ser tipo 2 con el código SOAT`);
-    if(['1','5','6','7','8'].includes(t) && typeof SOAT_READY!=='undefined' && SOAT_READY && r.codigoServicio && SOAT_DB[String(r.codigoServicio).trim()]) out.push(`Servicio ${i+1}: el código ${r.codigoServicio} es SOAT pero el tipo es ${t}; no coincide`);
-    [['totalFact','Total facturado'],['totalRec','Total reclamado']].forEach(([k,n])=>{ if(String(r[k]??'').length>15) out.push(`Servicio ${i+1}: ${n} excede 15 caracteres`); });
-    ['cantidad','vrUnitFact','vrUnitRec'].forEach(k=>{ const v=String(r[k]??''); if(v && !/^\d+(\.\d+)?$/.test(v)) out.push(`Servicio ${i+1}: ${k} debe ser numérico sin separadores`); });
+    const n = `Servicio ${i+1}${r.descripcion?' ('+String(r.descripcion).slice(0,28)+')':''}`;
+    const t = String(r.tipo||'').trim(), cod = String(r.codigoServicio||'').trim(), cu = String(r.codigoCUPS||'').trim();
+    // Longitudes máximas
+    [['tipo',1,'Tipo de servicio'],['codQx',6,'Código Qx'],['consecQx',2,'Consecutivo Qx'],['codigoServicio',20,'Código del servicio'],['codigoCUPS',6,'CUPS'],['cantidad',15,'Cantidad'],['vrUnitFact',15,'Valor unitario facturado'],['vrUnitRec',15,'Valor unitario reclamado']]
+      .forEach(([k,m,lbl])=>{ const v=String(r[k]??''); if(v.length>m) out.push(`${n}: ${lbl} tiene ${v.length} caracteres (máx ${m})`); });
+    // Tipo y códigos por tipo
+    if(!['1','2','3','4','5','6','7','8'].includes(t)) out.push(`${n}: falta el Tipo de servicio (C3)`);
+    if(['1','2','5','6','7'].includes(t) && !cod) out.push(`${n}: falta el código del servicio (C6)`);
+    if(['2','3','4'].includes(t) && !cu) out.push(`${n}: el CUPS (C7) es obligatorio para tipo ${t}`);
+    if(['2','3','4'].includes(t) && cu && !cupsValido(cu)) out.push(`${n}: el CUPS "${cu}" debe tener exactamente 6 caracteres alfanuméricos (tiene ${cu.length})`);
+    if(t==='2' && soatOk && cod && !SOAT_DB[cod]) out.push(`${n}: el código ${cod} no es SOAT; no coincide con tipo 2 (procedimientos)`);
+    if(['1','5','6','7','8'].includes(t) && soatOk && cod && SOAT_DB[cod]) out.push(`${n}: el código ${cod} es SOAT pero el tipo es ${t}; no coincide`);
+    if(['1','5','6','7','8'].includes(t) && cupsOk && cod && CUPS_DB[cod] && !(soatOk && SOAT_DB[cod])) out.push(`${n}: ${cod} es un código CUPS (procedimiento), no de tipo ${t}; debe ser tipo 2 con el código SOAT`);
+    if(String(r.codQx||'').trim() && !String(r.consecQx||'').trim() && t==='2') out.push(`${n}: tiene código Qx pero falta el consecutivo del procedimiento quirúrgico`);
+    // Descripción
+    if(!furSerLimpiarDesc(r.descripcion)) out.push(`${n}: falta la descripción del servicio (C8)`);
+    // Valores
+    const q = parseFloat(r.cantidad), vf = parseFloat(r.vrUnitFact), vr = parseFloat(r.vrUnitRec || r.vrUnitFact);
+    if(!(q>0)) out.push(`${n}: la cantidad debe ser mayor a cero`);
+    if(!(vf>0)) out.push(`${n}: el valor unitario facturado debe ser mayor a cero`);
+    if(!(vr>0)) out.push(`${n}: el valor unitario reclamado debe ser mayor a cero`);
+    ['vrUnitFact','vrUnitRec'].forEach(k=>{ const v=String(r[k]??'').trim(); if(v && !/^\d+$/.test(v)) out.push(`${n}: ${k==='vrUnitFact'?'valor unitario facturado':'valor unitario reclamado'} debe ser un entero sin puntos, comas ni decimales`); });
+    if(vf>0 && vr>vf) out.push(`${n}: el valor reclamado (${vr}) no puede superar el facturado (${vf})`);
   });
-  const nit=String(nitIPS(rec,g('fur-nit')?.value)||''); if(nit.length>10) out.push('NIT excede 10 caracteres');
+  const nit=String(nitIPS(rec,g('fur-nit')?.value)||'');
+  if(!nit) out.push('Falta el NIT del prestador');
+  else if(nit.length>10 || !/^\d+$/.test(nit)) out.push('NIT: solo dígitos, máximo 10 (IPS: máx. 9, sin dígito de verificación)');
+  if(!String(rec.factura||'').trim()) out.push('Falta el número de factura');
   if(String(rec.factura||'').length>20) out.push('Número de factura excede 20 caracteres');
   return out;
 }
-window.furSerValidar=furSerValidar;
+// Advertencias (no bloquean): valor por encima del tarifario SOAT vigente en servicios tipo 2
+function furSerAvisos(rec){
+  const out=[]; if(!(typeof SOAT_READY!=='undefined' && SOAT_READY) || typeof soatLookup!=='function') return out;
+  (rec.fur_ser||[]).forEach((r,i)=>{
+    if(String(r.tipo||'')!=='2' || !r.codigoServicio) return;
+    const h = soatLookup(String(r.codigoServicio).trim()); const vr = parseFloat(r.vrUnitRec||r.vrUnitFact);
+    if(h && h.valor && vr > h.valor) out.push(`Servicio ${i+1} (${r.codigoServicio}): reclamado $${vr.toLocaleString('es-CO')} supera la tarifa SOAT $${h.valor.toLocaleString('es-CO')}`);
+  });
+  return out;
+}
+window.furSerValidar = furSerValidar;
 // Construir JSON oficial FUR SER
 // ── Construye la entrada de UNA factura para el JSON FUR SER (Servicios) ──
 // Reutilizable tanto para la descarga individual como para el lote.
@@ -6568,22 +6633,27 @@ function furSerCupsParaTipo(r){
   const c = String(r.codigoCUPS||'').replace(/[^0-9A-Za-z]/g,'').slice(0,6);
   return c || null;
 }
+// Reglas del FUR SERVICIOS por tipo de servicio (Circular 003/2026 + validación de ADRES)
+const furSerTipo = r => String(r.tipo||'').trim();
+function furSerCodigoParaTipo(r){ return ['3','4','8'].includes(furSerTipo(r)) ? null : (String(r.codigoServicio||'').trim() || null); }
+function furSerQx(r, campo){ return furSerTipo(r)==='2' ? (String(r[campo]||'').trim() || null) : null; }
+const furSerEntero = v => { const n = Math.round(parseFloat(v)||0); return n>0 ? String(n) : null; };
 function buildFURSERServiciosEntry(rec){
   const factura = rec.factura || '';
   const servicios = (rec.fur_ser||[]).map(r => {
-    const tf  = String((parseFloat(r.cantidad)||0) * (parseFloat(r.vrUnitFact)||0));
+    const tf  = String(Math.round((parseFloat(r.cantidad)||0) * (parseFloat(r.vrUnitFact)||0)));
     const vur = parseFloat(r.vrUnitRec) || parseFloat(r.vrUnitFact) || 0;
-    const tr  = String((parseFloat(r.cantidad)||0) * vur);
+    const tr  = String(Math.round((parseFloat(r.cantidad)||0) * vur));
     return {
       Tipo_de_servicio:                                    String(r.tipo||'').trim() || null,
-      Codigo_del_servicio:                                 String(r.codigoServicio||'').trim() || null,
-      Codigo_general_del_procedimiento_quirurgico:         r.codQx       || null,
-      Consecutivo_procedimiento_quirurgico:                r.consecQx    || null,
+      Codigo_del_servicio:                                 furSerCodigoParaTipo(r),
+      Codigo_general_del_procedimiento_quirurgico:         furSerQx(r,'codQx'),
+      Consecutivo_procedimiento_quirurgico:                furSerQx(r,'consecQx'),
       Codificacion_CUPS:                                   furSerCupsParaTipo(r),
       Descripcion_del_servicio_o_elemento_reclamado:       furSerLimpiarDesc(r.descripcion) || null,
       Cantidad_de_servicios:                               r.cantidad    || null,
-      Valor_unitario_facturado:                            r.vrUnitFact  || null,
-      Valor_unitario_reclamado:                            r.vrUnitRec || r.vrUnitFact || null,
+      Valor_unitario_facturado:                            furSerEntero(r.vrUnitFact),
+      Valor_unitario_reclamado:                            furSerEntero(r.vrUnitRec || r.vrUnitFact),
       Valor_total_facturado:                               tf            || null,
       Valor_total_reclamado:                               tr            || null,
     };
@@ -6608,7 +6678,7 @@ function buildFURSERJsonLote(nit, listaRecs){
 }
 
 // Ver JSON
-window.buildFURSERServiciosEntry = buildFURSERServiciosEntry; window.furSerLimpiarDesc = furSerLimpiarDesc;
+window.buildFURSERServiciosEntry = buildFURSERServiciosEntry; window.furSerAvisos = furSerAvisos; window.furSerLimpiarDesc = furSerLimpiarDesc;
 window.furserVerJSON = () => {
   const json = buildFURSERJson();
   const panel = g('furser-json-panel');
@@ -6658,6 +6728,7 @@ window.descargarFURSERjson = () => {
   const nit  = nitIPS(REC, g('fur-nit')?.value);
   if(!nit){ toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1) de la pestaña FUR.','w'); return; }
   const _pv=furSerValidar(REC); if(_pv.length){ alert('No cumple la Circular 003:\n\n'+_pv.slice(0,15).join('\n')); return; }
+  const _av=furSerAvisos(REC); if(_av.length && !confirm('Advertencias (no bloquean):\n\n'+_av.slice(0,12).join('\n')+'\n\n¿Descargar de todos modos?')) return;
   const json = buildFURSERJson();
   const filename = `SER_${nit}.json`;
   const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
