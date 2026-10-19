@@ -6195,7 +6195,7 @@ function furserRow(i, r={}){
   const codQxStyle  = esProcedimiento ? '' : 'opacity:.4;pointer-events:none;';
   const consecStyle = esProcedimiento ? '' : 'opacity:.4;pointer-events:none;';
   const codSrvStyle = esTransOrNoInc  ? 'opacity:.4;pointer-events:none;' : '';
-  const cupsStyle   = esProcedimiento ? '' : 'opacity:.4;pointer-events:none;';
+  const cupsStyle   = ['2','3','4'].includes(tipo) ? (r.codigoCUPS ? '' : 'border:2px solid var(--warn);') : 'opacity:.4;pointer-events:none;';
 
   // Hint SOAT
   const soatHit = (r.codigoServicio && typeof soatLookup === 'function' && SOAT_READY) ? soatLookup(r.codigoServicio) : null;
@@ -6224,7 +6224,7 @@ function furserRow(i, r={}){
         title="C6 — Código del servicio (SOAT/CUM/IUM/INVIMA)">
       <input value="${r.codigoCUPS||''}" onchange="furserU(${i},'codigoCUPS',this.value)"
         maxlength="6" placeholder="C7 CUPS" style="width:100%;font-size:10px;${cupsStyle}"
-        title="C7 — Código CUPS. Solo tipo 2 (Procedimientos).">
+        title="C7 — Código CUPS. Obligatorio para tipo 2, 3 y 4; vacío para los demás tipos.">
       <input placeholder="🔍 buscar en catálogos..." oninput="window.soatKw(this.value,${i},'fsr-kw-${i}',true)"
         id="fsr-kw-${i}" style="width:100%;font-size:10px;" autocomplete="off">
       <div id="fsr-kw-res-${i}" style="display:none;position:absolute;z-index:500;background:var(--sur);border:1px solid var(--brd);border-radius:6px;max-height:200px;overflow-y:auto;width:min(420px,90vw);box-shadow:0 4px 16px rgba(0,0,0,.2);left:0;top:100%;"></div>
@@ -6512,12 +6512,12 @@ window.furserCargarXML = async (files) => {
   REC.fur_ser = result.items.map(r => ({
     factura:        r.factura||REC.factura,
     nit:            nitIPS(REC, g('fur-nit')?.value),
-    tipo:           r.tipo||'2',
+    tipo:           r.tipo || (typeof deducirTipo==='function' ? deducirTipo(r.codigo, r.descripcion) : '') || '',
     codQx:          '',
     consecQx:       '',
     codigoServicio: r.codigo||'',
-    codigoCUPS:     '',
-    descripcion:    r.descripcion||'',
+    codigoCUPS:     ((r.tipo||'')==='2' || (!r.tipo && SOAT_READY && SOAT_DB[r.codigo])) ? (SOAT_CUPS_MAP[r.codigo]||'') : '',
+    descripcion:    furSerLimpiarDesc(r.descripcion),
     cantidad:       String(r.cantidad||''),
     vrUnitFact:     String(r.vrUnitario||''),
     vrUnitRec:      String(r.vrUnitario||''),
@@ -6535,7 +6535,13 @@ function furSerValidar(rec){
   const lim=[['tipo',1,'Tipo de servicio'],['codQx',6,'Código Qx'],['consecQx',2,'Consecutivo Qx'],['codigoServicio',20,'Código del servicio'],['codigoCUPS',6,'CUPS'],['descripcion',200,'Descripción'],['cantidad',15,'Cantidad'],['vrUnitFact',15,'Valor unitario facturado'],['vrUnitRec',15,'Valor unitario reclamado']];
   f.forEach((r,i)=>{
     lim.forEach(([k,m,n])=>{ const v=String(r[k]??''); if(v.length>m) out.push(`Servicio ${i+1}: ${n} tiene ${v.length} caracteres (máx ${m})`); });
-    if(/,/.test(String(r.descripcion||''))) out.push(`Servicio ${i+1}: la descripción lleva comas`);
+    const t=String(r.tipo||'').trim(), cu=String(r.codigoCUPS||'').trim();
+    if(!['1','2','3','4','5','6','7','8'].includes(t)) out.push(`Servicio ${i+1}: falta el Tipo de servicio (C3)`);
+    if(['2','3','4'].includes(t) && !cu) out.push(`Servicio ${i+1}: el CUPS (C7) es obligatorio para tipo ${t}`);
+    if(!String(r.codigoServicio||'').trim()) out.push(`Servicio ${i+1}: falta el código del servicio (C6)`);
+    if(t==='2' && typeof SOAT_READY!=='undefined' && SOAT_READY && r.codigoServicio && !SOAT_DB[String(r.codigoServicio).trim()]) out.push(`Servicio ${i+1}: el código ${r.codigoServicio} no es un código SOAT; no coincide con tipo 2 (procedimientos)`);
+    if(['1','5','6','7','8'].includes(t) && typeof CUPS_READY!=='undefined' && CUPS_READY && r.codigoServicio && CUPS_DB[String(r.codigoServicio).trim()] && !(typeof SOAT_DB!=='undefined' && SOAT_DB[String(r.codigoServicio).trim()])) out.push(`Servicio ${i+1}: ${r.codigoServicio} es un código CUPS (procedimiento), no de tipo ${t}; debe ser tipo 2 con el código SOAT`);
+    if(['1','5','6','7','8'].includes(t) && typeof SOAT_READY!=='undefined' && SOAT_READY && r.codigoServicio && SOAT_DB[String(r.codigoServicio).trim()]) out.push(`Servicio ${i+1}: el código ${r.codigoServicio} es SOAT pero el tipo es ${t}; no coincide`);
     [['totalFact','Total facturado'],['totalRec','Total reclamado']].forEach(([k,n])=>{ if(String(r[k]??'').length>15) out.push(`Servicio ${i+1}: ${n} excede 15 caracteres`); });
     ['cantidad','vrUnitFact','vrUnitRec'].forEach(k=>{ const v=String(r[k]??''); if(v && !/^\d+(\.\d+)?$/.test(v)) out.push(`Servicio ${i+1}: ${k} debe ser numérico sin separadores`); });
   });
@@ -6547,6 +6553,21 @@ window.furSerValidar=furSerValidar;
 // Construir JSON oficial FUR SER
 // ── Construye la entrada de UNA factura para el JSON FUR SER (Servicios) ──
 // Reutilizable tanto para la descarga individual como para el lote.
+// Texto de descripción apto para ADRES: sin espacios raros/dobles, sin comas ni caracteres fuera del conjunto permitido
+function furSerLimpiarDesc(v){
+  return String(v||'').normalize('NFC')
+    .replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF\t\r\n]+/g,' ')
+    .replace(/,/g,' ')
+    .replace(/[^A-Za-zÀ-ÿ0-9 .;:!¡?¿\-+=@%°$€£¥¢©®™§&#*\\\/|~^`_{}\[\]()<>]/g,'')
+    .replace(/\s{2,}/g,' ').trim().slice(0,200);
+}
+// CUPS: obligatorio para tipo 2, 3 y 4; debe ir vacío para cualquier otro tipo (regla de ADRES)
+function furSerCupsParaTipo(r){
+  const t = String(r.tipo||'').trim();
+  if(!['2','3','4'].includes(t)) return null;
+  const c = String(r.codigoCUPS||'').replace(/[^0-9A-Za-z]/g,'').slice(0,6);
+  return c || null;
+}
 function buildFURSERServiciosEntry(rec){
   const factura = rec.factura || '';
   const servicios = (rec.fur_ser||[]).map(r => {
@@ -6554,12 +6575,12 @@ function buildFURSERServiciosEntry(rec){
     const vur = parseFloat(r.vrUnitRec) || parseFloat(r.vrUnitFact) || 0;
     const tr  = String((parseFloat(r.cantidad)||0) * vur);
     return {
-      Tipo_de_servicio:                                    r.tipo        || null,
-      Codigo_del_servicio:                                 r.codigoServicio || null,
+      Tipo_de_servicio:                                    String(r.tipo||'').trim() || null,
+      Codigo_del_servicio:                                 String(r.codigoServicio||'').trim() || null,
       Codigo_general_del_procedimiento_quirurgico:         r.codQx       || null,
       Consecutivo_procedimiento_quirurgico:                r.consecQx    || null,
-      Codificacion_CUPS:                                   r.codigoCUPS  || null,
-      Descripcion_del_servicio_o_elemento_reclamado:       r.descripcion || null,
+      Codificacion_CUPS:                                   furSerCupsParaTipo(r),
+      Descripcion_del_servicio_o_elemento_reclamado:       furSerLimpiarDesc(r.descripcion) || null,
       Cantidad_de_servicios:                               r.cantidad    || null,
       Valor_unitario_facturado:                            r.vrUnitFact  || null,
       Valor_unitario_reclamado:                            r.vrUnitRec || r.vrUnitFact || null,
@@ -6587,6 +6608,7 @@ function buildFURSERJsonLote(nit, listaRecs){
 }
 
 // Ver JSON
+window.buildFURSERServiciosEntry = buildFURSERServiciosEntry; window.furSerLimpiarDesc = furSerLimpiarDesc;
 window.furserVerJSON = () => {
   const json = buildFURSERJson();
   const panel = g('furser-json-panel');
