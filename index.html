@@ -357,7 +357,7 @@ select option{background:var(--sur2);}
 
       <!-- ETAPA 4: REVISAR -->
       <div class="ng">3 · Revisar</div>
-      <div class="ni" id="n-chequeo" onclick="go('chequeo')"><span class="ndot"></span>Chequeo de Soportes</div>
+      <div class="ni" id="n-revisor" onclick="go('revisor')"><span class="ndot"></span>🔎 Revisar cuenta</div>
           <div class="ni" id="n-traz" onclick="go('traz')"><span class="ndot"></span>🔍 Trazabilidad</div>
       <div id="nav-no-digitador" style="display:none;">
       <div class="ni" id="n-txt"     onclick="go('txt')">   <span class="ndot"></span>Archivos Planos .txt</div>
@@ -546,112 +546,16 @@ select option{background:var(--sur2);}
   </div>
 </div>
 </div>
-<div class="page hidden" id="p-chequeo">
-        <div class="ptitle">✅ Chequeo de Soportes</div>
-        <div class="psub">Revisión documental por ítem antes de radicar · Glosas serie 3101–3112</div>
-
-        <!-- Selector de reclamación -->
-        <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:14px;margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:700;font-family:var(--mono);color:var(--tx2);margin-bottom:10px;">SELECCIONAR RECLAMACIÓN A REVISAR</div>
-          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-            <div style="flex:1;min-width:280px;position:relative;">
-              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">Buscar por factura, consecutivo o IPS</label>
-              <div style="display:flex;gap:6px;">
-                <input id="chq-buscar" placeholder="Ej: FE100 · Enter para cargar"
-                  oninput="window.chqBuscar(this.value)"
-                  onkeydown="if(event.key==='Enter') window.chqBuscarEnter()"
-                  autocomplete="off"
-                  style="flex:1;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
-                <button onclick="window.chqBuscarEnter()" class="btn bp" style="font-size:12px;padding:6px 14px;flex-shrink:0;">🔍</button>
-              </div>
-              <!-- Dropdown de resultados -->
-              <div id="chq-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;background:var(--sur);border:1px solid var(--brd);border-radius:6px;z-index:200;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.2);"></div>
-            </div>
-            <div style="flex:1;min-width:180px;">
-              <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px;">O seleccionar de la lista completa</label>
-              <select id="chq-sel" onchange="window.chqSelRec(this.value)"
-                style="width:100%;padding:7px 10px;border-radius:5px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;">
-                <option value="">-- Seleccione reclamación --</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Panel principal (oculto hasta seleccionar) -->
-        <div id="chq-panel" style="display:none;">
-
-          <!-- Cabecera reclamación -->
-          <div id="chq-header" style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:12px 14px;margin-bottom:12px;"></div>
-
-          <!-- Progreso -->
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-            <div style="flex:1;height:8px;border-radius:4px;background:var(--sur2);overflow:hidden;">
-              <div id="chq-barra" style="height:100%;border-radius:4px;background:var(--acc);width:0%;transition:width .3s;"></div>
-            </div>
-            <span id="chq-pct" style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc);white-space:nowrap;">0 / 0</span>
-            <button class="btn bp" onclick="window.chqGuardar()" style="font-size:11px;padding:5px 12px;">💾 Guardar revisión</button>
-          </div>
-
-          <!-- Tabs: Por servicio / Resumen -->
-          <div style="display:flex;gap:0;border-bottom:1px solid var(--brd);margin-bottom:14px;">
-            <div id="chq-tab-items" onclick="window.chqTab('items')"
-              style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--acc);border-bottom:2px solid var(--acc);font-family:var(--mono);">
-              📋 Soportes por servicio
-            </div>
-            <div id="chq-tab-resumen" onclick="window.chqTab('resumen')"
-              style="padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx2);border-bottom:2px solid transparent;font-family:var(--mono);">
-              📊 Resumen y observaciones
-            </div>
-          </div>
-
-          <!-- TAB: Soportes por servicio -->
-          <div id="chq-pane-items">
-            <div id="chq-lista-soportes" style="display:flex;flex-direction:column;gap:8px;"></div>
-          </div>
-
-          <!-- TAB: Resumen -->
-          <div id="chq-pane-resumen" style="display:none;">
-            <div id="chq-resumen-html"></div>
-            <!-- Estado radicación -->
-            <div style="margin-top:14px;background:var(--sur2);border-radius:8px;padding:14px;border:1px solid var(--brd);">
-              <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:10px;">📋 ESTADO DE RADICACIÓN CON SOPORTES</div>
-              <div style="display:flex;flex-direction:column;gap:8px;">
-                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
-                  <input type="radio" name="chq-rad-estado" id="chq-rad-completo" value="completo" style="margin-top:3px;accent-color:#A3D55D;" checked>
-                  <div><div style="font-size:12px;font-weight:600;color:#A3D55D;">✅ Soportes completos</div><div style="font-size:10px;color:var(--tx3);">Radicada con documentación completa, sin observaciones</div></div>
-                </label>
-                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
-                  <input type="radio" name="chq-rad-estado" id="chq-rad-faltantes" value="faltantes_autorizados" style="margin-top:3px;accent-color:#e3b341;">
-                  <div><div style="font-size:12px;font-weight:600;color:#e3b341;">⚠️ Radicada con faltantes — autorización IPS</div><div style="font-size:10px;color:var(--tx3);">La IPS autorizó radiar con soportes incompletos. Glosa esperada y justificada.</div></div>
-                </label>
-                <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:6px;border:1px solid var(--brd);background:var(--sur);cursor:pointer;">
-                  <input type="radio" name="chq-rad-estado" id="chq-rad-obs" value="observacion_interna" style="margin-top:3px;accent-color:#999899;">
-                  <div><div style="font-size:12px;font-weight:600;color:#999899;">📋 Observación interna CONEXA</div><div style="font-size:10px;color:var(--tx3);">Nota interna sobre condiciones especiales de esta radicación</div></div>
-                </label>
-              </div>
-              <div id="chq-rad-justificacion-wrap" style="margin-top:10px;display:none;">
-                <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:4px;">Justificación / Nota de autorización</label>
-                <textarea id="chq-rad-justificacion" rows="3" placeholder="Ej: La IPS autorizó por correo radiar sin epicrisis por demora del médico tratante." style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;resize:vertical;"></textarea>
-              </div>
-            </div>
-            <div style="margin-top:14px;">
-              <label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px;">Observaciones generales del revisor</label>
-              <textarea id="chq-obs" rows="4" placeholder="Ej: Falta epicrisis de UCI, soporte de radiología sin firma de especialista..."
-                style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur2);color:var(--tx);font-size:12px;resize:vertical;"></textarea>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px;">
-              <button class="btn bp" onclick="window.chqGuardar()" style="font-size:12px;">💾 Guardar revisión completa</button>
-              <button class="btn bs" onclick="window.chqTab('items')" style="font-size:12px;">← Volver a soportes</button>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Estado vacío -->
-        <div id="chq-empty" style="text-align:center;padding:40px 0;color:var(--tx3);font-size:13px;">
-          Selecciona una reclamación para iniciar la revisión de soportes.
-        </div>
-
+<div class="page hidden" id="p-revisor" style="padding:0;">
+  <div style="font-size:11px;color:var(--tx3);padding:6px 12px;">🔒 Los archivos se revisan en tu computador y no se suben. Solo se guarda el resumen de la revisión en la reclamación.</div>
+  <details style="margin:0 12px 6px;font-size:12px;">
+    <summary style="cursor:pointer;color:var(--tx2);font-family:var(--mono);font-size:11px;">📎 Autorización de la IPS por faltantes (estado y justificación)</summary>
+    <div style="background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:12px;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+      <input id="sp-fac" placeholder="Factura" style="width:140px;">
+      <select id="sp-est"><option value="completo">Completo</option><option value="faltantes_autorizados">Faltantes autorizados por la IPS</option><option value="observacion_interna">Observación interna</option></select>
+      <input id="sp-just" placeholder="Justificación (ej: la IPS autorizó radicar sin epicrisis)" style="flex:1;min-width:240px;">
+      <button class="btn bp" style="font-size:11px;" onclick="window.soporteEstadoRapido()">💾 Guardar</button>
+    </div>
         <!-- Carga masiva soportes -->
         <div style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-top:14px;">
           <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;margin-bottom:12px;">📊 ACTUALIZACIÓN MASIVA DE ESTADO DE SOPORTES</div>
@@ -676,7 +580,9 @@ select option{background:var(--sur2);}
           </div>
         </div>
 
-      </div>
+  </details>
+  <iframe id="rv-frame" title="Revisar cuenta" style="width:100%;height:calc(100vh - 110px);border:0;background:transparent;"></iframe>
+</div>
 
 
 
@@ -3692,6 +3598,15 @@ function renderLista(){
     const ts=r.creado?.toDate?r.creado.toDate().toLocaleDateString('es-CO'):'—';
     const vBadge=badgeVencimiento(r);
     const vTip=tooltipVencimiento(r);
+    const revBadge=(()=>{
+      const v=r.revision_cuenta;
+      const f=v&&v.fecha?new Date(v.fecha).toLocaleDateString('es-CO'):'';
+      const tip=v?`Revisada por ${v.usuarioNombre||''} el ${f}${(v.errores&&v.errores.length)?'\nErrores: '+v.errores.join(' · '):''}${(v.pendientes&&v.pendientes.length)?'\nPendientes: '+v.pendientes.join(' · '):''}`.replace(/"/g,"'"):'Aún no se ha revisado la cuenta';
+      if(!v) return `<span title="${tip}" style="background:rgba(139,148,158,.15);color:var(--tx3);font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);">🔎 Sin revisar</span>`;
+      if(v.estado==='con_errores') return `<span title="${tip}" style="background:rgba(211,47,47,.15);color:var(--red);font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);">🔎 ✕${(v.errores||[]).length} por corregir</span>`;
+      if(v.estado==='con_pendientes') return `<span title="${tip}" style="background:rgba(245,124,0,.12);color:var(--warn);font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);">🔎 ⏳${(v.pendientes||[]).length} pendientes</span>`;
+      return `<span title="${tip}" style="background:rgba(157,180,85,.12);color:var(--green);font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);">🔎 ✔ Revisada</span>`;
+    })();
     const chqBadge=(()=>{
       const c=r.chequeo_soportes;
       if(!c) return '';
@@ -3732,7 +3647,7 @@ function renderLista(){
       <div style="font-family:var(--mono);font-size:10px;color:var(--acc);min-width:24px;">#${r.id.slice(-4)}</div>
       <div style="flex:1;cursor:pointer;" onclick="selRec('${r.id}')">
         <div style="font-weight:500;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          ${r.factura} ${canEdit?`<button onclick="event.stopPropagation();editarFactura('${r.id}','${(r.factura||'').replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--tx3);padding:0;" title="Editar número de factura">✏️</button>`:''} <span class="badge bb2">${r.consec}</span> ${gBadge} ${aBadge} ${rondasBadge} ${glosasBadge} ${loteTag} ${r.paquete?.radicadoInterno?`<span title="Paquete de recepción · ${r.paquete.radicadoCuenta||''}" style="background:rgba(163,113,247,.15);color:#a371f7;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;">📦 ${r.paquete.radicadoInterno}</span>`:''} ${radNum} ${vBadge} ${chqBadge} ${asigBadge}
+          ${r.factura} ${canEdit?`<button onclick="event.stopPropagation();editarFactura('${r.id}','${(r.factura||'').replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--tx3);padding:0;" title="Editar número de factura">✏️</button>`:''} <span class="badge bb2">${r.consec}</span> ${gBadge} ${aBadge} ${rondasBadge} ${glosasBadge} ${loteTag} ${r.paquete?.radicadoInterno?`<span title="Paquete de recepción · ${r.paquete.radicadoCuenta||''}" style="background:rgba(163,113,247,.15);color:#a371f7;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;">📦 ${r.paquete.radicadoInterno}</span>`:''} ${radNum} ${vBadge} ${chqBadge} ${revBadge} ${asigBadge}
         </div>
         <div style="font-size:11px;color:var(--tx2);margin-top:2px;">
           IPS:${r.codHab} · ${items} ítems ·
@@ -8077,6 +7992,29 @@ function abrirParte2ConDatos(rec, rol){
   }
 }
 
+/* ── Traza de la revisión de cuentas (la escribe el revisor, que corre en un iframe de este mismo sitio) ── */
+window.RevisorHook = {
+  usuario: () => USER ? {uid:USER.uid, nombre:USER.nombre||USER.email||''} : null,
+  async guardar(r){
+    if(!USER) return {ok:false, motivo:'Sesión no iniciada en el sistema.'};
+    const fa = String(r.factura||'').toUpperCase();
+    const rec = (RECS_ALL||[]).find(x => String(x.factura||'').toUpperCase()===fa);
+    if(!rec) return {ok:false, motivo:`La factura ${fa} no está registrada en el sistema (recíbela primero en un paquete).`};
+    const ahora = new Date().toISOString(), nombre = USER.nombre||USER.email||'';
+    const prev = rec.revision_cuenta || {}, hist = [...(Array.isArray(prev.historial)?prev.historial:[])];
+    const firma = JSON.stringify([r.estado, r.errores, r.pendientes]);
+    const ult = hist[hist.length-1];
+    if(ult && ult.firma===firma){ ult.fecha = ahora; ult.usuarioNombre = nombre; }
+    else hist.push({fecha:ahora, usuario:USER.uid, usuarioNombre:nombre, estado:r.estado, errores:r.errores.length, pendientes:r.pendientes.length, alertas:r.alertas, firma});
+    const rc = {estado:r.estado, errores:r.errores, pendientes:r.pendientes, alertas:r.alertas, confirmadas:r.confirmadas, totalManual:r.totalManual,
+      fecha:ahora, usuario:USER.uid, usuarioNombre:nombre, version:r.version||'1', historial:hist.slice(-30)};
+    try{ await updateDoc(doc(db,'reclamaciones',rec.id), {revision_cuenta:rc}); }
+    catch(e){ return {ok:false, motivo:'No se pudo guardar: '+(e.code||e.message)}; }
+    rec.revision_cuenta = rc;
+    return {ok:true, consec:rec.consec};
+  }
+};
+
 window.go=(id)=>{
   document.querySelectorAll('.page').forEach(e=>{ e.classList.remove('on'); e.style.display=''; });
   const pg=g('p-'+id);
@@ -8086,6 +8024,7 @@ window.go=(id)=>{
   if(id==='nueva') prepNueva();
   if(id==='lista'){ renderLista(); }
   if(id==='paq'){ paqLoad(); paqTab('nuevo'); }
+  if(id==='revisor'){ const f=g('rv-frame'); if(f && !f.getAttribute('src')) f.setAttribute('src','revisor_cuenta.html'); }
   if(id==='txt')   loadTxt();
   if(id==='xl')    loadXL();
   if(id==='hist')  loadHistorial();
@@ -8112,7 +8051,6 @@ window.go=(id)=>{
     loadPagos();
   }
   if(id==='glosas'){ loadGlosas(); }
-  if(id==='chequeo'){ loadChequeo(); }
 };
 
 // ── PREPARAR NUEVA RECLAMACIÓN CON CONSECUTIVO AUTOMÁTICO ──
@@ -10536,6 +10474,17 @@ window.asignarMasivoExcel=async function(file){
   const inp=document.getElementById('asig-excel-input');if(inp)inp.value='';
 };
 
+window.soporteEstadoRapido=async()=>{
+  const fac=(g('sp-fac').value||'').trim().toUpperCase(), est=g('sp-est').value, just=(g('sp-just').value||'').trim();
+  const rec=(typeof RECS_ALL!=='undefined'?RECS_ALL:[]).find(r=>String(r.factura||'').toUpperCase()===fac);
+  if(!rec){toast('No encontré la factura "'+fac+'".','w');return;}
+  if(est==='faltantes_autorizados'&&!just){toast('Escribe la justificación de la autorización.','w');return;}
+  try{
+    await updateDoc(doc(db,'reclamaciones',rec.id),{'chequeo_soportes.soporteRadicacion':est,'chequeo_soportes.soporteJustificacion':just,'chequeo_soportes.actualizadoPor':USER.nombre||USER.email||'',actualizado:serverTimestamp()});
+    rec.chequeo_soportes={...(rec.chequeo_soportes||{}),soporteRadicacion:est,soporteJustificacion:just};
+    toast('✔ Guardado','ok');
+  }catch(e){toast('Error: '+e.message,'e');}
+};
 window.descargarPlantillaSoportes=function(){
   if(typeof XLSX==='undefined'){toast('Cargando librería Excel...','w');setTimeout(descargarPlantillaSoportes,1500);return;}
   // Usar RECS_ALL para incluir TODAS las reclamaciones sin importar el filtro activo

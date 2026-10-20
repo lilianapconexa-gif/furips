@@ -1001,6 +1001,7 @@ async function inicializar(){
       if(snap.exists()){
         REC={id:snap.id,...snap.data()};
         dbg('✔ Datos desde Firestore');
+        window.__revAvisar=true;
         try{sessionStorage.setItem('furips_p2_rec',JSON.stringify(REC));}catch(e){}
         mostrarFormulario();
         return;
@@ -1060,6 +1061,7 @@ async function _sincFB(recId){
 inicializar();
 
 function mostrarFormulario(){
+  if(window.__revAvisar){ window.__revAvisar=false; setTimeout(revisionToast,800); }
   if(!REC) return;
   g('hdr-fac').textContent = 'Factura: '+REC.factura+' · '+REC.consec;
   const rolEl=g('hdr-rol2');
@@ -3329,10 +3331,7 @@ window.cargarFURIPSdesdePDF = async (file) => {
 
 window.guardarF1=async()=>{
   if(!REC){toast('No hay reclamación activa.','e');return;}
-  // ── Mostrar lista de chequeo antes de guardar ──
-  window.abrirChequeo(async ({marcados, pendientes})=>{
-    await _ejecutarGuardarF1(marcados, pendientes);
-  });
+  await _ejecutarGuardarF1([],[]);
 };
 
 async function _ejecutarGuardarF1(soportesMarcados=[], soportesPendientes=[]){
@@ -3382,20 +3381,12 @@ async function _ejecutarGuardarF1(soportesMarcados=[], soportesPendientes=[]){
   loader(true);
   const ok2=await saveToFB({
     furips1:d,
-    furips1_flags:flags,
-    chequeo_soportes:{
-      marcados:soportesMarcados,
-      pendientes:soportesPendientes,
-      fecha:new Date().toISOString()
-    }
+    furips1_flags:flags
   });
   loader(false);
   if(ok2){
     REC.furips1=d; REC.furips1_flags=flags;
-    const pendMsg = soportesPendientes.length>0
-      ? ` · ⚠️ ${soportesPendientes.length} soporte${soportesPendientes.length>1?'s':''} pendiente${soportesPendientes.length>1?'s':''}`
-      : ' · ✔ Todos los soportes confirmados';
-    toast('✔ FURIPS 1 guardado en Firebase' + pendMsg, soportesPendientes.length>0?'w':'ok');
+    toast('✔ FURIPS 1 guardado en Firebase','ok');
     setTimeout(()=>{ markAllGreen(); valAll(); },300);
   }
 }
@@ -6004,7 +5995,16 @@ function furActivarMsgs(){
 window.furRefrescarMsgs = () => FUR_SPEC.forEach(s => furMsgCampo(s[2]));
 setTimeout(furActivarMsgs, 0);
 // Puerta común: ajusta, valida y bloquea si hay errores
+function revisionAviso(){
+  const v=REC&&REC.revision_cuenta;
+  if(!v) return 'Esta cuenta aún no se ha revisado (pestaña "Revisar cuenta").';
+  if(v.estado==='con_errores') return 'La revisión dejó '+((v.errores||[]).length)+' punto(s) por corregir: '+(v.errores||[]).slice(0,3).join(' · ');
+  if(v.estado==='con_pendientes') return 'La revisión dejó '+((v.pendientes||[]).length)+' punto(s) por confirmar.';
+  return '';
+}
+function revisionToast(){ try{ const m=revisionAviso(); if(m) toast('🔎 '+m,'w'); }catch(e){} }
 function furPuerta(){
+  revisionToast();
   furAutoAjustar(true);
   const errs = furValidarTodo();
   if(errs.length){ toast(`⚠ ${errs.length} campo(s) no cumplen la Circular; revisa el panel.`,'w'); furVerificar(); return false; }
@@ -6858,6 +6858,7 @@ window.guardarFURSER = async () => {
 
 // Descargar JSON
 window.descargarFURSERjson = () => {
+  revisionToast();
   const nit  = nitIPS(REC, g('fur-nit')?.value);
   if(!nit){ toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1) de la pestaña FUR.','w'); return; }
   const _pv=furSerValidar(REC); if(_pv.length){ alert('No cumple la Circular 003:\n\n'+_pv.slice(0,15).join('\n')); return; }
