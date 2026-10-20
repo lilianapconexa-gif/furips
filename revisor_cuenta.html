@@ -106,6 +106,28 @@ async function textoPDF(file){
   return {txt,pages:pdf.numPages};
 }
 
+// Firmas del profesional: nombre + especialidad + registro médico o documento de identidad
+function revisarFirmas(txt){
+  const L=txt.split(/\n/).map(x=>x.replace(/\s+/g,' ').trim()), out={bloques:0,faltas:[]};
+  const LAB=/(registro\s*m[eé]d\w*|reg\.?\s*m[eé]d\w*|tarjeta\s+profesional)/ig;
+  const ESPW=/m[eé]dic[oa]s?|especialista|ortop[eé]dia|ortop[eé]dic[oa]|cirujan[oa]|cirug[ií]a|anest[eé]si\w+|pediatr\w+|ginec\w+|internist\w+|urgencias|enfermer[oa]|fisioterap\w+|terapeuta|radi[oó]log\w+|odont[oó]log\w+|psic[oó]log\w+|general|traumatolog[ií]a|s\.?s\.?o\.?/ig;
+  const BOIL=/este documento no registra firma[^\n]*|licenciado a:[^\n]*|c[eé]dula\s*:?|\bcc\b/ig;
+  L.forEach((ln,i)=>{
+    if(!/registro\s*m[eé]d|reg\.?\s*m[eé]d|tarjeta\s+profesional/i.test(ln)) return;
+    const w=L.slice(Math.max(0,i-3),i+4);
+    const near=L.slice(Math.max(0,i-2),i+2).join(' ');
+    if(!/\d{2,}/.test(near)) return;
+    out.bloques++;
+    const sinLab=w.join('\n').replace(LAB,' ').replace(BOIL,' ');
+    const esp=new RegExp(ESPW.source,'i').test(sinLab);
+    const resto=sinLab.replace(ESPW,' ').replace(/[\d\-:.,\[\]()]+/g,' ');
+    const nom=/[A-ZÁÉÍÓÚÑ]{3,}( [A-ZÁÉÍÓÚÑ]{2,}){1,4}/.test(resto);
+    if(!nom) out.faltas.push('nombre del profesional');
+    if(!esp) out.faltas.push('especialidad');
+  });
+  return out;
+}
+
 // ───────── Lectura de XML / RIPS / CUV ─────────
 const loc=(n,name)=>[...n.getElementsByTagName('*')].filter(e=>e.localName===name);
 const first=(n,name)=>loc(n,name)[0]||null;
@@ -286,6 +308,13 @@ async function revisar(key,g){
         if(dias.size&&!dias.has(f)) add('Contenido','warn',`La historia (HEV/EPI) no tiene folio del ${f.split('-').reverse().join('/')}, fecha de la atención facturada`,enDQX?'Solo aparece en la descripción quirúrgica.':'Verifica que el resumen cubra la atención que se cobra.');
       });
     }
+    // firmas del profesional (nombre, especialidad y registro o documento)
+    ['HEV','EPI','DQX','HAU','OPF','RAN'].forEach(p=>(T[p]||[]).forEach(t=>{
+      const f=revisarFirmas(t);
+      if(!f.bloques) add('Contenido','err',`${p}: no veo registro médico ni documento del profesional que firma`,'Debe venir nombre, especialidad y registro médico o documento de identidad del profesional.');
+      else if(f.faltas.length) add('Contenido','err',`${p}: a la firma del profesional le falta ${[...new Set(f.faltas)].join(' y ')}`,'Debe venir nombre, especialidad y registro médico o documento de identidad.');
+      else add('Contenido','ok',`Firma completa en ${p} (nombre, especialidad y registro)`);
+    }));
     // IPO: diagnósticos del FURIPS
     (T.IPO||[]).forEach(t=>{
       const e=t.match(/Diagnostico\s+Principal\s+Egreso([^\n]*)/i);
@@ -440,7 +469,9 @@ function armarLista(key,R){
   man('inc','Ningún ítem cobrado aparte está ya incluido en otro servicio (derechos de sala, materiales, honorarios) — glosa 45');
   man('tar','Los valores están liquidados con el manual tarifario SOAT de la fecha del servicio y no superan el tope de cobertura (glosa 43 y 42)');
   man('hev','El resumen o la evolución corresponde a la atención que se cobra (fechas y servicios)');
-  man('fir','Las firmas, sellos y registro médico están visibles donde se exigen');
+  { const okf=R.filter(r=>r.msg&&r.msg.startsWith('Firma completa')), esc=R.filter(r=>r.msg&&r.msg.includes('es un documento escaneado'));
+    if(okf.length) L.push({id:'fir',txt:'Firmas del profesional con nombre, especialidad y registro: '+okf.map(r=>r.msg.replace('Firma completa en ','').replace(/ \(.*\)/,'')).join(', '),tipo:'ok'});
+    if(esc.length||!okf.length) man('fir2','Firmas en '+(esc.length?'los documentos escaneados':'los documentos clínicos')+': traen nombre, especialidad y registro médico o documento del profesional'); }
   { const ev=por('Evento'), oks=ev.filter(r=>r.lvl==='ok');
     if(!ev.some(r=>r.lvl==='err'||r.lvl==='warn')){
       if(oks.length>=2) L.push({id:'evt',txt:'Evento verificado como accidente de tránsito: '+oks.map(r=>r.msg).join(' · '),tipo:'ok'});
