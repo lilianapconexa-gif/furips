@@ -421,7 +421,7 @@ function armarLista(key,R){
   const hay=(sec,lvl)=>por(sec).some(r=>r.lvl===lvl);
   const auto=(id,txt,ok,det)=>L.push({id,txt,tipo:ok?'ok':'fail',det});
   const man=(id,txt,det)=>L.push({id,txt,tipo:'manual',det});
-  auto('nom','Nombres de archivos según la guía',!hay('Nombres','err'));
+  L.push({id:'nom',txt:'Nombres de archivos según la guía'+(hay('Nombres','err')?' — hay nombres por corregir (no impide procesar la cuenta)':''),tipo:'ok',det:''});
   auto('sop','Soportes obligatorios presentes',!hay('Soportes','err'));
   auto('cuv','CUV válido y de esta factura',R.some(r=>r.msg&&r.msg.startsWith('CUV válido')));
   auto('tot','Total del RIPS igual al de la factura',R.some(r=>r.msg&&r.msg.startsWith('Total RIPS')));
@@ -458,6 +458,7 @@ window.rvChk=(key,id,v)=>{
   const st=leerEstado(key);st[id]=v;guardarEstado(key,st);
   const el=document.getElementById('ci_'+key+'_'+id);if(el)el.classList.toggle('done',v);
   const b=document.getElementById('lb_'+key),r=resumenLista(key);if(b){b.className='lb '+r.c;b.textContent=r.t}
+  pintarSugerido(key);
   enviarTraza(key,700);
 };
 // ───────── Traza en el sistema (solo resumen; sin datos de pacientes) ─────────
@@ -465,12 +466,32 @@ function hookSistema(){try{return window.parent!==window&&window.parent.RevisorH
 function resumenTraza(key){
   const res=RESULT[key],L=LISTAS[key],st=leerEstado(key),docs=(res.rr&&res.rr.docs)||[];
   const san=t=>{let x=String(t||'');docs.forEach(d=>{if(d)x=x.split(d).join('[doc]')});return x};
-  const fallas=L.filter(x=>x.tipo==='fail').map(x=>san(x.txt));
-  const errs=res.R.filter(r=>r.lvl==='err').map(r=>san(r.msg));
+  const ESEN=/^Falta (FEV|RIP|CUV|IPO)\b|^Falta resumen de atención/;
+  const fl=L.filter(x=>x.tipo==='fail'&&x.id!=='nom'&&x.id!=='sop');
+  const fallas=fl.map(x=>san(x.txt));
+  const rerr=res.R.filter(r=>r.lvl==='err'&&r.sec!=='Nombres');
+  const errs=rerr.map(r=>san(r.msg));
   const errores=[...new Set([...errs,...fallas])].slice(0,30);
+  const esenciales=[...new Set([...rerr.filter(r=>ESEN.test(r.msg)||r.sec==='Plazo').map(r=>san(r.msg)),...fl.filter(x=>x.id==='plz').map(x=>san(x.txt))])].slice(0,30);
   const manual=L.filter(x=>x.tipo==='manual'),pend=manual.filter(x=>!st[x.id]).map(x=>san(x.txt)).slice(0,30);
   return {factura:key,nit:GRUPOS[key]?GRUPOS[key].nit:'',estado:errores.length?'con_errores':pend.length?'con_pendientes':'completa',
-    errores,pendientes:pend,alertas:res.R.filter(r=>r.lvl==='warn').length,confirmadas:manual.length-pend.length,totalManual:manual.length,version:'1'};
+    errores,esenciales,pendientes:pend,sugerido:(esenciales.length?'devuelta_ips':(errores.length||pend.length)?'pendiente':'radicada'),alertas:res.R.filter(r=>r.lvl==='warn').length,confirmadas:manual.length-pend.length,totalManual:manual.length,version:'1'};
+}
+const SUG={devuelta_ips:{ic:'↩',t:'Devolver a la IPS',c:'var(--err)'},pendiente:{ic:'⏳',t:'Dejar pendiente',c:'var(--warn)'},radicada:{ic:'✔',t:'Pasa a radicación',c:'var(--ok)'}};
+function pintarSugerido(key){
+  const el=$('sg_'+key); if(!el) return;
+  const rs=resumenTraza(key),sg=SUG[rs.sugerido];
+  const motivo=rs.sugerido==='devuelta_ips'?rs.esenciales.join(' | '):rs.sugerido==='pendiente'?'Solicitar a la IPS: '+[...rs.errores,...rs.pendientes].join(' | '):'';
+  el.innerHTML=`<div style="border:1px solid ${sg.c};border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:220px;font-size:13px;"><b style="color:${sg.c}">${sg.ic} Estado sugerido: ${sg.t}</b><div style="font-size:11px;color:var(--tx2);margin-top:2px;">${rs.sugerido==='devuelta_ips'?'Falta un documento esencial o la cuenta es extemporánea ('+rs.esenciales.length+'): se glosaría completa.':rs.sugerido==='pendiente'?'Se puede subsanar pidiendo a la IPS lo que falta ('+(rs.errores.length+rs.pendientes.length)+' punto(s)).':'Sin faltantes y todo confirmado.'} Es una sugerencia: tú decides.</div></div><button class="btn" id="sgb_${key}" style="padding:6px 12px;">Aplicar estado</button></div>`;
+  const b=$('sgb_'+key); if(b) b.onclick=()=>aplicarSugerido(key,rs.sugerido,motivo);
+}
+async function aplicarSugerido(key,est,motivo){
+  const h=hookSistema(); if(!h||!h.aplicarEstado){alert('Ábrelo desde «Revisar cuenta» dentro del sistema para aplicar el estado.');return}
+  if(!confirm('¿Cambiar el estado de la factura '+key+' a «'+SUG[est].t+'»?'))return;
+  try{const r=await h.aplicarEstado(key,est,motivo);const el=$('sg_'+key);
+    if(r&&r.ok)el.insertAdjacentHTML('beforeend','<div style="font-size:12px;color:var(--ok);margin-top:6px;">✔ Estado actualizado en el sistema.</div>');
+    else alert((r&&r.motivo)||'No se pudo cambiar el estado.');
+  }catch(e){alert('Error: '+e.message)}
 }
 const _tzT={};
 function enviarTraza(key,demora){
@@ -480,14 +501,14 @@ function enviarTraza(key,demora){
     const h=hookSistema();
     if(!h){el.textContent='🔌 Abierto fuera del sistema: la revisión no deja traza. Ábrelo desde «Revisar cuenta» dentro del sistema.';el.style.color='var(--warn)';return}
     try{const r=await h.guardar(resumenTraza(key));
-      if(r.ok){el.textContent=`🗂 Traza guardada en el sistema (consecutivo ${r.consec})`;el.style.color='var(--ok)'}
+      if(r.ok){pintarSugerido(key);el.textContent=`🗂 Traza guardada en el sistema (consecutivo ${r.consec})`;el.style.color='var(--ok)'}
       else{el.textContent='⚠ '+r.motivo;el.style.color='var(--warn)'}
     }catch(e){el.textContent='⚠ No se pudo guardar la traza: '+e.message;el.style.color='var(--warn)'}
   },demora||0);
 }
 function pintarLista(key){
   const L=LISTAS[key],st=leerEstado(key),r=resumenLista(key);
-  return `<div class="lst"><h3>Lista de chequeo</h3><div id="lb_${key}" class="lb ${r.c}">${esc(r.t)}</div><div id="tz_${key}" style="font-size:12px;color:var(--tx2);margin:-2px 0 8px;"></div>`+L.map(x=>{
+  return `<div class="lst"><h3>Lista de chequeo</h3><div id="lb_${key}" class="lb ${r.c}">${esc(r.t)}</div><div id="tz_${key}" style="font-size:12px;color:var(--tx2);margin:-2px 0 8px;"></div><div id="sg_${key}" style="margin:0 0 10px;"></div>`+L.map(x=>{
     if(x.tipo==='ok') return `<div class="ci ok"><input type="checkbox" checked disabled><label>${esc(x.txt)}<span class="tg tg-ok">verificado</span></label></div>`;
     if(x.tipo==='fail') return `<div class="ci fail"><input type="checkbox" disabled><label>${esc(x.txt)}<span class="tg tg-fail">corregir</span></label></div>`;
     return `<div class="ci ${st[x.id]?'done':''}" id="ci_${key}_${x.id}"><input type="checkbox" id="ck_${key}_${x.id}" ${st[x.id]?'checked':''} onchange="rvChk('${key}','${x.id}',this.checked)"><label for="ck_${key}_${x.id}">${esc(x.txt)}${x.det?`<small style="display:block;color:var(--tx2)">${esc(x.det)}</small>`:''}</label></div>`;
@@ -533,7 +554,7 @@ async function procesar(files){
   const porCufe={};
   Object.entries(hechos).forEach(([k,r])=>{const c=r.fx&&r.fx.cufe;if(c)(porCufe[c]=porCufe[c]||[]).push(k)});
   Object.values(porCufe).filter(v=>v.length>1).forEach(v=>v.forEach(k=>hechos[k].R.push({sec:'Factura',lvl:'err',msg:`El CUFE es igual al de otra factura (${v.filter(x=>x!==k).join(', ')})`,det:'Glosa 4412: anula la reclamación.'})));
-  Object.keys(hechos).forEach(k=>{RESULT[k]=hechos[k];$('out').insertAdjacentHTML('beforeend',pintar(k,hechos[k]));enviarTraza(k,0)});
+  Object.keys(hechos).forEach(k=>{RESULT[k]=hechos[k];$('out').insertAdjacentHTML('beforeend',pintar(k,hechos[k]));pintarSugerido(k);enviarTraza(k,0)});
   if(SUELTOS.length){
     $('out').insertAdjacentHTML('beforeend',`<div class="card"><div class="hd"><h2>Archivos que no se asignaron a una factura</h2></div><div class="sec">${SUELTOS.map(s=>`<div class="it l-warn"><span class="ic">⚠</span><span class="t">${esc(s.f.name)}<small>${esc(s.motivo)}</small></span></div>`).join('')}</div></div>`);
   }

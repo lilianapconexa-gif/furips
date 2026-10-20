@@ -8006,12 +8006,20 @@ window.RevisorHook = {
     const ult = hist[hist.length-1];
     if(ult && ult.firma===firma){ ult.fecha = ahora; ult.usuarioNombre = nombre; }
     else hist.push({fecha:ahora, usuario:USER.uid, usuarioNombre:nombre, estado:r.estado, errores:r.errores.length, pendientes:r.pendientes.length, alertas:r.alertas, firma});
-    const rc = {estado:r.estado, errores:r.errores, pendientes:r.pendientes, alertas:r.alertas, confirmadas:r.confirmadas, totalManual:r.totalManual,
+    const rc = {estado:r.estado, sugerido:r.sugerido||null, errores:r.errores, pendientes:r.pendientes, alertas:r.alertas, confirmadas:r.confirmadas, totalManual:r.totalManual,
       fecha:ahora, usuario:USER.uid, usuarioNombre:nombre, version:r.version||'1', historial:hist.slice(-30)};
     try{ await updateDoc(doc(db,'reclamaciones',rec.id), {revision_cuenta:rc}); }
     catch(e){ return {ok:false, motivo:'No se pudo guardar: '+(e.code||e.message)}; }
     rec.revision_cuenta = rc;
     return {ok:true, consec:rec.consec};
+  },
+  async aplicarEstado(factura, estado, motivo){
+    const fa = String(factura||'').toUpperCase();
+    const rec = (RECS_ALL||[]).find(x => String(x.factura||'').toUpperCase()===fa);
+    if(!rec) return {ok:false, motivo:'La factura no está registrada en el sistema.'};
+    if(!['pendiente','devuelta_ips','radicada'].includes(estado)) return {ok:false, motivo:'Estado no válido.'};
+    const ok = await window.cambiarEstadoGestion(rec.id, estado, String(motivo||'').slice(0,1500));
+    return ok ? {ok:true} : {ok:false, motivo:'No se cambió el estado (revisa el aviso del sistema: permisos o transición no permitida).'};
   }
 };
 
