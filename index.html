@@ -2507,7 +2507,7 @@ service cloud.firestore {
 <script type="module">
 import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── CONFIG ──
 const FB = { apiKey:"AIzaSyDTt_Zcps6lX8E-dZ2aW7oztJUvu7-kz_g", authDomain:"conexa-soat.firebaseapp.com", projectId:"conexa-soat", storageBucket:"conexa-soat.firebasestorage.app", messagingSenderId:"410323697377", appId:"1:410323697377:web:f76e88fe905b8c265e41a0" };
@@ -7992,6 +7992,33 @@ function abrirParte2ConDatos(rec, rol){
   }
 }
 
+/* ── Aprendizaje compartido del revisor: solo conteos (sin datos de pacientes) ── */
+function aprDeltas(prev, A, inc){
+  prev = prev || {}; A = A || {};
+  const P = {v:prev.v||[], o:prev.o||[], e:prev.e||[], p:prev.p||[], c:!!prev.c};
+  const pv=new Set(P.v), po=new Set(P.o), pe=new Set(P.e), pp=new Set(P.p);
+  const items={}, errores={}, profs={}; let cambia=false;
+  (A.v||[]).forEach(x=>{ if(!pv.has(x.h)){ (items[x.h]=items[x.h]||{t:x.t}).v=inc(1); cambia=true; } });
+  (A.o||[]).forEach(h=>{ if(!po.has(h)){ (items[h]=items[h]||{}).o=inc(1); cambia=true; } });
+  P.o.forEach(h=>{ if(!(A.o||[]).includes(h)){ (items[h]=items[h]||{}).o=inc(-1); cambia=true; } });
+  (A.e||[]).forEach(x=>{ if(!pe.has(x.h)){ errores[x.h]={t:x.t,n:inc(1)}; cambia=true; } });
+  (A.p||[]).forEach(q=>{ if(!pp.has(q.k)){ (profs[q.reg]=profs[q.reg]||{reg:q.reg,versiones:{}}).versiones[q.k]={nombre:q.nombre,esp:q.esp,n:inc(1)}; cambia=true; } });
+  const nuevo = {v:[...new Set([...P.v,...(A.v||[]).map(x=>x.h)])].slice(-120), o:(A.o||[]).slice(0,120),
+    e:[...new Set([...P.e,...(A.e||[]).map(x=>x.h)])].slice(-80), p:[...new Set([...P.p,...(A.p||[]).map(q=>q.k)])].slice(-40), c:true};
+  return {items, errores, profs, cuenta:!P.c, cambia: cambia||!P.c, nuevo};
+}
+async function aprEscribir(nit, d){
+  if(!d.cambia) return;
+  const base = {};
+  if(Object.keys(d.items).length) base.items=d.items;
+  if(Object.keys(d.errores).length) base.errores=d.errores;
+  if(d.cuenta) base.cuentas=increment(1);
+  const tareas=[];
+  if(nit) tareas.push(setDoc(doc(db,'aprendizaje_ips',String(nit)),{nit:String(nit),...base},{merge:true}));
+  tareas.push(setDoc(doc(db,'aprendizaje_ips','_global'),{nit:'_global',...base},{merge:true}));
+  Object.values(d.profs).forEach(pr=>tareas.push(setDoc(doc(db,'aprendizaje_prof',String(pr.reg)),pr,{merge:true})));
+  await Promise.all(tareas);
+}
 /* ── Traza de la revisión de cuentas (la escribe el revisor, que corre en un iframe de este mismo sitio) ── */
 window.RevisorHook = {
   usuario: () => USER ? {uid:USER.uid, nombre:USER.nombre||USER.email||''} : null,
@@ -8006,12 +8033,28 @@ window.RevisorHook = {
     const ult = hist[hist.length-1];
     if(ult && ult.firma===firma){ ult.fecha = ahora; ult.usuarioNombre = nombre; }
     else hist.push({fecha:ahora, usuario:USER.uid, usuarioNombre:nombre, estado:r.estado, errores:r.errores.length, pendientes:r.pendientes.length, alertas:r.alertas, firma});
-    const rc = {estado:r.estado, sugerido:r.sugerido||null, errores:r.errores, pendientes:r.pendientes, alertas:r.alertas, confirmadas:r.confirmadas, totalManual:r.totalManual,
+    let aprendido = prev.aprendido || null;
+    try{
+      const dl = aprDeltas(prev.aprendido, r.aprend, increment);
+      await aprEscribir(r.nit||prev.nit||'', dl);
+      aprendido = dl.nuevo;
+    }catch(e){ console.warn('aprendizaje:', e.message); }
+    const rc = {nit:String(r.nit||prev.nit||''), aprendido, estado:r.estado, sugerido:r.sugerido||null, errores:r.errores, pendientes:r.pendientes, alertas:r.alertas, confirmadas:r.confirmadas, totalManual:r.totalManual,
       fecha:ahora, usuario:USER.uid, usuarioNombre:nombre, version:r.version||'1', historial:hist.slice(-30)};
     try{ await updateDoc(doc(db,'reclamaciones',rec.id), {revision_cuenta:rc}); }
     catch(e){ return {ok:false, motivo:'No se pudo guardar: '+(e.code||e.message)}; }
     rec.revision_cuenta = rc;
     return {ok:true, consec:rec.consec};
+  },
+  aprendizaje: {
+    async leer(nit, regs){
+      const out = {ips:null, prof:{}};
+      try{ const sn = await getDoc(doc(db,'aprendizaje_ips',String(nit))); if(sn.exists()) out.ips = sn.data(); }catch(e){}
+      for(const rg of (regs||[]).slice(0,12)){
+        try{ const sn = await getDoc(doc(db,'aprendizaje_prof',String(rg))); if(sn.exists()) out.prof[rg] = sn.data(); }catch(e){}
+      }
+      return out;
+    }
   },
   async aplicarEstado(factura, estado, motivo){
     const fa = String(factura||'').toUpperCase();
@@ -8019,6 +8062,15 @@ window.RevisorHook = {
     if(!rec) return {ok:false, motivo:'La factura no está registrada en el sistema.'};
     if(!['pendiente','devuelta_ips','radicada'].includes(estado)) return {ok:false, motivo:'Estado no válido.'};
     const ok = await window.cambiarEstadoGestion(rec.id, estado, String(motivo||'').slice(0,1500));
+    if(ok){
+      try{
+        const rc = rec.revision_cuenta || {}, kk = (rc.sugerido||'ninguno')+'__'+estado;
+        const dd = {estados:{[kk]:increment(1)}};
+        const t = [setDoc(doc(db,'aprendizaje_ips','_global'),{nit:'_global',...dd},{merge:true})];
+        if(rc.nit) t.push(setDoc(doc(db,'aprendizaje_ips',String(rc.nit)),{nit:String(rc.nit),...dd},{merge:true}));
+        await Promise.all(t);
+      }catch(e){ console.warn('aprendizaje estado:', e.message); }
+    }
     return ok ? {ok:true} : {ok:false, motivo:'No se cambió el estado (revisa el aviso del sistema: permisos o transición no permitida).'};
   }
 };

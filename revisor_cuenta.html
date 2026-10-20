@@ -108,10 +108,13 @@ async function textoPDF(file){
 
 // Firmas del profesional: nombre + especialidad + registro médico o documento de identidad
 function revisarFirmas(txt){
-  const L=txt.split(/\n/).map(x=>x.replace(/\s+/g,' ').trim()), out={bloques:0,faltas:[]};
+  const L=txt.split(/\n/).map(x=>x.replace(/\s+/g,' ').trim()), out={bloques:0,faltas:[],profs:[]};
   const LAB=/(registro\s*m[eé]d\w*|reg\.?\s*m[eé]d\w*|tarjeta\s+profesional)/ig;
   const ESPW=/m[eé]dic[oa]s?|especialista|ortop[eé]dia|ortop[eé]dic[oa]|cirujan[oa]|cirug[ií]a|anest[eé]si\w+|pediatr\w+|ginec\w+|internist\w+|urgencias|enfermer[oa]|fisioterap\w+|terapeuta|radi[oó]log\w+|odont[oó]log\w+|psic[oó]log\w+|general|traumatolog[ií]a|s\.?s\.?o\.?/ig;
   const BOIL=/este documento no registra firma[^\n]*|licenciado a:[^\n]*|c[eé]dula\s*:?|\bcc\b/ig;
+  const limp=x=>(x||'').replace(LAB,' ').replace(BOIL,' ').replace(/\d+|[-:.,\[\]()]+/g,' ').replace(/\s+/g,' ').trim();
+  const esNom=x=>{const t=limp(x);return /^[A-ZÁÉÍÓÚÑ]{2,}( [A-ZÁÉÍÓÚÑ]{2,}){1,4}$/.test(t)&&!new RegExp(ESPW.source,'i').test(t)?t:''};
+  const esEsp=x=>{const t=limp(x);return t&&t.length<=50&&new RegExp(ESPW.source,'i').test(t)&&/^[A-ZÁÉÍÓÚÑ ]+$/.test(t)?t:''};
   L.forEach((ln,i)=>{
     if(!/registro\s*m[eé]d|reg\.?\s*m[eé]d|tarjeta\s+profesional/i.test(ln)) return;
     const w=L.slice(Math.max(0,i-3),i+4);
@@ -124,6 +127,12 @@ function revisarFirmas(txt){
     const nom=/[A-ZÁÉÍÓÚÑ]{3,}( [A-ZÁÉÍÓÚÑ]{2,}){1,4}/.test(resto);
     if(!nom) out.faltas.push('nombre del profesional');
     if(!esp) out.faltas.push('especialidad');
+    // datos del profesional (para aprender): registro, nombre y especialidad
+    const rg=(ln.match(/(\d{2,})\s+(?:registro|reg\.?|tarjeta)/i)||ln.match(/(?:registro\s*m[eé]d\w*|reg\.?\s*m[eé]d\w*|tarjeta\s+profesional)\s*:?\s*(\d{2,})/i)||(L[i-1]||'').match(/^(\d{2,})$/)||(L[i+1]||'').match(/^(\d{2,})\b/)||[])[1];
+    let nombre='',especialidad='';
+    [L[i-1],L[i+1],L[i-2],ln].forEach(x=>{if(!nombre)nombre=esNom(x)});
+    [L[i+1],L[i+2],L[i-1],ln,L[i+3]].forEach(x=>{if(!especialidad)especialidad=esEsp(x)});
+    if(rg&&nombre&&especialidad) out.profs.push({reg:rg,nombre,esp:especialidad});
   });
   return out;
 }
@@ -215,9 +224,8 @@ async function revisar(key,g){
   // 3. Obligatorios
   const exige=(p,txt,lvl='err')=>{ if(!prefijos.has(p)) add('Soportes',lvl,`Falta ${p} — ${SOP[p]}`,txt); };
   ['FEV','RIP','CUV','FAC','IPO'].forEach(p=>exige(p,p==='IPO'?'Obligatorio en reclamaciones por accidente de tránsito.':'Obligatorio en toda cuenta.'));
-  const quirur=rr&&rr.procs.some(p=>String(p.grupoServicios)==='04');
-  if((quirur||(rr&&rr.hosp.length))&&!prefijos.has('EPI')) add('Soportes','err','Falta EPI — Epicrisis','El Manual de auditoría de la ADRES la exige cuando hay cirugía, hospitalización o urgencias con observación; la hoja de evolución (HEV) no la reemplaza (riesgo de glosa 3111).');
-  else if(!prefijos.has('EPI')&&!prefijos.has('HEV')) add('Soportes','err','Falta resumen de atención: HEV o EPI','Debe haber al menos uno.');
+  const quirur=rr&&rr.procs.some(p=>String(p.grupoServicios)==='04'); let posterior=false; const prof=[];
+  if(!prefijos.has('EPI')&&!prefijos.has('HEV')) add('Soportes','err','Falta resumen de atención: HEV o EPI','Debe haber al menos uno.');
   if(rr){
     const gs=new Set(rr.procs.map(p=>String(p.grupoServicios)));
     if(gs.has('04')){exige('DQX','El RIPS reporta procedimientos quirúrgicos.');exige('RAN','Si hubo anestesia diferente a local, debe ir el registro de anestesia (confírmalo).','warn')}
@@ -286,18 +294,28 @@ async function revisar(key,g){
         }
       }catch(e){add('Soportes','warn',`No pude abrir ${x.f.name}: ${e.message}`)}
     }
-    const num=key.replace(/\D/g,'').replace(/^0+/,'');
-    (T.FAC||[]).forEach(t=>{ if(num&&!t.replace(/\D/g,'').includes(num)) add('Contenido','err',`El PDF de la factura (FAC) no muestra el número ${key}`) });
-    // egreso vs hora del procedimiento
-    const fac=(T.FAC||[])[0];
-    if(fac&&rr){
-      const m=fac.match(/Fec\s*Egreso\s+(\d{1,2})\s+([a-zñ]{3})\.?\s+(\d{4})\s+(\d{1,2}):(\d{2})/i);
-      if(m){
-        const eg=new Date(+m[3],(MESES[m[2].toLowerCase()]||1)-1,+m[1],+m[4],+m[5]);
-        const tarde=rr.fechas.map(s=>new Date(s.replace(' ','T'))).filter(d=>!isNaN(d)&&d>eg&&_iso(d)===_iso(eg));
-        if(tarde.length){const d=tarde[0];add('Contenido','err',`Hay un servicio a las ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} y el egreso en la factura es a las ${m[4]}:${m[5]}`,'El servicio quedaría después del egreso: corrige la hora de egreso o la del servicio.')}
+    // Servicio posterior al evento (p. ej. retiro de material): basta la historia clínica; la epicrisis no es obligatoria
+    {
+      const ipoE=(T.IPO||[]).join('\n'), fe0=ipoE.match(/Fecha\s+de\s+Evento\s+(\d{2})\/(\d{2})\/(\d{4})/i);
+      const ev0=fe0?`${fe0[3]}-${fe0[2]}-${fe0[1]}`:'';
+      posterior=!!(ev0&&rr&&rr.fechas.length&&!rr.hosp.length&&rr.fechas.every(d=>d.slice(0,10)>ev0));
+      if((quirur||(rr&&rr.hosp.length))&&!prefijos.has('EPI')){
+        if(posterior&&prefijos.has('HEV')) add('Soportes','ok','Servicio posterior al evento: no se exige epicrisis, basta la historia clínica (HEV)','Sirve para demostrar que la atención deriva del accidente de tránsito (evento '+ev0.split('-').reverse().join('/')+').');
+        else add('Soportes','err','Falta EPI — Epicrisis','El Manual de auditoría de la ADRES la exige cuando hay cirugía u hospitalización; si el servicio es posterior al evento (control, retiro de material) basta la historia clínica (HEV), pero debe estar anexa.');
       }
     }
+    // Paciente remitido: debe anexarse la historia clínica de la primera IPS que lo atendió
+    {
+      const ev=[]; 
+      if(rr&&[...rr.cons,...rr.urg,...rr.hosp,...rr.procs].some(x=>String(x.viaIngresoServicioSalud||'')==='09')) ev.push('el RIPS reporta vía de ingreso «derivado de otra institución» (09)');
+      const ipoR=(T.IPO||[]).join('\n'); const pr=ipoR.match(/Prestador\s+que\s+Remite[ \t]+(\S[^\n]*)/i);
+      if(pr&&!/^(persona|cargo|direcci|departamento|municipio|tel[eé]fono|c[oó]digo)/i.test(pr[1].trim())&&pr[1].replace(/[\s_.-]/g,'').length>3) ev.push('el IPO trae «Prestador que remite»');
+      const rem=[...(T.HEV||[]),...(T.EPI||[]),...(T.HAU||[]),...(T.DQX||[])].join('\n').match(/(?:paciente\s+)?remitid[oa]\s+(?:de|desde|por)\b[^\n]{0,60}|viene\s+remitid[oa][^\n]{0,60}|referid[oa]\s+de\s+[^\n]{0,50}|remisi[oó]n\s+(?:de|desde)\s+[^\n]{0,50}/i);
+      if(rem) ev.push('la historia dice «'+rem[0].trim().slice(0,70)+'»');
+      if(ev.length) add('Soportes','warn','Parece un paciente remitido: debe anexarse la historia clínica de la primera IPS que lo atendió','Indicios: '+ev.join('; ')+'. Para demostrar que sigue siendo atención derivada del accidente de tránsito.');
+    }
+    const num=key.replace(/\D/g,'').replace(/^0+/,'');
+    (T.FAC||[]).forEach(t=>{ if(num&&!t.replace(/\D/g,'').includes(num)) add('Contenido','err',`El PDF de la factura (FAC) no muestra el número ${key}`) });
     // folio del día de atención en HEV / EPI
     const clin=[...(T.HEV||[]),...(T.EPI||[]),...(T.HAU||[])];
     if(clin.length&&rr&&rr.fechas.length){
@@ -305,12 +323,12 @@ async function revisar(key,g){
       clin.forEach(t=>[...t.matchAll(/(\d{1,2})\s+de\s+([a-zñ]+)\s+de\s+(\d{4})/gi)].forEach(m=>{const mo=MESES[m[2].toLowerCase()];if(mo)dias.add(`${m[3]}-${String(mo).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`)}));
       [...new Set(rr.fechas.map(s=>s.slice(0,10)))].forEach(f=>{
         const enDQX=(T.DQX||[]).some(t=>t.includes(f.split('-').reverse().join('/')));
-        if(dias.size&&!dias.has(f)) add('Contenido','warn',`La historia (HEV/EPI) no tiene folio del ${f.split('-').reverse().join('/')}, fecha de la atención facturada`,enDQX?'Solo aparece en la descripción quirúrgica.':'Verifica que el resumen cubra la atención que se cobra.');
+        if(dias.size&&!dias.has(f)&&!enDQX) add('Contenido','warn',`La historia (HEV/EPI) no tiene folio del ${f.split('-').reverse().join('/')}, fecha de la atención facturada`,enDQX?'Solo aparece en la descripción quirúrgica.':'Verifica que el resumen cubra la atención que se cobra.');
       });
     }
     // firmas del profesional (nombre, especialidad y registro o documento)
     ['HEV','EPI','DQX','HAU','OPF','RAN'].forEach(p=>(T[p]||[]).forEach(t=>{
-      const f=revisarFirmas(t);
+      const f=revisarFirmas(t); f.profs.forEach(q=>{if(!prof.some(z=>z.reg===q.reg&&z.nombre===q.nombre))prof.push(q)});
       if(!f.bloques) add('Contenido','err',`${p}: no veo registro médico ni documento del profesional que firma`,'Debe venir nombre, especialidad y registro médico o documento de identidad del profesional.');
       else if(f.faltas.length) add('Contenido','err',`${p}: a la firma del profesional le falta ${[...new Set(f.faltas)].join(' y ')}`,'Debe venir nombre, especialidad y registro médico o documento de identidad.');
       else add('Contenido','ok',`Firma completa en ${p} (nombre, especialidad y registro)`);
@@ -356,7 +374,7 @@ async function revisar(key,g){
         if(prim&&prim<ev) add('Evento','err',`La atención (${prim}) es anterior a la fecha del evento (${ev})`);
         else add('Evento','ok',`Evento el ${fe[1]}/${fe[2]}/${fe[3]}, anterior a la atención facturada`);
         const hdias=[...(T.HEV||[]),...(T.HAU||[])].join('\n').match(/(\d{1,2})\s+de\s+([a-zñ]+)\s+de\s+(\d{4})/i);
-        if(hdias&&MESES[hdias[2].toLowerCase()]){const hd=`${hdias[3]}-${String(MESES[hdias[2].toLowerCase()]).padStart(2,'0')}-${String(hdias[1]).padStart(2,'0')}`;const df=Math.abs(Math.round((_pd(hd)-_pd(ev))/86400000));if(df>1) add('Evento','warn',`La primera atención en la historia es el ${hd} y el FURIPS dice que el evento fue el ${ev}`,`Diferencia de ${df} días: verifica la fecha del evento.`)}
+        if(hdias&&MESES[hdias[2].toLowerCase()]){const hd=`${hdias[3]}-${String(MESES[hdias[2].toLowerCase()]).padStart(2,'0')}-${String(hdias[1]).padStart(2,'0')}`;const df=Math.abs(Math.round((_pd(hd)-_pd(ev))/86400000));if(df>1&&!posterior) add('Evento','warn',`La primera atención en la historia es el ${hd} y el FURIPS dice que el evento fue el ${ev}`,`Diferencia de ${df} días: verifica la fecha del evento.`)}
       }
       const est=(ipo.match(/Aseguramiento\s+([A-Za-zñ_]+)/i)||[])[1]||'';
       if(est){
@@ -373,9 +391,22 @@ async function revisar(key,g){
     // a) Extemporaneidad: el término corre desde el EGRESO (o la fecha de prestación si es ambulatoria/urgencias)
     let ref='',origen='';
     const mf=fac.match(/Fec\s*Egreso\s+(\d{1,2})\s+([a-zñ]{3})\.?\s+(\d{4})/i), mi=ipo.match(/Fecha\s+de\s+Egreso\s+(\d{2})\/(\d{2})\/(\d{4})/i);
-    if(mf){ref=f2iso(mf[1],mf[2],mf[3]);origen='fecha de egreso de la factura'}
-    else if(mi){ref=`${mi[3]}-${mi[2]}-${mi[1]}`;origen='fecha de egreso del FURIPS'}
-    else if(rr&&rr.fechas.length){ref=rr.fechas.map(x=>x.slice(0,10)).sort().pop();origen='fecha de la última atención del RIPS'}
+    // Solo la historia clínica: fecha de egreso/alta; si no hay, el último folio con fecha
+    const HCT=[...(T.EPI||[]),...(T.HEV||[]),...(T.HAU||[]),...(T.DQX||[])];
+    const isoDMY=(d,m,y)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let hc=null;
+    HCT.forEach(t=>{ if(hc) return;
+      const x=t.match(/(?:egreso|alta)[^\d\n]{0,40}(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/i);
+      if(x){hc=isoDMY(x[1],x[2],x[3]);return}
+      const y=t.match(/(?:egreso|alta)[^\d\n]{0,40}(\d{1,2})\s+de\s+([a-zñ]+)\s+de\s+(\d{4})/i);
+      if(y&&MESES[y[2].toLowerCase()]) hc=isoDMY(y[1],MESES[y[2].toLowerCase()],y[3]); });
+    if(hc){ref=hc;origen='fecha de egreso de la historia clínica'}
+    else{
+      const fe=[];HCT.forEach(t=>{[...t.matchAll(/(\d{1,2})\s+de\s+([a-zñ]+)\s+de\s+(\d{4})/gi)].forEach(m=>{const mo=MESES[m[2].toLowerCase()];if(mo)fe.push(isoDMY(m[1],mo,m[3]))});[...t.matchAll(/\b(\d{2})\/(\d{2})\/(\d{4})\b/g)].forEach(m=>{if(+m[2]<=12&&+m[1]<=31)fe.push(isoDMY(m[1],m[2],m[3]))})});
+      const hoy=_iso(new Date()),v=fe.filter(x=>x<=hoy).sort();
+      if(v.length){ref=v[v.length-1];origen='fecha del último folio de la historia clínica'}
+      else add('Plazo','info','No encuentro la fecha de egreso en la historia clínica','Verifica a mano la fecha de egreso y que la radicación esté dentro del término de extemporaneidad.');
+    }
     if(ref){
       const d=_pd(ref),lim=new Date(d);let norma;
       if(ref<'2012-01-10'){lim.setMonth(lim.getMonth()+6);norma='6 meses — Art. 13 Decreto Ley 1281/2002'}
@@ -440,7 +471,7 @@ async function revisar(key,g){
   }
 
   if(!R.some(r=>r.lvl==='err'||r.lvl==='warn')) add('Resultado','ok','Cuenta completa y coherente: lista para digitar el FUR y el SER');
-  return {R,fx,rr};
+  return {R,fx,rr,prof};
 }
 
 // ───────── Lista de chequeo inteligente ─────────
@@ -454,11 +485,13 @@ function armarLista(key,R){
   auto('sop','Soportes obligatorios presentes',!hay('Soportes','err'));
   auto('cuv','CUV válido y de esta factura',R.some(r=>r.msg&&r.msg.startsWith('CUV válido')));
   auto('tot','Total del RIPS igual al de la factura',R.some(r=>r.msg&&r.msg.startsWith('Total RIPS')));
-  auto('plz','Dentro del plazo de radicación y sin extemporaneidad',por('Plazo').length>0&&!hay('Plazo','err'));
+  if(por('Plazo').some(r=>r.lvl!=='info')) auto('plz','Dentro del plazo de radicación y sin extemporaneidad',!hay('Plazo','err')); else man('plz','Verifiqué en la historia clínica la fecha de egreso y que la radicación está dentro del término de extemporaneidad');
   R.filter(r=>(r.sec==='Contenido'||r.sec==='Evento')&&r.lvl==='err').forEach((r,i)=>auto('ce'+i,r.msg,false));
   R.filter(r=>r.msg&&r.msg.includes('es un documento escaneado')).forEach((r,i)=>man('esc'+i,'Revisé a mano '+r.msg.split(':')[0]+': es el documento correcto, está legible y completo'));
   R.filter(r=>(r.sec==='Contenido'||r.sec==='Evento')&&r.lvl==='warn').forEach((r,i)=>man('cw'+i,'Revisé la alerta: '+r.msg,r.det));
   if(R.some(r=>r.msg&&r.msg.startsWith('Falta RAN'))) man('ran','Anestesia: confirmé que fue local (no requiere RAN) o adjunté el registro de anestesia');
+  if(R.some(r=>r.msg&&r.msg.startsWith('Parece un paciente remitido'))) man('rem','Paciente remitido: anexaron la historia clínica de la primera IPS que lo atendió (llegada, atención inicial y remisión)');
+  else man('rem0','Si el paciente fue remitido de otra IPS (revisa la historia y el IPO), está anexa la historia clínica de la primera IPS');
   man('cond','Confirmé si aplican y están adjuntos: CRA (póliza diferencial o agotamiento de tope), FCT (servicios tercerizados), CVE (evento catastrófico)');
   man('ord','Cada procedimiento facturado tiene su orden médica');
   man('ret','El médico tratante del FURIPS está en el RETHUS (documento y registro médico)');
@@ -517,7 +550,7 @@ function pintarSugerido(key){
   const el=$('sg_'+key); if(!el) return;
   const rs=resumenTraza(key),sg=SUG[rs.sugerido];
   const motivo=rs.sugerido==='devuelta_ips'?rs.esenciales.join(' | '):rs.sugerido==='pendiente'?'Solicitar a la IPS: '+[...rs.errores,...rs.pendientes].join(' | '):'';
-  el.innerHTML=`<div style="border:1px solid ${sg.c};border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:220px;font-size:13px;"><b style="color:${sg.c}">${sg.ic} Estado sugerido: ${sg.t}</b><div style="font-size:11px;color:var(--tx2);margin-top:2px;">${rs.sugerido==='devuelta_ips'?'Falta un documento esencial o la cuenta es extemporánea ('+rs.esenciales.length+'): se glosaría completa.':rs.sugerido==='pendiente'?'Se puede subsanar pidiendo a la IPS lo que falta ('+(rs.errores.length+rs.pendientes.length)+' punto(s)).':'Sin faltantes y todo confirmado.'} Es una sugerencia: tú decides.</div></div><button class="btn" id="sgb_${key}" style="padding:6px 12px;">Aplicar estado</button></div>`;
+  el.innerHTML=`<div style="border:1px solid ${sg.c};border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:220px;font-size:13px;"><b style="color:${sg.c}">${sg.ic} Estado sugerido: ${sg.t}</b><div style="font-size:11px;color:var(--tx2);margin-top:2px;">${rs.sugerido==='devuelta_ips'?'Falta un documento esencial o la cuenta es extemporánea ('+rs.esenciales.length+'): se glosaría completa.':rs.sugerido==='pendiente'?'Se puede subsanar pidiendo a la IPS lo que falta ('+(rs.errores.length+rs.pendientes.length)+' punto(s)).':'Sin faltantes y todo confirmado.'} Es una sugerencia: tú decides.</div>${notaEstados(key,rs.sugerido)}</div><button class="btn" id="sgb_${key}" style="padding:6px 12px;">Aplicar estado</button></div>`;
   const b=$('sgb_'+key); if(b) b.onclick=()=>aplicarSugerido(key,rs.sugerido,motivo);
 }
 async function aplicarSugerido(key,est,motivo){
@@ -528,6 +561,60 @@ async function aplicarSugerido(key,est,motivo){
     else alert((r&&r.motivo)||'No se pudo cambiar el estado.');
   }catch(e){alert('Error: '+e.message)}
 }
+// ───────── Aprendizaje compartido (solo conteos; sin datos de pacientes) ─────────
+const APR={};
+function hid(s){let a=5381,b=52711;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=((a*33)^c)>>>0;b=((b*31)+c)>>>0}return a.toString(36)+b.toString(36)+s.length.toString(36)}
+function normAprend(t){return String(t||'').replace(/^Revisé la alerta:\s*/i,'').replace(/^Revisé a mano \S+?:/i,'Revisé a mano un documento escaneado:').replace(/\S+\.(pdf|json|zip|xml)/ig,'').replace(/\[doc\]/g,'').replace(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}-\d{2}-\d{2}/g,'').replace(/\d+/g,'#').replace(/\s+/g,' ').trim().toLowerCase().slice(0,160)}
+const mayus1=t=>t?t.charAt(0).toUpperCase()+t.slice(1):t;
+const sinAcc=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+const toksN=t=>new Set(sinAcc(t).split(/[^A-Z]+/).filter(x=>x.length>1));
+const jac=(a,b)=>{const A=toksN(a),B=toksN(b);if(!A.size||!B.size)return 0;let i=0;A.forEach(x=>{if(B.has(x))i++});return i/(A.size+B.size-i)};
+function aprendizajeDe(key,rs){
+  const L=LISTAS[key]||[],st=leerEstado(key),res=RESULT[key]||{R:[],prof:[]};
+  const man=L.filter(x=>x.tipo==='manual'&&!/figura en cuentas anteriores|aparece ahora como/.test(x.txt));
+  const k=x=>{const t=normAprend(x);return {h:hid(t),t}};
+  const e=rs.errores.map(k);
+  if(res.R.some(r=>r.sec==='Nombres'&&r.lvl==='err')) e.push(k('nombres de archivo fuera de la guía'));
+  return {v:man.map(x=>k(x.txt)),o:man.filter(x=>st[x.id]).map(x=>k(x.txt).h),e,
+    p:(res.prof||[]).map(q=>({k:hid(q.reg+'|'+sinAcc(q.nombre)+'|'+sinAcc(q.esp)),reg:q.reg,nombre:q.nombre,esp:q.esp}))};
+}
+async function cargarAprendizaje(k,hecho){
+  const h=hookSistema(); if(!h||!h.aprendizaje) return;
+  try{
+    const regs=[...new Set((hecho.prof||[]).map(p=>p.reg))];
+    const a=await Promise.race([h.aprendizaje.leer(GRUPOS[k].nit,regs),new Promise((_,rej)=>setTimeout(()=>rej(new Error('tiempo')),7000))]);
+    APR[k]=a;
+    (hecho.prof||[]).forEach(p=>{
+      const d=a.prof&&a.prof[p.reg]; if(!d||!d.versiones) return;
+      const vs=Object.values(d.versiones); if(!vs.length) return;
+      const mismo=vs.filter(v=>jac(v.nombre,p.nombre)>=0.6);
+      if(!mismo.length){const top=vs.sort((x,y)=>(y.n||0)-(x.n||0))[0];
+        hecho.R.push({sec:'Contenido',lvl:'warn',msg:`El registro médico ${p.reg} figura en cuentas anteriores a nombre de «${top.nombre}» y aquí aparece «${p.nombre}»`,det:'Puede ser un error de digitación del registro o de otro profesional; verifícalo en el RETHUS.'})}
+      else if(!mismo.some(v=>jac(v.esp,p.esp)>=0.5)){
+        hecho.R.push({sec:'Contenido',lvl:'warn',msg:`${p.nombre} (registro ${p.reg}) aparece ahora como «${p.esp}» y antes como «${mismo[0].esp}»`,det:'Puede ser legítimo (cambió de especialidad o de cargo); confirma que corresponde.'})}
+    });
+  }catch(e){}
+}
+function tagApr(key,x){
+  const a=APR[key]&&APR[key].ips; if(!a||!a.items) return '';
+  const s=a.items[hid(normAprend(x.txt))]; if(!s||(s.v||0)<5) return '';
+  const o=Math.max(0,s.o||0);
+  return o/s.v>=0.8?`<span class="tg tg-ok">suele estar bien en esta IPS (${o} de ${s.v})</span>`:'';
+}
+function boxHistorial(k){
+  const a=APR[k]&&APR[k].ips; if(!a||!a.cuentas||a.cuentas<3) return '';
+  const act=new Set((LISTAS[k]||[]).map(x=>hid(normAprend(x.txt))));
+  const er=Object.entries(a.errores||{}).map(([h,v])=>({h,t:v.t,n:v.n||0})).filter(x=>x.n>=2).sort((x,y)=>y.n-x.n).slice(0,6);
+  if(!er.length) return '';
+  return `<div class="sec"><h3>📚 Lo que más se repite en esta IPS (${a.cuentas} cuentas revisadas)</h3>`+er.map(x=>`<div class="it l-info"><span class="ic">•</span><span class="t">${esc(mayus1(x.t))}<small>en ${x.n} de ${a.cuentas} cuentas (${Math.round(100*x.n/a.cuentas)}%)</small></span></div>`).join('')+'</div>';
+}
+function notaEstados(k,sug){
+  const a=APR[k]&&APR[k].ips; if(!a||!a.estados) return '';
+  const c={};Object.entries(a.estados).forEach(([kk,n])=>{const [s,ap]=kk.split('__');if(s===sug)c[ap]=(c[ap]||0)+n});
+  const tot=Object.values(c).reduce((x,y)=>x+y,0); if(tot<3) return '';
+  const nom={devuelta_ips:'devolver',pendiente:'pendiente',radicada:'radicación'};
+  return `<div style="font-size:11px;color:var(--tx2);margin-top:4px;">📚 En esta IPS, cuando se sugirió «${nom[sug]}», los revisores aplicaron: ${Object.entries(c).sort((x,y)=>y[1]-x[1]).map(([s,n])=>`${nom[s]||s} ${n}`).join(' · ')}.</div>`;
+}
 const _tzT={};
 function enviarTraza(key,demora){
   clearTimeout(_tzT[key]);
@@ -535,7 +622,7 @@ function enviarTraza(key,demora){
     const el=$('tz_'+key); if(!el) return;
     const h=hookSistema();
     if(!h){el.textContent='🔌 Abierto fuera del sistema: la revisión no deja traza. Ábrelo desde «Revisar cuenta» dentro del sistema.';el.style.color='var(--warn)';return}
-    try{const r=await h.guardar(resumenTraza(key));
+    try{const rs=resumenTraza(key);rs.aprend=aprendizajeDe(key,rs);const r=await h.guardar(rs);
       if(r.ok){pintarSugerido(key);el.textContent=`🗂 Traza guardada en el sistema (consecutivo ${r.consec})`;el.style.color='var(--ok)'}
       else{el.textContent='⚠ '+r.motivo;el.style.color='var(--warn)'}
     }catch(e){el.textContent='⚠ No se pudo guardar la traza: '+e.message;el.style.color='var(--warn)'}
@@ -546,7 +633,7 @@ function pintarLista(key){
   return `<div class="lst"><h3>Lista de chequeo</h3><div id="lb_${key}" class="lb ${r.c}">${esc(r.t)}</div><div id="tz_${key}" style="font-size:12px;color:var(--tx2);margin:-2px 0 8px;"></div><div id="sg_${key}" style="margin:0 0 10px;"></div>`+L.map(x=>{
     if(x.tipo==='ok') return `<div class="ci ok"><input type="checkbox" checked disabled><label>${esc(x.txt)}<span class="tg tg-ok">verificado</span></label></div>`;
     if(x.tipo==='fail') return `<div class="ci fail"><input type="checkbox" disabled><label>${esc(x.txt)}<span class="tg tg-fail">corregir</span></label></div>`;
-    return `<div class="ci ${st[x.id]?'done':''}" id="ci_${key}_${x.id}"><input type="checkbox" id="ck_${key}_${x.id}" ${st[x.id]?'checked':''} onchange="rvChk('${key}','${x.id}',this.checked)"><label for="ck_${key}_${x.id}">${esc(x.txt)}${x.det?`<small style="display:block;color:var(--tx2)">${esc(x.det)}</small>`:''}</label></div>`;
+    return `<div class="ci ${st[x.id]?'done':''}" id="ci_${key}_${x.id}"><input type="checkbox" id="ck_${key}_${x.id}" ${st[x.id]?'checked':''} onchange="rvChk('${key}','${x.id}',this.checked)"><label for="ck_${key}_${x.id}">${esc(x.txt)}${tagApr(key,x)}${x.det?`<small style="display:block;color:var(--tx2)">${esc(x.det)}</small>`:''}</label></div>`;
   }).join('')+'</div>';
 }
 
@@ -565,7 +652,7 @@ function pintar(key,res){
     h+='</div>';
   });
   LISTAS[key]=armarLista(key,R);
-  return h+pintarLista(key)+'</div>';
+  return h+boxHistorial(key)+pintarLista(key)+'</div>';
 }
 function aTexto(key,res){
   let t=`FACTURA ${key}\n`;
@@ -589,6 +676,8 @@ async function procesar(files){
   const porCufe={};
   Object.entries(hechos).forEach(([k,r])=>{const c=r.fx&&r.fx.cufe;if(c)(porCufe[c]=porCufe[c]||[]).push(k)});
   Object.values(porCufe).filter(v=>v.length>1).forEach(v=>v.forEach(k=>hechos[k].R.push({sec:'Factura',lvl:'err',msg:`El CUFE es igual al de otra factura (${v.filter(x=>x!==k).join(', ')})`,det:'Glosa 4412: anula la reclamación.'})));
+  $('st').textContent='Consultando lo aprendido de esta IPS…';
+  await Promise.all(Object.keys(hechos).map(k=>cargarAprendizaje(k,hechos[k])));
   Object.keys(hechos).forEach(k=>{RESULT[k]=hechos[k];$('out').insertAdjacentHTML('beforeend',pintar(k,hechos[k]));pintarSugerido(k);enviarTraza(k,0)});
   if(SUELTOS.length){
     $('out').insertAdjacentHTML('beforeend',`<div class="card"><div class="hd"><h2>Archivos que no se asignaron a una factura</h2></div><div class="sec">${SUELTOS.map(s=>`<div class="it l-warn"><span class="ic">⚠</span><span class="t">${esc(s.f.name)}<small>${esc(s.motivo)}</small></span></div>`).join('')}</div></div>`);
