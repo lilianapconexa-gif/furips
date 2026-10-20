@@ -441,7 +441,11 @@ function armarLista(key,R){
   man('tar','Los valores están liquidados con el manual tarifario SOAT de la fecha del servicio y no superan el tope de cobertura (glosa 43 y 42)');
   man('hev','El resumen o la evolución corresponde a la atención que se cobra (fechas y servicios)');
   man('fir','Las firmas, sellos y registro médico están visibles donde se exigen');
-  man('evt','Confirmé que el evento es un accidente de tránsito (causa, mecanismo, víctima y fecha) y que los datos coinciden entre el IPO y la historia clínica');
+  { const ev=por('Evento'), oks=ev.filter(r=>r.lvl==='ok');
+    if(!ev.some(r=>r.lvl==='err'||r.lvl==='warn')){
+      if(oks.length>=2) L.push({id:'evt',txt:'Evento verificado como accidente de tránsito: '+oks.map(r=>r.msg).join(' · '),tipo:'ok'});
+      else man('evt','No tengo suficiente información para verificar el evento (falta IPO o historia legible): confirma a mano que es un accidente de tránsito');
+    } }
   return L;
 }
 const LS_K=k=>'rv_chk_'+k;
