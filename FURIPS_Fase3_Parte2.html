@@ -6642,7 +6642,7 @@ window.furserDescomponer = () => {
   if(!REC.fur_ser) REC.fur_ser=[];
   REC.fur_ser.push(...comp);
   furserRender();
-  toast(`🔧 Procedimiento ${c} discriminado (consecutivo ${consecMax+1}): ${comp.length} líneas`,'ok');
+  toast(`🔧 Procedimiento ${c}: ${comp.length} líneas creadas (consecutivo ${consecMax+1}). Digita los valores como están en la factura.`,'ok');
 };
 
 // Cargar XML DIAN (reutiliza parsearXMLDIAN del FURIPS2)
@@ -6680,6 +6680,7 @@ window.furserCargarXML = async (files) => {
   }));
   furserRender();
   window.furserExpandirQx(false);
+  { const nq = REC.fur_ser.filter(furSerEsLineaProcedimientoQx).length; if(nq) toast(`⚠ ${nq} procedimiento(s) quirúrgico(s) sin discriminar: digita cirujano, anestesiólogo, ayudante, sala y materiales como están en la factura (botón «Descomponer Proc. Qx.» arma la estructura sin valores)`,'w'); }
   const nSin = REC.fur_ser.filter(x => !String(x.codigoServicio||'').trim()).length;
   toast(`✔ ${REC.fur_ser.length} ítems cargados desde XML DIAN` + (nSin ? ` · ⚠ ${nSin} sin código: usa las sugerencias 💡 (el sistema lo recuerda)` : ''),'ok');
 };
@@ -6688,66 +6689,47 @@ window.furserCargarXML = async (files) => {
 // ── Procedimientos quirúrgicos: el FUR SER solo lleva el DISCRIMINADO (cirujano, anestesiólogo, ayudante, derechos de sala, materiales), no el nombre del procedimiento ──
 const FURSER_QX_ROLES = [['c','SERVICIOS PROFESIONALES DE CIRUJANO'],['a','SERVICIOS PROFESIONALES DE ANESTESIOLOGO'],['y','SERVICIOS PROFESIONALES DE AYUDANTIA'],['s','DERECHOS DE SALA'],['m','MATERIALES DE SUTURA Y CURACION']];
 function furSerQxGrupo(cod){ try{ return (typeof GRUPOS_READY!=='undefined' && GRUPOS_READY && typeof obtenerGrupoQx==='function') ? obtenerGrupoQx(cod) : null; }catch(e){ return null; } }
-function furSerComponentesQx(cod, consec, base, objetivo){
+function furSerComponentesQx(cod, consec, base){
+  // Solo arma la estructura (códigos, descripción y CUPS). Los valores NO se inventan: se digitan como están en la factura.
   const gr = furSerQxGrupo(cod); const comp = gr ? GRUPOS_SOAT.grupos[gr] : null; if(!comp) return null;
   const cups = cupsDeMapa(cod) || (base && cupsValido(base.codigoCUPS) ? String(base.codigoCUPS).trim() : '');
-  const cant = '1'; // Diccionario FUR SERVICIOS (campo 9): cada componente del procedimiento quirúrgico lleva cantidad 1
-  const roles = [];
+  const out = [];
   FURSER_QX_ROLES.forEach(([k,def]) => {
     const c = comp[k]; if(!c) return;
     const hit = (typeof soatLookup==='function' && typeof SOAT_READY!=='undefined' && SOAT_READY) ? soatLookup(String(c)) : null;
-    roles.push({c:String(c), def, hit, v: hit && hit.valor ? Math.round(hit.valor) : 0});
-  });
-  // La suma de los totales facturados del SER debe coincidir con la factura (FEV): si el procedimiento
-  // vino con un valor, se reparte entre los componentes en proporción a la tarifa SOAT.
-  const sumaSoat = roles.reduce((a,x)=>a+x.v,0), obj = Math.round(parseFloat(objetivo)||0);
-  if(obj>0 && sumaSoat>0 && roles.every(x=>x.v>0)){
-    let asig = 0; roles.forEach(x=>{ x.v2 = Math.max(1, Math.round(x.v*obj/sumaSoat)); asig += x.v2; });
-    const mayor = roles.reduce((m,x)=> x.v2>m.v2 ? x : m, roles[0]); mayor.v2 += (obj - asig);
-  } else roles.forEach(x=>{ x.v2 = x.v; });
-  return roles.map(x => { const v = x.v2 ? String(x.v2) : '';
-    return { factura:(base&&base.factura)||'', nit:(base&&base.nit)||'', tipo:'2', codQx:String(cod).trim(), consecQx:String(consec),
-      codigoServicio:x.c, codigoCUPS:cups, descripcion:furSerLimpiarDesc(x.hit && x.hit.desc ? x.hit.desc : x.def), cantidad:cant,
-      vrUnitFact:v, vrUnitRec:v, totalFact:v, totalRec:v, _qxOrigen:true }; });
-}
-// Devuelve las filas del FUR SER con cada procedimiento quirúrgico reemplazado por su discriminado
-function furSerRowsExpandidas(rec){
-  const rows = rec.fur_ser || []; let consec = Math.max(0, ...rows.map(r => parseInt(r.consecQx)||0));
-  const out = [];
-  // Título de procedimiento (p. ej. "GRUPOS 07 - 08 - 09" o "PROCEDIMIENTO QX (Grupo 5)"): no va en el SER
-  const esTitulo = r => !String(r.codQx||'').trim() && ['2',''].includes(String(r.tipo||'').trim()) &&
-    /^\s*(procedimiento\s+qx\s*)?\(?\s*grupos?\s*\d{1,2}(\s*(-|–|y|,|\/)\s*\d{1,2})*\s*\)?\s*$/i.test(String(r.descripcion||''));
-  rows.forEach(r => {
-    if(esTitulo(r)) return;
-    const cod = String(r.codigoServicio||'').trim();
-    if((String(r.tipo||'').trim()==='2' || !String(r.tipo||'').trim()) && cod && !String(r.codQx||'').trim() && furSerQxGrupo(cod)){
-      const veces = Math.min(10, Math.max(1, Math.round(parseFloat(r.cantidad)||1)));
-      let hecho = false;
-      for(let n=0; n<veces; n++){
-        const comp = furSerComponentesQx(cod, consec+1, r, ((parseFloat(r.cantidad)||0)*(parseFloat(r.vrUnitFact)||0))/veces);
-        if(comp && comp.length){ consec++; out.push(...comp); hecho = true; }
-      }
-      if(hecho) return;
-    }
-    out.push(r);
+    out.push({ factura:(base&&base.factura)||'', nit:(base&&base.nit)||'', tipo:'2', codQx:String(cod).trim(), consecQx:String(consec),
+      codigoServicio:String(c), codigoCUPS:cups, descripcion:furSerLimpiarDesc(hit && hit.desc ? hit.desc : def), cantidad:'1',
+      vrUnitFact:'', vrUnitRec:'', totalFact:'', totalRec:'' });
   });
   return out;
 }
-// Aplica la expansión a la tabla visible (REC.fur_ser) y avisa
+// Devuelve las filas del FUR SER tal como se digitaron, sin los títulos de procedimiento ni la línea del procedimiento cuando su
+// discriminado ya está digitado. NUNCA inventa líneas ni valores.
+const furSerEsTitulo = r => !String(r.codQx||'').trim() && ['2',''].includes(String(r.tipo||'').trim()) &&
+  /^\s*(procedimiento\s+qx\s*)?\(?\s*grupos?\s*\d{1,2}(\s*(-|–|y|,|\/)\s*\d{1,2})*\s*\)?\s*$/i.test(String(r.descripcion||''));
+function furSerTieneDiscriminado(rows, r){
+  const cod = String(r.codigoServicio||'').trim();
+  const g = (typeof GRUPOS_SOAT!=='undefined' && GRUPOS_SOAT.grupos) ? (GRUPOS_SOAT.grupos[furSerQxGrupo(cod)] || {}) : {};
+  const comps = ['c','a','y','s','m'].map(k=>String(g[k]||'')).filter(Boolean);
+  return rows.some(x => x!==r && (String(x.codQx||'').trim()===cod || comps.includes(String(x.codigoServicio||'').trim())));
+}
+function furSerEsLineaProcedimientoQx(r){
+  const cod = String(r.codigoServicio||'').trim();
+  return !!cod && !String(r.codQx||'').trim() && ['2',''].includes(String(r.tipo||'').trim()) && !!furSerQxGrupo(cod);
+}
+function furSerRowsExpandidas(rec){
+  const rows = rec.fur_ser || [];
+  return rows.filter(r => !furSerEsTitulo(r) && !(furSerEsLineaProcedimientoQx(r) && furSerTieneDiscriminado(rows, r)));
+}
+// Limpia la tabla visible (quita títulos y líneas de procedimiento ya discriminadas)
 window.furserExpandirQx = (silencioso) => {
   if(!REC || !(REC.fur_ser||[]).length) return 0;
   const antes = REC.fur_ser, despues = furSerRowsExpandidas(REC);
-  const quitadas = antes.filter(r => !despues.includes(r));
-  if(!quitadas.length) return 0;
-  const totMadre = quitadas.reduce((a,r)=>a+(parseFloat(r.cantidad)||0)*(parseFloat(r.vrUnitFact)||0),0);
-  const nuevas = despues.filter(r => r._qxOrigen && !antes.includes(r));
-  const totComp = nuevas.reduce((a,r)=>a+(parseFloat(r.totalFact)||0),0);
+  const quitadas = antes.length - despues.length;
+  if(quitadas<=0) return 0;
   REC.fur_ser = despues; furserRender();
-  if(!silencioso){
-    const dif = totMadre && Math.round(totMadre)!==Math.round(totComp) ? ` · ⚠ el valor facturado $${Math.round(totMadre).toLocaleString('es-CO')} no coincide con el discriminado $${Math.round(totComp).toLocaleString('es-CO')}: ajusta los valores` : '';
-    toast(`🔧 ${quitadas.length} línea(s) reemplazada(s) por ${nuevas.length} del discriminado; el valor facturado se repartió según la tarifa SOAT (compáralo con el RIPS)`+dif, dif?'w':'ok');
-  }
-  return quitadas.length;
+  if(!silencioso) toast(`🧹 ${quitadas} línea(s) de título o nombre de procedimiento quitada(s): en el SER solo va el discriminado`,'ok');
+  return quitadas;
 };
 // ── Validación SER según Circular 003 y reglas de ADRES. Devuelve errores que bloquean la descarga. ──
 function furSerValidar(rec){
@@ -6768,6 +6750,7 @@ function furSerValidar(rec){
     if(t==='2' && soatOk && cod && !SOAT_DB[cod]) out.push(`${n}: el código ${cod} no es SOAT; no coincide con tipo 2 (procedimientos)`);
     if(['1','5','6','7','8'].includes(t) && soatOk && cod && SOAT_DB[cod]) out.push(`${n}: el código ${cod} es SOAT pero el tipo es ${t}; no coincide`);
     if(['1','5','6','7','8'].includes(t) && cupsOk && cod && CUPS_DB[cod] && !(soatOk && SOAT_DB[cod])) out.push(`${n}: ${cod} es un código CUPS (procedimiento), no de tipo ${t}; debe ser tipo 2 con el código SOAT`);
+    if(furSerEsLineaProcedimientoQx(r)) out.push(`${n}: el procedimiento quirúrgico ${cod} debe digitarse discriminado como está en la factura (cirujano, anestesiólogo, ayudante, derechos de sala y materiales), cada línea con código Qx ${cod} y consecutivo`);
     if(String(r.codQx||'').trim() && !String(r.consecQx||'').trim() && t==='2') out.push(`${n}: tiene código Qx pero falta el consecutivo del procedimiento quirúrgico`);
     // Descripción
     if(!furSerLimpiarDesc(r.descripcion)) out.push(`${n}: falta la descripción del servicio (C8)`);
