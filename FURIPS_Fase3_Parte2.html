@@ -6435,6 +6435,7 @@ function furserCalcTR(r){
 window.furserU = (i,f,v) => {
   if(!REC.fur_ser?.[i]) return;
   REC.fur_ser[i][f] = v;
+  if(f==='codigoServicio' && String(v||'').trim() && furSerQxGrupo(String(v).trim())) window.furserExpandirQx(false);
 };
 
 // Actualizar campo numérico y recalcular totales
@@ -6549,6 +6550,7 @@ window.furserAplicarSug = (i, k) => {
   r.codigoServicio = sg.cod; r.tipo = r.tipo || sg.tipo; r.sugerencias = []; r.codOrigen = 'manual';
   if(sg.tipo==='2') r.codigoCUPS = r.codigoCUPS || cupsDeMapa(sg.cod);
   furserRender();
+  window.furserExpandirQx(false);
 };
 window.furserSelCodigo = (i, cod, desc, val) => {
   { const r0 = REC.fur_ser?.[i]; if(r0){ const h0 = buscarEnCatalogos(cod); memAprender(r0.descOrig || r0.descripcion, cod, h0 ? h0.tipo : ''); r0.sugerencias = []; r0.codOrigen = 'manual'; } }
@@ -6559,6 +6561,7 @@ window.furserSelCodigo = (i, cod, desc, val) => {
   REC.fur_ser[i].descripcion    = REC.fur_ser[i].descripcion || desc;
   REC.fur_ser[i].tipo           = REC.fur_ser[i].tipo || '2';
   furserRender();
+  window.furserExpandirQx(false);
 };
 
 // Totales
@@ -6629,36 +6632,17 @@ window.furserOrganizar = () => {
 
 // Descomponer procedimiento Qx (misma lógica que FURIPS2)
 window.furserDescomponer = () => {
-  const cod = prompt('Código SOAT del procedimiento quirúrgico (numerales 2-18 del Decreto 780/2016):');
+  const cod = prompt('Código SOAT del procedimiento quirúrgico (ej. 13200):');
   if(!cod) return;
   const c = cod.trim();
-  const consecMax = REC.fur_ser ? Math.max(0,...REC.fur_ser.filter(r=>r.consecQx).map(r=>parseInt(r.consecQx)||0)) : 0;
-  const consec = String(consecMax+1);
-  const comp = [
-    {codigo:'47', desc:'Honorarios Cirujano'},
-    {codigo:'48', desc:'Honorarios Anestesiólogo'},
-    {codigo:'54', desc:'Derechos de sala y materiales'},
-  ];
-  comp.forEach(({codigo, desc}) => {
-    const hit = (typeof soatLookup==='function' && SOAT_READY) ? soatLookup(codigo) : null;
-    if(!REC.fur_ser) REC.fur_ser=[];
-    REC.fur_ser.push({
-      factura: REC.factura,
-      nit: nitIPS(REC, g('fur-nit')?.value),
-      tipo: '2',
-      codQx: c,
-      consecQx: consec,
-      codigoServicio: codigo,
-      descripcion: hit ? furSerLimpiarDesc(hit.desc) : desc,
-      cantidad: '1',
-      vrUnitFact: hit ? String(hit.valor) : '',
-      vrUnitRec:  hit ? String(hit.valor) : '',
-      totalFact:  hit ? String(hit.valor) : '',
-      totalRec:   hit ? String(hit.valor) : '',
-    });
-  });
+  if(!furSerQxGrupo(c)){ toast('⚠ No encuentro el código '+c+' en los grupos quirúrgicos SOAT (grupos_soat.json). Verifícalo o digita el discriminado a mano.','w'); return; }
+  const consecMax = REC.fur_ser ? Math.max(0,...REC.fur_ser.map(r=>parseInt(r.consecQx)||0)) : 0;
+  const comp = furSerComponentesQx(c, consecMax+1, {factura:REC.factura, nit:nitIPS(REC, g('fur-nit')?.value)});
+  if(!comp || !comp.length){ toast('No pude armar el discriminado de '+c,'e'); return; }
+  if(!REC.fur_ser) REC.fur_ser=[];
+  REC.fur_ser.push(...comp);
   furserRender();
-  toast(`🔧 Procedimiento Qx ${c} descompuesto (consec. ${consec})`,'ok');
+  toast(`🔧 Procedimiento ${c} discriminado (consecutivo ${consecMax+1}): ${comp.length} líneas`,'ok');
 };
 
 // Cargar XML DIAN (reutiliza parsearXMLDIAN del FURIPS2)
@@ -6695,14 +6679,64 @@ window.furserCargarXML = async (files) => {
     codOrigen:      r.codOrigen || '',
   }));
   furserRender();
+  window.furserExpandirQx(false);
   const nSin = REC.fur_ser.filter(x => !String(x.codigoServicio||'').trim()).length;
   toast(`✔ ${REC.fur_ser.length} ítems cargados desde XML DIAN` + (nSin ? ` · ⚠ ${nSin} sin código: usa las sugerencias 💡 (el sistema lo recuerda)` : ''),'ok');
 };
 
 
+// ── Procedimientos quirúrgicos: el FUR SER solo lleva el DISCRIMINADO (cirujano, anestesiólogo, ayudante, derechos de sala, materiales), no el nombre del procedimiento ──
+const FURSER_QX_ROLES = [['c','SERVICIOS PROFESIONALES DE CIRUJANO'],['a','SERVICIOS PROFESIONALES DE ANESTESIOLOGO'],['y','SERVICIOS PROFESIONALES DE AYUDANTIA'],['s','DERECHOS DE SALA'],['m','MATERIALES DE SUTURA Y CURACION']];
+function furSerQxGrupo(cod){ try{ return (typeof GRUPOS_READY!=='undefined' && GRUPOS_READY && typeof obtenerGrupoQx==='function') ? obtenerGrupoQx(cod) : null; }catch(e){ return null; } }
+function furSerComponentesQx(cod, consec, base){
+  const gr = furSerQxGrupo(cod); const comp = gr ? GRUPOS_SOAT.grupos[gr] : null; if(!comp) return null;
+  const cups = cupsDeMapa(cod) || (base && cupsValido(base.codigoCUPS) ? String(base.codigoCUPS).trim() : '');
+  const cant = (parseFloat(base && base.cantidad) > 0) ? String(parseFloat(base.cantidad)) : '1';
+  const out = [];
+  FURSER_QX_ROLES.forEach(([k,def]) => {
+    const c = comp[k]; if(!c) return;
+    const hit = (typeof soatLookup==='function' && typeof SOAT_READY!=='undefined' && SOAT_READY) ? soatLookup(String(c)) : null;
+    const v = hit && hit.valor ? String(Math.round(hit.valor)) : '';
+    out.push({ factura:(base&&base.factura)||'', nit:(base&&base.nit)||'', tipo:'2', codQx:String(cod).trim(), consecQx:String(consec),
+      codigoServicio:String(c), codigoCUPS:cups, descripcion:furSerLimpiarDesc(hit && hit.desc ? hit.desc : def), cantidad:cant,
+      vrUnitFact:v, vrUnitRec:v, totalFact:v?String(Math.round(parseFloat(v)*parseFloat(cant))):'', totalRec:v?String(Math.round(parseFloat(v)*parseFloat(cant))):'',
+      _qxOrigen:true });
+  });
+  return out;
+}
+// Devuelve las filas del FUR SER con cada procedimiento quirúrgico reemplazado por su discriminado
+function furSerRowsExpandidas(rec){
+  const rows = rec.fur_ser || []; let consec = Math.max(0, ...rows.map(r => parseInt(r.consecQx)||0));
+  const out = [];
+  rows.forEach(r => {
+    const cod = String(r.codigoServicio||'').trim();
+    if((String(r.tipo||'').trim()==='2' || !String(r.tipo||'').trim()) && cod && !String(r.codQx||'').trim() && furSerQxGrupo(cod)){
+      const comp = furSerComponentesQx(cod, consec+1, r);
+      if(comp && comp.length){ consec++; out.push(...comp); return; }
+    }
+    out.push(r);
+  });
+  return out;
+}
+// Aplica la expansión a la tabla visible (REC.fur_ser) y avisa
+window.furserExpandirQx = (silencioso) => {
+  if(!REC || !(REC.fur_ser||[]).length) return 0;
+  const antes = REC.fur_ser, despues = furSerRowsExpandidas(REC);
+  const quitadas = antes.filter(r => !despues.includes(r));
+  if(!quitadas.length) return 0;
+  const totMadre = quitadas.reduce((a,r)=>a+(parseFloat(r.cantidad)||0)*(parseFloat(r.vrUnitFact)||0),0);
+  const nuevas = despues.filter(r => r._qxOrigen && !antes.includes(r));
+  const totComp = nuevas.reduce((a,r)=>a+(parseFloat(r.totalFact)||0),0);
+  REC.fur_ser = despues; furserRender();
+  if(!silencioso){
+    const dif = totMadre && Math.round(totMadre)!==Math.round(totComp) ? ` · ⚠ facturado $${Math.round(totMadre).toLocaleString('es-CO')} vs discriminado SOAT $${Math.round(totComp).toLocaleString('es-CO')}: revisa los valores` : '';
+    toast(`🔧 ${quitadas.length} procedimiento(s) quirúrgico(s) discriminado(s) en ${nuevas.length} línea(s)`+dif, dif?'w':'ok');
+  }
+  return quitadas.length;
+};
 // ── Validación SER según Circular 003 y reglas de ADRES. Devuelve errores que bloquean la descarga. ──
 function furSerValidar(rec){
-  const out=[]; const f=rec.fur_ser||[];
+  const out=[]; const f=furSerRowsExpandidas(rec);
   const soatOk = typeof SOAT_READY!=='undefined' && SOAT_READY;
   const cupsOk = typeof CUPS_READY!=='undefined' && CUPS_READY;
   f.forEach((r,i)=>{
@@ -6773,7 +6807,7 @@ function furSerQx(r, campo){ return furSerTipo(r)==='2' ? (String(r[campo]||'').
 const furSerEntero = v => { const n = Math.round(parseFloat(v)||0); return n>0 ? String(n) : null; };
 function buildFURSERServiciosEntry(rec){
   const factura = rec.factura || '';
-  const servicios = (rec.fur_ser||[]).map(r => {
+  const servicios = furSerRowsExpandidas(rec).map(r => {
     const tf  = String(Math.round((parseFloat(r.cantidad)||0) * (parseFloat(r.vrUnitFact)||0)));
     const vur = parseFloat(r.vrUnitRec) || parseFloat(r.vrUnitFact) || 0;
     const tr  = String(Math.round((parseFloat(r.cantidad)||0) * vur));
