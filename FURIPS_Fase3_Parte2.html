@@ -6691,7 +6691,7 @@ function furSerQxGrupo(cod){ try{ return (typeof GRUPOS_READY!=='undefined' && G
 function furSerComponentesQx(cod, consec, base){
   const gr = furSerQxGrupo(cod); const comp = gr ? GRUPOS_SOAT.grupos[gr] : null; if(!comp) return null;
   const cups = cupsDeMapa(cod) || (base && cupsValido(base.codigoCUPS) ? String(base.codigoCUPS).trim() : '');
-  const cant = (parseFloat(base && base.cantidad) > 0) ? String(parseFloat(base.cantidad)) : '1';
+  const cant = '1'; // Diccionario FUR SERVICIOS (campo 9): cada componente del procedimiento quirúrgico lleva cantidad 1
   const out = [];
   FURSER_QX_ROLES.forEach(([k,def]) => {
     const c = comp[k]; if(!c) return;
@@ -6708,11 +6708,20 @@ function furSerComponentesQx(cod, consec, base){
 function furSerRowsExpandidas(rec){
   const rows = rec.fur_ser || []; let consec = Math.max(0, ...rows.map(r => parseInt(r.consecQx)||0));
   const out = [];
+  // Título de procedimiento (p. ej. "GRUPOS 07 - 08 - 09" o "PROCEDIMIENTO QX (Grupo 5)"): no va en el SER
+  const esTitulo = r => !String(r.codQx||'').trim() && ['2',''].includes(String(r.tipo||'').trim()) &&
+    /^\s*(procedimiento\s+qx\s*)?\(?\s*grupos?\s*\d{1,2}(\s*(-|–|y|,|\/)\s*\d{1,2})*\s*\)?\s*$/i.test(String(r.descripcion||''));
   rows.forEach(r => {
+    if(esTitulo(r)) return;
     const cod = String(r.codigoServicio||'').trim();
     if((String(r.tipo||'').trim()==='2' || !String(r.tipo||'').trim()) && cod && !String(r.codQx||'').trim() && furSerQxGrupo(cod)){
-      const comp = furSerComponentesQx(cod, consec+1, r);
-      if(comp && comp.length){ consec++; out.push(...comp); return; }
+      const veces = Math.min(10, Math.max(1, Math.round(parseFloat(r.cantidad)||1)));
+      let hecho = false;
+      for(let n=0; n<veces; n++){
+        const comp = furSerComponentesQx(cod, consec+1, r);
+        if(comp && comp.length){ consec++; out.push(...comp); hecho = true; }
+      }
+      if(hecho) return;
     }
     out.push(r);
   });
@@ -6789,8 +6798,8 @@ window.furSerValidar = furSerValidar;
 function furSerLimpiarDesc(v){
   return String(v||'').normalize('NFC')
     .replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF\t\r\n]+/g,' ')
-    .replace(/,/g,' ')
-    .replace(/[^A-Za-zÀ-ÿ0-9 .;:!¡?¿\-+=@%°$€£¥¢©®™§&#*\\\/|~^`_{}\[\]()<>]/g,'')
+    // Diccionario FUR SERVICIOS (campo 8): letras, números y solo # - . ( ) % + * /
+    .replace(/[^A-Za-zÀ-ÿ0-9 #.\-()%+*\/]/g,' ')
     .replace(/\s{2,}/g,' ').trim().slice(0,200);
 }
 // CUPS: obligatorio para tipo 2, 3 y 4; debe ir vacío para cualquier otro tipo (regla de ADRES)
@@ -6893,6 +6902,7 @@ window.guardarFURSER = async () => {
 // Descargar JSON
 window.descargarFURSERjson = () => {
   revisionToast();
+  try{ window.furserExpandirQx(true); }catch(e){}
   const nit  = nitIPS(REC, g('fur-nit')?.value);
   if(!nit){ toast('⚠ No se conoce el NIT de esta IPS: digítalo en la sección I (C1) de la pestaña FUR.','w'); return; }
   const _pv=furSerValidar(REC); if(_pv.length){ alert('No cumple la Circular 003:\n\n'+_pv.slice(0,15).join('\n')); return; }
