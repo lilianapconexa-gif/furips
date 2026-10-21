@@ -6688,21 +6688,27 @@ window.furserCargarXML = async (files) => {
 // ── Procedimientos quirúrgicos: el FUR SER solo lleva el DISCRIMINADO (cirujano, anestesiólogo, ayudante, derechos de sala, materiales), no el nombre del procedimiento ──
 const FURSER_QX_ROLES = [['c','SERVICIOS PROFESIONALES DE CIRUJANO'],['a','SERVICIOS PROFESIONALES DE ANESTESIOLOGO'],['y','SERVICIOS PROFESIONALES DE AYUDANTIA'],['s','DERECHOS DE SALA'],['m','MATERIALES DE SUTURA Y CURACION']];
 function furSerQxGrupo(cod){ try{ return (typeof GRUPOS_READY!=='undefined' && GRUPOS_READY && typeof obtenerGrupoQx==='function') ? obtenerGrupoQx(cod) : null; }catch(e){ return null; } }
-function furSerComponentesQx(cod, consec, base){
+function furSerComponentesQx(cod, consec, base, objetivo){
   const gr = furSerQxGrupo(cod); const comp = gr ? GRUPOS_SOAT.grupos[gr] : null; if(!comp) return null;
   const cups = cupsDeMapa(cod) || (base && cupsValido(base.codigoCUPS) ? String(base.codigoCUPS).trim() : '');
   const cant = '1'; // Diccionario FUR SERVICIOS (campo 9): cada componente del procedimiento quirúrgico lleva cantidad 1
-  const out = [];
+  const roles = [];
   FURSER_QX_ROLES.forEach(([k,def]) => {
     const c = comp[k]; if(!c) return;
     const hit = (typeof soatLookup==='function' && typeof SOAT_READY!=='undefined' && SOAT_READY) ? soatLookup(String(c)) : null;
-    const v = hit && hit.valor ? String(Math.round(hit.valor)) : '';
-    out.push({ factura:(base&&base.factura)||'', nit:(base&&base.nit)||'', tipo:'2', codQx:String(cod).trim(), consecQx:String(consec),
-      codigoServicio:String(c), codigoCUPS:cups, descripcion:furSerLimpiarDesc(hit && hit.desc ? hit.desc : def), cantidad:cant,
-      vrUnitFact:v, vrUnitRec:v, totalFact:v?String(Math.round(parseFloat(v)*parseFloat(cant))):'', totalRec:v?String(Math.round(parseFloat(v)*parseFloat(cant))):'',
-      _qxOrigen:true });
+    roles.push({c:String(c), def, hit, v: hit && hit.valor ? Math.round(hit.valor) : 0});
   });
-  return out;
+  // La suma de los totales facturados del SER debe coincidir con la factura (FEV): si el procedimiento
+  // vino con un valor, se reparte entre los componentes en proporción a la tarifa SOAT.
+  const sumaSoat = roles.reduce((a,x)=>a+x.v,0), obj = Math.round(parseFloat(objetivo)||0);
+  if(obj>0 && sumaSoat>0 && roles.every(x=>x.v>0)){
+    let asig = 0; roles.forEach(x=>{ x.v2 = Math.max(1, Math.round(x.v*obj/sumaSoat)); asig += x.v2; });
+    const mayor = roles.reduce((m,x)=> x.v2>m.v2 ? x : m, roles[0]); mayor.v2 += (obj - asig);
+  } else roles.forEach(x=>{ x.v2 = x.v; });
+  return roles.map(x => { const v = x.v2 ? String(x.v2) : '';
+    return { factura:(base&&base.factura)||'', nit:(base&&base.nit)||'', tipo:'2', codQx:String(cod).trim(), consecQx:String(consec),
+      codigoServicio:x.c, codigoCUPS:cups, descripcion:furSerLimpiarDesc(x.hit && x.hit.desc ? x.hit.desc : x.def), cantidad:cant,
+      vrUnitFact:v, vrUnitRec:v, totalFact:v, totalRec:v, _qxOrigen:true }; });
 }
 // Devuelve las filas del FUR SER con cada procedimiento quirúrgico reemplazado por su discriminado
 function furSerRowsExpandidas(rec){
@@ -6718,7 +6724,7 @@ function furSerRowsExpandidas(rec){
       const veces = Math.min(10, Math.max(1, Math.round(parseFloat(r.cantidad)||1)));
       let hecho = false;
       for(let n=0; n<veces; n++){
-        const comp = furSerComponentesQx(cod, consec+1, r);
+        const comp = furSerComponentesQx(cod, consec+1, r, ((parseFloat(r.cantidad)||0)*(parseFloat(r.vrUnitFact)||0))/veces);
         if(comp && comp.length){ consec++; out.push(...comp); hecho = true; }
       }
       if(hecho) return;
@@ -6738,8 +6744,8 @@ window.furserExpandirQx = (silencioso) => {
   const totComp = nuevas.reduce((a,r)=>a+(parseFloat(r.totalFact)||0),0);
   REC.fur_ser = despues; furserRender();
   if(!silencioso){
-    const dif = totMadre && Math.round(totMadre)!==Math.round(totComp) ? ` · ⚠ facturado $${Math.round(totMadre).toLocaleString('es-CO')} vs discriminado SOAT $${Math.round(totComp).toLocaleString('es-CO')}: revisa los valores` : '';
-    toast(`🔧 ${quitadas.length} procedimiento(s) quirúrgico(s) discriminado(s) en ${nuevas.length} línea(s)`+dif, dif?'w':'ok');
+    const dif = totMadre && Math.round(totMadre)!==Math.round(totComp) ? ` · ⚠ el valor facturado $${Math.round(totMadre).toLocaleString('es-CO')} no coincide con el discriminado $${Math.round(totComp).toLocaleString('es-CO')}: ajusta los valores` : '';
+    toast(`🔧 ${quitadas.length} línea(s) reemplazada(s) por ${nuevas.length} del discriminado; el valor facturado se repartió según la tarifa SOAT (compáralo con el RIPS)`+dif, dif?'w':'ok');
   }
   return quitadas.length;
 };

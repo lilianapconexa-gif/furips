@@ -217,7 +217,10 @@ async function revisar(key,g){
       fx=parseFacturaXML(xml); if(!fx) throw new Error('no se encontró la factura (Invoice) dentro del XML');
     }catch(e){add('Archivos','err',`No pude leer la factura XML: ${e.message}`)}
   }
-  try{const x=tiene('RIP')[0];if(x)rips=JSON.parse(await x.f.text())}catch(e){add('Archivos','err',`No pude leer el RIPS: ${e.message}`)}
+  try{const x=tiene('RIP')[0];if(x){const raw=await x.f.text();rips=JSON.parse(raw);
+    // Valores monetarios del RIPS: solo números enteros (sin decimales, separadores ni letras)
+    const mal={};[...raw.matchAll(/"(vr\w+|valor\w+)"\s*:\s*(-?\d+[.,]\d+|"[^"]*")/gi)].forEach(m=>{const v=m[2].replace(/"/g,'');if(!/^-?\d+$/.test(v)){(mal[m[1]]=mal[m[1]]||[]).push(v)}});
+    Object.entries(mal).forEach(([k,v])=>add('Archivos','err',`RIPS: ${v.length} valor(es) de ${k} no son números enteros (por ejemplo «${v[0]}»)`,'ADRES rechaza decimales, separadores de miles y caracteres en los valores del RIPS. La IPS debe corregir el RIPS y volver a validarlo (CUV).'))}}catch(e){add('Archivos','err',`No pude leer el RIPS: ${e.message}`)}
   try{const x=tiene('CUV')[0];if(x)cuv=JSON.parse(await x.f.text())}catch(e){add('Archivos','err',`No pude leer el CUV: ${e.message}`)}
   const rr=rips?recolectarRips(rips):null;
 
