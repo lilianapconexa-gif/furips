@@ -880,6 +880,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
     <button class="btn bs" onclick="furVerJSON()" style="font-size:12px;">🔍 Ver JSON</button>
     <button class="btn bp" onclick="guardarFUR()" style="background:var(--green);border-color:var(--green);">💾 Guardar FUR en nube</button>
     <button class="btn bs" onclick="descargarFURjson()" style="font-size:12px;">⬇ Descargar .json</button>
+    <button class="btn bs" onclick="descargarFURjson('xlsx')" style="font-size:12px;border-color:#1a7f37;color:#1a7f37;">📊 Descargar Excel (plantilla)</button>
     <button class="btn bs" onclick="abrirSelectorLote('fur')" style="font-size:12px;border-color:#6e40c9;color:#6e40c9;">🗂️ Generar en lote</button>
   </div>
 </div>
@@ -926,6 +927,7 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="btn bp" onclick="guardarFURSER()" style="background:var(--green);border-color:var(--green);">💾 Guardar FUR SER en nube</button>
       <button class="btn bs" onclick="descargarFURSERjson()" style="font-size:12px;">⬇ Descargar .json</button>
+      <button class="btn bs" onclick="descargarFURSERjson('xlsx')" style="font-size:12px;border-color:#1a7f37;color:#1a7f37;">📊 Descargar Excel (plantilla)</button>
       <button class="btn bs" onclick="abrirSelectorLote('ser')" style="font-size:12px;border-color:#6e40c9;color:#6e40c9;">🗂️ Generar en lote</button>
       <button class="btn bs" onclick="furserVerJSON()" style="font-size:12px;">🔍 Ver JSON</button>
     </div>
@@ -6080,7 +6082,7 @@ window.guardarFUR = async () => {
 };
 
 // ── Descargar JSON ──
-window.descargarFURjson = () => {
+window.descargarFURjson = (fmt) => {
   // Misma validación que guardarFUR(): no dejar salir un JSON con la
   // descripción del evento por debajo del mínimo exigido por ADRES, aunque
   // el digitador descargue directo sin pasar por "Guardar en nube".
@@ -6103,6 +6105,7 @@ window.descargarFURjson = () => {
   }
   if(!furPuerta()) return;
   const json = buildFURJson();
+  if(fmt==='xlsx') return window.descargarExcel('fur', json, nit);
   const filename = `FUR_${nit}.json`;
   const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
   const a = document.createElement('a');
@@ -6111,6 +6114,65 @@ window.descargarFURjson = () => {
   a.click();
   URL.revokeObjectURL(a.href);
   toast(`⬇ ${filename}`,'ok');
+};
+
+// ═══ SALIDA EN EXCEL (plantillas oficiales FUR y SER) ═══
+const FUR_XLSX_HEAD = ["NIT_PRESTADOR", "NUM_FACTURA", "Tipo_documento_identidad_victima", "Numero_documento_identidad_victima", "Tipo_de_poblacion_especial", "Primer_nombre_victima", "Segundo_nombre_victima", "Primer_apellido_victima", "Segundo_apellido_victima", "Direccion_residencia_victima", "Codigo_municipio_residencia_victima", "Telefono_victima", "Naturaleza_del_evento", "Descripcion_del_otro_evento", "Condicion_victima", "Fecha_de_ocurrencia_evento", "Zona_de_ocurrencia_evento", "Codigo_municipio_ocurrencia_evento", "Direccion_de_ocurrencia_evento", "Descripcion_corta_de_lo_ocurrido_en_el_evento", "Estado_de_aseguramiento", "Placa_vehiculo", "Tipo_de_Vehiculo", "Codigo_de_la_aseguradora", "Numero_de_poliza_SOAT", "Fecha_de_inicio_de_vigencia_de_la_poliza", "Fecha_final_de_vigencia_de_la_poliza", "Numero_de_radicado_SIRAS", "Cobro_por_agotamiento_tope_Aseguradora", "Tipo_de_documento_de_identidad_del_propietario", "Numero_de_documento_de_identidad_del_propietario", "Primer_nombre_del_propietario_o_razon_social", "Segundo_nombre_del_propietario", "Primer_apellido_del_propietario", "Segundo_apellido_del_propietario", "Direccion_de_residencia_del_propietario", "Telefono_de_residencia_del_propietario", "Codigo_del_municipio_de_residencia_del_propietario", "Tipo_de_documento_de_identidad_del_conductor", "Numero_de_documento_de_identidad_del_conductor", "Primer_nombre_del_conductor", "Segundo_nombre_del_conductor", "Primer_apellido_del_conductor", "Segundo_apellido_del_conductor", "Codigo_del_municipio_de_residencia_del_conductor", "Direccion_de_residencia_del_conductor", "Telefono_de_residencia_del_conductor", "Uso_material_de_osteosintesis_en_la_atencion", "Es_atencion_inicial_paciente_remitido_o_control", "Placa_ambulancia_que_realiza_el_traslado_secundario", "Tipo_de_servicio_del_transporte_secundario", "Codigo_de_habilitacion_del_prestador_que_remite", "Codigo_de_habilitacion_del_prestador_que_recibe", "TIPO_de_documento_Profesional_que_recibe", "Numero_de_documento_Profesional_que_recibe", "Fecha_de_aceptacion", "Hora_aceptacion", "Tipo_de_servicio_del_transporte", "Placa_ambulancia_que_realiza_el_traslado", "Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario", "Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion", "Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS"];
+const SER_XLSX_HEAD = ["NUM_FACTURA", "NIT_PRESTADOR", "Tipo_de_servicio", "Codigo_general_del_procedimiento_quirurgico", "Consecutivo_procedimiento_quirurgico", "Codigo_del_servicio", "Codificacion_CUPS", "Descripcion_del_servicio_o_elemento_reclamado", "Cantidad_de_servicios", "Valor_unitario_facturado", "Valor_unitario_reclamado", "Valor_total_facturado", "Valor_total_reclamado"];
+function cargarXLSX(){
+  return new Promise((ok,err)=>{
+    if(window.XLSX) return ok();
+    const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload=()=>ok(); sc.onerror=()=>err(new Error('No se pudo cargar la librería de Excel (revisa la conexión).'));
+    document.head.appendChild(sc);
+  });
+}
+// Hoja con exactamente los encabezados de la plantilla; texto para todo salvo cantidades y valores del SER
+function xlsxHoja(head, filas, numericas){
+  const aoa=[head, ...filas];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  const rango=XLSX.utils.decode_range(ws['!ref']||'A1');
+  for(let R=1; R<=rango.e.r; R++) for(let C=0; C<=rango.e.c; C++){
+    const ref=XLSX.utils.encode_cell({r:R,c:C}), cel=ws[ref]; if(!cel) continue;
+    if(numericas && numericas.has(C) && cel.v!=='' && !isNaN(Number(cel.v))){ cel.t='n'; cel.v=Number(cel.v); }
+    else { cel.t='s'; cel.v=String(cel.v); delete cel.z; }
+  }
+  ws['!cols']=head.map(h=>({wch:Math.min(45,Math.max(14,String(h).length*0.8))}));
+  return ws;
+}
+function furFilasExcel(json){
+  const filas=[]; const hojas=json||[];
+  hojas.forEach(h=>{
+    const nit=(h.Datos_IPS&&h.Datos_IPS.NIT_PRESTADOR)||'';
+    (h.Datos_reclamacion||[]).forEach(entry=>{
+      const hoja={NIT_PRESTADOR:nit};
+      const rec=(o)=>{ Object.entries(o||{}).forEach(([k,v])=>{ if(v && typeof v==='object' && !Array.isArray(v)) rec(v); else hoja[k]=v; }); };
+      rec(entry);
+      filas.push(FUR_XLSX_HEAD.map(c=> hoja[c]==null ? '' : hoja[c]));
+    });
+  });
+  return filas;
+}
+function serFilasExcel(json){
+  const filas=[];
+  (json||[]).forEach(h=>{
+    const nit=(h.Datos_IPS&&h.Datos_IPS.NIT_PRESTADOR)||'';
+    (h.Datos_servicios_reclamacion||[]).forEach(f=>{
+      (f.Servicios||[]).forEach(sv=>{
+        filas.push(SER_XLSX_HEAD.map(c=> c==='NUM_FACTURA' ? (f.NUM_FACTURA||'') : c==='NIT_PRESTADOR' ? nit : (sv[c]==null ? '' : sv[c])));
+      });
+    });
+  });
+  return filas;
+}
+window.descargarExcel = async (tipo, json, nit, nFacturas) => {
+  try{ await cargarXLSX(); }catch(e){ toast('⚠ '+e.message,'w'); return; }
+  const wb=XLSX.utils.book_new();
+  if(tipo==='fur') XLSX.utils.book_append_sheet(wb, xlsxHoja(FUR_XLSX_HEAD, furFilasExcel(json), null), 'Sheet1');
+  else XLSX.utils.book_append_sheet(wb, xlsxHoja(SER_XLSX_HEAD, serFilasExcel(json), new Set([8,9,10,11,12])), 'Sheet1');
+  const filename=`${tipo==='fur'?'FUR':'SER'}_${nit}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  toast(`⬇ ${filename}${nFacturas?` (${nFacturas} factura(s))`:''}`,'ok');
 };
 
 // ═══ Generación en LOTE (varias facturas de la misma IPS en un solo archivo) ═══
@@ -6201,6 +6263,7 @@ window.abrirSelectorLote = async (tipo) => {
       <div id="lote-lista" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:14px;"></div>
       <div style="display:flex;gap:8px;">
         <button id="lote-generar" class="btn bp">⬇ Generar y descargar .json</button>
+        <button id="lote-excel" class="btn bs" style="border-color:#1a7f37;color:#1a7f37;">📊 Descargar Excel (plantilla)</button>
         <button id="lote-cancelar" class="btn bs">Cancelar</button>
       </div>
     </div>
@@ -6246,7 +6309,7 @@ window.abrirSelectorLote = async (tipo) => {
   overlay.querySelector('#lote-cancelar').addEventListener('click', ()=>overlay.remove());
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 
-  overlay.querySelector('#lote-generar').addEventListener('click', ()=>{
+  const generarLote = (fmt) => {
     const seleccionados = visibles().filter(r => marcadas.has(r.id));
     if(!seleccionados.length){ toast('Marca al menos una factura.','w'); return; }
     const conProblema = seleccionados.filter(r => r._prob.length);
@@ -6262,13 +6325,16 @@ window.abrirSelectorLote = async (tipo) => {
       json = buildFURSERJsonLote(nit, seleccionados);
       filename = `SER_${nit}.json`;
     }
+    if(fmt==='xlsx'){ window.descargarExcel(tipo, json, nit, seleccionados.length); overlay.remove(); return; }
     const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = filename; a.click();
     URL.revokeObjectURL(a.href);
     toast(`⬇ ${filename} (${seleccionados.length} factura(s))`,'ok');
     overlay.remove();
-  });
+  };
+  overlay.querySelector('#lote-generar').addEventListener('click', ()=>generarLote('json'));
+  overlay.querySelector('#lote-excel').addEventListener('click', ()=>generarLote('xlsx'));
 };
 
 // ── Mostrar/ocultar secciones FUR ──
@@ -6583,7 +6649,9 @@ function furserTots(){
       <span>Total Rec: <strong>$${(trM+trT).toLocaleString('es-CO')}</strong></span>
       <span style="color:var(--tx3);">| Méd-Qx: $${tfM.toLocaleString('es-CO')}</span>
       <span style="color:var(--tx3);">| Transp: $${tfT.toLocaleString('es-CO')}</span>
-    </div>`;
+    </div>${(()=>{ try{ const c = furSerConciliacion(REC); if(!c.objetivo) return '';
+      return c.dif===0 ? `<div style="margin-top:4px;color:var(--green);">✔ El SER enviado ($${c.ser.toLocaleString('es-CO')}) coincide con C96+C98 del FUR.</div>`
+        : `<div style="margin-top:4px;color:var(--red);font-weight:600;">⚠ El SER que se enviará suma $${c.ser.toLocaleString('es-CO')} y C96+C98 del FUR es $${c.objetivo.toLocaleString('es-CO')} (diferencia $${c.dif.toLocaleString('es-CO')}).${c.omitidas.length?' No se envían: '+c.omitidas.map(o=>o.d+' $'+o.v.toLocaleString('es-CO')).join('; ')+'.':''}</div>`; }catch(e){ return ''; } })()}`;
   furserValidar(tfM, trM, tfT, trT);
 }
 
@@ -6769,9 +6837,22 @@ function furSerValidar(rec){
   if(String(rec.factura||'').length>20) out.push('Número de factura excede 20 caracteres');
   return out;
 }
+// Conciliación del SER con el total facturado del FUR (C96 + C98): ADRES exige que la suma de los totales facturados del SER coincida con la FEV
+function furSerConciliacion(rec){
+  const filas = rec.fur_ser || [], util = furSerRowsExpandidas(rec);
+  const tot = r => Math.round((parseFloat(r.cantidad)||0) * (parseFloat(r.vrUnitFact)||0));
+  const ser = util.reduce((a,r)=>a+tot(r),0);
+  const omitidas = filas.filter(r => !util.includes(r) && tot(r)>0).map(r => ({d:String(r.descripcion||'').slice(0,40), v:tot(r)}));
+  const f1 = rec.furips1 || {};
+  const v96 = parseInt((typeof gv2==='function' ? gv2('c96') : '') || f1.c96 || 0) || 0, v98 = parseInt((typeof gv2==='function' ? gv2('c98') : '') || f1.c98 || 0) || 0;
+  return {ser, objetivo:v96+v98, dif: ser-(v96+v98), omitidas};
+}
 // Advertencias (no bloquean): valor por encima del tarifario SOAT vigente en servicios tipo 2
 function furSerAvisos(rec){
-  const out=[]; if(!(typeof SOAT_READY!=='undefined' && SOAT_READY) || typeof soatLookup!=='function') return out;
+  const out=[]; 
+  { const c = furSerConciliacion(rec);
+    if(c.objetivo>0 && c.dif!==0) out.push(`La suma de los totales facturados del SER ($${c.ser.toLocaleString('es-CO')}) no coincide con C96+C98 del FUR ($${c.objetivo.toLocaleString('es-CO')}): diferencia $${c.dif.toLocaleString('es-CO')}. ADRES exige que coincida con el total de la FEV.`+(c.omitidas.length?` Líneas de procedimiento/título que no se envían: ${c.omitidas.map(o=>o.d+' $'+o.v.toLocaleString('es-CO')).join('; ')}.`:'')); }
+  if(!(typeof SOAT_READY!=='undefined' && SOAT_READY) || typeof soatLookup!=='function') return out;
   (rec.fur_ser||[]).forEach((r,i)=>{
     if(String(r.tipo||'')!=='2' || !r.codigoServicio) return;
     const h = soatLookup(String(r.codigoServicio).trim()); const vr = parseFloat(r.vrUnitRec||r.vrUnitFact);
@@ -6889,7 +6970,7 @@ window.guardarFURSER = async () => {
 };
 
 // Descargar JSON
-window.descargarFURSERjson = () => {
+window.descargarFURSERjson = (fmt) => {
   revisionToast();
   try{ window.furserExpandirQx(true); }catch(e){}
   const nit  = nitIPS(REC, g('fur-nit')?.value);
@@ -6897,6 +6978,7 @@ window.descargarFURSERjson = () => {
   const _pv=furSerValidar(REC); if(_pv.length){ alert('No cumple la Circular 003:\n\n'+_pv.slice(0,15).join('\n')); return; }
   const _av=furSerAvisos(REC); if(_av.length && !confirm('Advertencias (no bloquean):\n\n'+_av.slice(0,12).join('\n')+'\n\n¿Descargar de todos modos?')) return;
   const json = buildFURSERJson();
+  if(fmt==='xlsx') return window.descargarExcel('ser', json, nit);
   const filename = `SER_${nit}.json`;
   const blob = new Blob([JSON.stringify(json, null, 3)], {type:'application/json'});
   const a = document.createElement('a');
