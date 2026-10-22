@@ -899,6 +899,8 @@ table input,table select{padding:4px 6px;font-size:11.5px;min-width:75px;}
       <button class="btn bs" style="font-size:12px;" onclick="furserAddRow()">✚ Agregar Ítem</button>
       <button class="btn bs" style="font-size:12px;background:#6e40c9;color:#fff;border-color:#6e40c9;" onclick="furserOrganizar()">📐 Organizar tabla</button>
       <button class="btn bs" style="font-size:12px;" onclick="furserDescomponer()">🔧 Descomponer Proc. Qx.</button>
+      <button class="btn bs" style="font-size:12px;" onclick="document.getElementById('furser-pdfqx-input').click()" title="Lee el PDF de la factura (FAC) y trae cada procedimiento quirúrgico con su discriminado y los valores tal como están en la factura">📄 Cargar Qx desde PDF de la factura</button>
+      <input type="file" id="furser-pdfqx-input" accept=".pdf" style="display:none" onchange="window.furserCargarQxPDF(this.files[0]); this.value=''">
       <span style="color:var(--tx3);font-size:11px;margin:0 4px;">│</span>
       <button class="btn bs" style="font-size:12px;background:var(--acc);color:#fff;border-color:var(--acc);" onclick="document.getElementById('furser-xml-input').click()">📂 Cargar XML DIAN</button>
       <input type="file" id="furser-xml-input" accept=".xml,.zip" multiple style="display:none" onchange="window.furserCargarXML(this.files)">
@@ -6713,6 +6715,89 @@ window.furserDescomponer = () => {
   toast(`🔧 Procedimiento ${c}: ${comp.length} líneas creadas (consecutivo ${consecMax+1}). Digita los valores como están en la factura.`,'ok');
 };
 
+// ── Procedimientos quirúrgicos desde el PDF de la factura (FAC): trae el discriminado y los valores tal como están en la factura ──
+let _pdfjsLib = null;
+async function furGetPdfJs(){
+  if(_pdfjsLib) return _pdfjsLib;
+  if(!window.pdfjsLib){
+    await new Promise((ok,err)=>{ const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload=ok; sc.onerror=()=>err(new Error('No se pudo cargar el lector de PDF (revisa la conexión).')); document.head.appendChild(sc); });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  return (_pdfjsLib = window.pdfjsLib);
+}
+async function furTextoPDF(file){
+  const lib = await furGetPdfJs();
+  const pdf = await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  let txt='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const c = await (await pdf.getPage(p)).getTextContent(); let y=null;
+    c.items.forEach(it=>{ const yy=Math.round(it.transform[5]); if(y!==null && Math.abs(yy-y)>2) txt+='\n'; else if(y!==null) txt+='  '; txt+=it.str; y=yy; });
+    txt+='\n';
+  }
+  return txt;
+}
+const furNumCO = t => { const n = parseInt(String(t||'').replace(/\./g,'').replace(/,\d+$/,''),10); return isNaN(n) ? 0 : n; };
+// Devuelve [{codigo, desc, total, comps:[{codigo, desc, valor}]}] leyendo el texto de la factura
+function furParsearQxFactura(txt){
+  const lines = txt.split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const compSet = new Set(); try{ Object.values(GRUPOS_SOAT.grupos||{}).forEach(g=>['c','a','y','s','m'].forEach(k=>{ if(g[k]) compSet.add(String(g[k])); })); }catch(e){}
+  const esComp = (cod, resto) => compSet.has(cod) || (/^39\d{3}$/.test(cod) && /GRUPOS?\s*\d/i.test(resto));
+  const esProc = cod => (typeof furSerQxGrupo==='function' && GRUPOS_READY) ? !!furSerQxGrupo(cod) : /^1\d{4}$/.test(cod);
+  const QV = /(\d+,\d{2})\s+(-?[\d.]+)(?:\s+-?[\d.,]+)?\s*$/;
+  const procs = []; let cur = null;
+  lines.forEach(L => {
+    const m = L.match(/^(\d{5})\s+(.*)$/);
+    if(m){
+      const cod = m[1], resto = m[2];
+      if(esComp(cod, resto)){
+        if(!cur) return;
+        const q = resto.match(QV);
+        const desc = (q ? resto.slice(0, q.index) : resto).replace(/M[ée]dico\s*:.*/i,'').trim();
+        cur.comps.push({codigo:cod, desc, valor: q ? furNumCO(q[2]) : 0});
+      } else if(esProc(cod)){
+        cur = {codigo:cod, desc:resto.replace(/M[ée]dico\s*:.*/i,'').trim(), total:null, comps:[]}; procs.push(cur);
+        const q = resto.match(QV); if(q) cur.total = furNumCO(q[2]);
+      } else { cur = null; }
+    } else if(cur && cur.total==null && !cur.comps.length){
+      const q = L.match(QV); if(q) cur.total = furNumCO(q[2]);
+    }
+  });
+  return procs.filter(p => p.comps.length);
+}
+window.furserCargarQxPDF = async (file) => {
+  if(!file) return;
+  if(!REC){ toast('No hay reclamación activa.','e'); return; }
+  if(!GRUPOS_READY) toast('ℹ grupos_soat.json no cargó: detecto los procedimientos por su código y la palabra GRUPO.','w');
+  let txt='';
+  try{ txt = await furTextoPDF(file); }catch(e){ toast('No pude leer el PDF: '+e.message,'e'); return; }
+  const procs = furParsearQxFactura(txt);
+  if(!procs.length){ toast('No encontré procedimientos quirúrgicos con discriminado en ese PDF. Si es un escaneo, digítalos a mano.','w'); return; }
+  if(!REC.fur_ser) REC.fur_ser = [];
+  let consec = Math.max(0, ...REC.fur_ser.map(r=>parseInt(r.consecQx)||0));
+  let nuevas = 0, saltadas = [], avisos = [];
+  const nit = nitIPS(REC, g('fur-nit')?.value);
+  procs.forEach(pr => {
+    if(REC.fur_ser.some(r => String(r.codQx||'').trim()===pr.codigo && String(r.consecQx||'').trim()) && !REC.fur_ser.some(r=>r._qxPdf && r.codQx===pr.codigo)){ saltadas.push(pr.codigo); return; }
+    consec++;
+    const cups = cupsDeMapa(pr.codigo);
+    let suma = 0;
+    pr.comps.filter(c=>c.valor>0).forEach(c => {
+      const hit = (typeof soatLookup==='function' && SOAT_READY) ? soatLookup(c.codigo) : null;
+      suma += c.valor;
+      REC.fur_ser.push({ factura:REC.factura, nit, tipo:'2', codQx:pr.codigo, consecQx:String(consec), codigoServicio:c.codigo, codigoCUPS:cups,
+        descripcion: furSerLimpiarDesc(hit && hit.desc ? hit.desc : c.desc), cantidad:'1', vrUnitFact:String(c.valor), vrUnitRec:String(c.valor),
+        totalFact:String(c.valor), totalRec:String(c.valor), _qxPdf:true });
+      nuevas++;
+    });
+    if(pr.total!=null && suma!==pr.total) avisos.push(`${pr.codigo}: factura $${pr.total.toLocaleString('es-CO')} vs discriminado $${suma.toLocaleString('es-CO')}`);
+  });
+  // quita la línea con el nombre del procedimiento y los títulos
+  REC.fur_ser = furSerRowsExpandidas(REC);
+  furserRender();
+  const sinCups = REC.fur_ser.filter(r=>r._qxPdf && !cupsValido(r.codigoCUPS)).length;
+  toast(`📄 ${procs.length-saltadas.length} procedimiento(s) quirúrgico(s) cargados (${nuevas} líneas con valor, como en la factura)`+(saltadas.length?` · ya digitados: ${saltadas.join(', ')}`:'')+(avisos.length?` · ⚠ ${avisos.join('; ')}`:'')+(sinCups?` · ⚠ ${sinCups} línea(s) sin CUPS: digítalo (el del RIPS)`:''), (avisos.length||sinCups)?'w':'ok');
+};
+
 // Cargar XML DIAN (reutiliza parsearXMLDIAN del FURIPS2)
 window.furserCargarXML = async (files) => {
   if(!files?.length) return;
@@ -6748,7 +6833,7 @@ window.furserCargarXML = async (files) => {
   }));
   furserRender();
   window.furserExpandirQx(false);
-  { const nq = REC.fur_ser.filter(furSerEsLineaProcedimientoQx).length; if(nq) toast(`⚠ ${nq} procedimiento(s) quirúrgico(s) sin discriminar: digita cirujano, anestesiólogo, ayudante, sala y materiales como están en la factura (botón «Descomponer Proc. Qx.» arma la estructura sin valores)`,'w'); }
+  { const nq = REC.fur_ser.filter(furSerEsLineaProcedimientoQx).length; if(nq) toast(`⚠ ${nq} procedimiento(s) quirúrgico(s) sin discriminar: digita cirujano, anestesiólogo, ayudante, sala y materiales como están en la factura (use «📄 Cargar Qx desde PDF de la factura» para traerlo tal cual está en la factura)`,'w'); }
   const nSin = REC.fur_ser.filter(x => !String(x.codigoServicio||'').trim()).length;
   toast(`✔ ${REC.fur_ser.length} ítems cargados desde XML DIAN` + (nSin ? ` · ⚠ ${nSin} sin código: usa las sugerencias 💡 (el sistema lo recuerda)` : ''),'ok');
 };
@@ -6776,10 +6861,9 @@ function furSerComponentesQx(cod, consec, base){
 const furSerEsTitulo = r => !String(r.codQx||'').trim() && ['2',''].includes(String(r.tipo||'').trim()) &&
   /^\s*(procedimiento\s+qx\s*)?\(?\s*grupos?\s*\d{1,2}(\s*(-|–|y|,|\/)\s*\d{1,2})*\s*\)?\s*$/i.test(String(r.descripcion||''));
 function furSerTieneDiscriminado(rows, r){
+  // Solo cuenta si hay filas con el código Qx de ESTE procedimiento (los códigos de componente se repiten entre procedimientos)
   const cod = String(r.codigoServicio||'').trim();
-  const g = (typeof GRUPOS_SOAT!=='undefined' && GRUPOS_SOAT.grupos) ? (GRUPOS_SOAT.grupos[furSerQxGrupo(cod)] || {}) : {};
-  const comps = ['c','a','y','s','m'].map(k=>String(g[k]||'')).filter(Boolean);
-  return rows.some(x => x!==r && (String(x.codQx||'').trim()===cod || comps.includes(String(x.codigoServicio||'').trim())));
+  return rows.some(x => x!==r && String(x.codQx||'').trim()===cod && String(x.consecQx||'').trim());
 }
 function furSerEsLineaProcedimientoQx(r){
   const cod = String(r.codigoServicio||'').trim();
