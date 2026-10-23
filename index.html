@@ -11624,20 +11624,21 @@ window.trazGrupoExcel = function(){
   for(let r=1;r<=rows.length+1;r++) money.forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws[a]) ws[a].z='#,##0'; });
   ws['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(head.length-1)}${rows.length+1}`}; ws['!freeze']={xSplit:2,ySplit:1};
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
-  // Hoja de movimientos: una fila por hecho, ordenado por factura y fecha
-  const mov = [];
+  // Hoja de movimientos: UNA fila por factura; todo el historial va condensado en la columna «Detalle» (cronológico)
   const fd = d => d ? (d.toDate ? d.toDate() : new Date(d)) : null;
   const fs = d => { const x=fd(d); return x && !isNaN(x) ? x.toLocaleDateString('es-CO') : ''; };
-  recs.forEach(r => {
-    if(r.creado?.toDate) mov.push([r.factura||'', fs(r.creado), 'Ingresada al sistema', '', '', '', '', '', 'Por '+(r.creadoPorNombre||'CONEXA')]);
+  const mon = v => '$'+R(v).toLocaleString('es-CO');
+  const mov = recs.map(r => {
+    const partes = [];
+    if(r.creado?.toDate) partes.push(`${fs(r.creado)} Ingresada al sistema (${r.creadoPorNombre||'CONEXA'})`);
     trazRondasDe(r).forEach((d,i) => {
-      mov.push([r.factura||'', d.fecha||'', `Radicación ${i+1} ante ADRES`, d.numero||'', d.lote||'', '', '', '', '']);
-      if(d.estado) mov.push([r.factura||'', d.fechaRespuesta||d.fechaDevolucion||'', `Respuesta ADRES: ${lblE(d.estado)}`, d.numero||'', d.lote||'', R(d.valorAprobado), R(d.valorGlosado), lblE(d.estado), d.descripcion||'']);
+      partes.push(`${d.fecha||'s/f'} Radicación ${i+1} ante ADRES N° ${d.numero||'—'}${d.lote?' · Lote '+d.lote:''}`);
+      if(d.estado) partes.push(`${d.fechaRespuesta||d.fechaDevolucion||'s/f'} Respuesta ADRES: ${lblE(d.estado)} · aprobado ${mon(d.valorAprobado)} · glosado ${mon(d.valorGlosado)}${d.descripcion?' — '+d.descripcion:''}`);
     });
+    return [r.factura||'', r.consec||'', EST_GESTION[getEstadoGestion(r)]?.lbl||'', partes.join('  ||  ')];
   });
-  const ws2 = XLSX.utils.aoa_to_sheet([['Factura','Fecha','Movimiento','N° Radicación','Lote','Valor Aprobado','Valor Glosado','Estado','Detalle'], ...mov]);
-  ws2['!cols'] = [16,14,32,16,14,14,14,16,60].map(w=>({wch:w}));
-  for(let r=1;r<=mov.length;r++) [5,6].forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws2[a] && typeof ws2[a].v==='number') ws2[a].z='#,##0'; });
+  const ws2 = XLSX.utils.aoa_to_sheet([['Factura','Consecutivo','Estado gestión','Detalle'], ...mov]);
+  ws2['!cols'] = [16,12,16,160].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws2, 'Movimientos');
   if(window.TRAZ_NOENC.length){
     const ws3 = XLSX.utils.aoa_to_sheet([['Facturas del listado que no se encontraron'], ...window.TRAZ_NOENC.map(x=>[x])]); ws3['!cols']=[{wch:40}];
