@@ -11605,45 +11605,38 @@ window.trazGrupoExcel = function(){
     const v = window.getValoresAdresTotal(r), rec = val(r);
     return {r, rondas, rec, porRec:Math.max(0, rec - v.valorAprobado - v.valorGlosado), apr:v.valorAprobado, glo:v.valorGlosado};
   });
-  // HOJA 1 «Trazabilidad»: solo VALORES y ESTADOS (una fila por factura)
-  const max = Math.max(1, ...filas.map(f=>f.rondas.length));
-  const head = ['Factura','Consecutivo','Valor Factura','Valor Total por Recuperar','IPS','Estado gestión'];
-  for(let i=1;i<=max;i++) head.push(`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`);
-  head.push('Total Aprobado','Total Glosado');
-  const rows = filas.map(f => {
-    const row = [f.r.factura||'', f.r.consec||'', f.rec, R(f.porRec), IPS_NOMBRES?.[f.r.codHab]||f.r.codHab||'', EST_GESTION[getEstadoGestion(f.r)]?.lbl||''];
-    for(let i=0;i<max;i++){ const d=f.rondas[i]; if(d) row.push(lblE(d.estado), R(d.valorReclamado), R(d.valorAprobado), R(d.valorGlosado)); else row.push('','','',''); }
-    row.push(R(f.apr), R(f.glo)); return row;
-  });
-  const tot = ['TOTAL GRUPO','', filas.reduce((a,f)=>a+f.rec,0), filas.reduce((a,f)=>a+R(f.porRec),0), '',''];
-  for(let i=0;i<max;i++) tot.push('','','','');
-  tot.push(filas.reduce((a,f)=>a+R(f.apr),0), filas.reduce((a,f)=>a+R(f.glo),0));
-  const ws = XLSX.utils.aoa_to_sheet([head,...rows,tot]);
-  ws['!cols'] = [{wch:16},{wch:12},{wch:14},{wch:20},{wch:22},{wch:16}].concat(Array.from({length:max*4},(_,i)=>({wch:[14,16,16,16][i%4]}))).concat([{wch:14},{wch:14}]);
-  const money = [2,3]; for(let i=0;i<max;i++){ const b=6+i*4; money.push(b+1,b+2,b+3); } money.push(6+max*4, 7+max*4);
-  for(let r=1;r<=rows.length+1;r++) money.forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws[a]) ws[a].z='#,##0'; });
-  ws['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(head.length-1)}${rows.length+1}`}; ws['!freeze']={xSplit:2,ySplit:1};
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
-  // HOJA 2 «Movimientos»: solo FECHAS, N° de radicación, lote y observación (una fila por factura, sin valores, sin usuarios)
+  // UNA sola hoja, una fila por factura, pensada para que cualquiera (auxiliar o gerente) la entienda:
+  // datos de la cuenta → resumen de valores → PRIMERA RADICACIÓN → GLOSA 1 → GLOSA 2 … (cada una con fecha, N°, estado, valores y observación)
   const fd = d => d ? (d.toDate ? d.toDate() : new Date(d)) : null;
   const fs = d => { const x=fd(d); return x && !isNaN(x) ? x.toLocaleDateString('es-CO') : ''; };
-  const rondasAsc = recs.map(r => trazRondasDe(r));
-  const maxM = Math.max(1, ...rondasAsc.map(x=>x.length));
-  const headM = ['Factura','Consecutivo','Fecha ingreso al sistema'];
-  for(let i=1;i<=maxM;i++) headM.push(`Radicación ${i} - Fecha`,`Radicación ${i} - N°`,`Radicación ${i} - Lote`,`Respuesta ${i} - Fecha`,`Respuesta ${i} - Observación`);
-  const mov = recs.map((r,k) => {
-    const row = [r.factura||'', r.consec||'', fs(r.creado)];
-    for(let i=0;i<maxM;i++){
-      const d = rondasAsc[k][i];
-      if(d) row.push(d.fecha||'', d.numero||'', d.lote||'', d.estado?(d.fechaRespuesta||d.fechaDevolucion||''):'', d.descripcion||'');
-      else row.push('','','','','');
+  const max = Math.max(1, ...filas.map(f=>f.rondas.length));
+  const FIJAS = ['Factura','Consecutivo','IPS','Fecha de ingreso al sistema','Estado actual de la cuenta','Valor de la factura','Total aprobado','Total glosado','Valor pendiente por recuperar'];
+  const GRUPO = ['Fecha de radicación','N° de radicación','Respuesta de ADRES','Fecha de respuesta','Valor radicado','Valor aprobado','Valor glosado','Observación de ADRES'];
+  const titulo = ['DATOS DE LA CUENTA','','','','','RESUMEN DE VALORES','','',''];
+  const sub = [...FIJAS];
+  for(let i=0;i<max;i++){ titulo.push(i===0?'PRIMERA RADICACIÓN':`GLOSA ${i}`, ...Array(GRUPO.length-1).fill('')); sub.push(...GRUPO); }
+  const rows = filas.map(f => {
+    const row = [f.r.factura||'', f.r.consec||'', IPS_NOMBRES?.[f.r.codHab]||f.r.codHab||'', fs(f.r.creado), EST_GESTION[getEstadoGestion(f.r)]?.lbl||'', f.rec, R(f.apr), R(f.glo), R(f.porRec)];
+    for(let i=0;i<max;i++){
+      const d = f.rondas[i];
+      if(d) row.push(d.fecha||'', d.numero||'', d.estado?lblE(d.estado):'Sin respuesta', d.estado?(d.fechaRespuesta||d.fechaDevolucion||''):'', R(d.valorReclamado), d.estado?R(d.valorAprobado):'', d.estado?R(d.valorGlosado):'', d.descripcion||'');
+      else row.push(...Array(GRUPO.length).fill(''));
     }
     return row;
   });
-  const ws2 = XLSX.utils.aoa_to_sheet([headM, ...mov]);
-  ws2['!cols'] = [{wch:16},{wch:12},{wch:18}].concat(Array.from({length:maxM*5},(_,i)=>({wch:[16,16,12,16,40][i%5]})));
-  ws2['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(headM.length-1)}${mov.length+1}`}; ws2['!freeze']={xSplit:2,ySplit:1};
-  XLSX.utils.book_append_sheet(wb, ws2, 'Movimientos');
+  const tot = ['TOTAL DEL GRUPO','','','','', filas.reduce((a,f)=>a+f.rec,0), filas.reduce((a,f)=>a+R(f.apr),0), filas.reduce((a,f)=>a+R(f.glo),0), filas.reduce((a,f)=>a+R(f.porRec),0)];
+  for(let i=0;i<max;i++){
+    const sm = k => filas.reduce((a,f)=>a+(f.rondas[i]?R(f.rondas[i][k]):0),0);
+    tot.push('','','','', sm('valorReclamado'), sm('valorAprobado'), sm('valorGlosado'), '');
+  }
+  const ws = XLSX.utils.aoa_to_sheet([titulo, sub, ...rows, tot]);
+  ws['!cols'] = [{wch:16},{wch:12},{wch:22},{wch:16},{wch:18},{wch:16},{wch:16},{wch:16},{wch:18}].concat(Array.from({length:max*GRUPO.length},(_,i)=>({wch:[16,16,18,16,16,16,16,40][i%GRUPO.length]})));
+  const nC = sub.length;
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:0,c:5},e:{r:0,c:8}}].concat(Array.from({length:max},(_,i)=>({s:{r:0,c:9+i*GRUPO.length},e:{r:0,c:8+(i+1)*GRUPO.length}})));
+  const money = [5,6,7,8]; for(let i=0;i<max;i++){ const b=9+i*GRUPO.length; money.push(b+4,b+5,b+6); }
+  for(let r=2;r<rows.length+3;r++) money.forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws[a]) ws[a].z='#,##0'; });
+  ws['!autofilter'] = {ref:`A2:${XLSX.utils.encode_col(nC-1)}${rows.length+2}`}; ws['!freeze']={xSplit:2,ySplit:2};
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
   if(window.TRAZ_NOENC.length){
     const ws3 = XLSX.utils.aoa_to_sheet([['Facturas del listado que no se encontraron'], ...window.TRAZ_NOENC.map(x=>[x])]); ws3['!cols']=[{wch:40}];
     XLSX.utils.book_append_sheet(wb, ws3, 'No encontradas');
