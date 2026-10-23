@@ -714,6 +714,35 @@ select option{background:var(--sur2);}
           <div id="traz-lista" style="margin-top:10px;display:none;max-height:180px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;"></div>
         </div>
 
+
+        <!-- Trazabilidad de un GRUPO de cuentas (selección múltiple o listado en Excel) -->
+        <details id="traz-grupo" style="background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+          <summary style="cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.5px;">📦 TRAZABILIDAD DE UN GRUPO DE CUENTAS · un solo Excel</summary>
+          <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">
+            <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① Elegir cuentas</div>
+              <input id="trg-filtro" oninput="trazGrupoPintar()" placeholder="Filtrar por factura o consecutivo…" autocomplete="off" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur);color:var(--tx);font-size:12px;margin-bottom:6px;">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+                <button class="btn bs" style="font-size:10px;" onclick="trazGrupoMarcarVisibles(true)">☑ Marcar visibles</button>
+                <button class="btn bs" style="font-size:10px;" onclick="trazGrupoMarcarVisibles(false)">☐ Desmarcar visibles</button>
+              </div>
+              <div id="trg-lista" style="max-height:200px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;background:var(--sur);"></div>
+            </div>
+            <div style="background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">② o subir / pegar un listado de facturas</div>
+              <input type="file" id="trg-xlsx" accept=".xlsx,.xls,.csv" style="display:none;" onchange="trazGrupoLeerExcel(this.files[0]); this.value=''">
+              <button class="btn bs" style="font-size:11px;width:100%;margin-bottom:6px;" onclick="document.getElementById('trg-xlsx').click()">📂 Subir Excel con el listado (columna «Factura»)</button>
+              <textarea id="trg-pegar" rows="4" placeholder="…o pega aquí las facturas (una por línea, o separadas por coma)" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid var(--brd2);background:var(--sur);color:var(--tx);font-size:12px;font-family:var(--mono);"></textarea>
+              <button class="btn bs" style="font-size:11px;margin-top:6px;" onclick="trazGrupoAplicarPegado()">➕ Agregar las pegadas</button>
+            </div>
+          </div>
+          <div id="trg-estado" style="font-size:11px;color:var(--tx2);margin-top:10px;"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            <button class="btn bp" style="font-size:12px;" onclick="trazGrupoExcel()">⬇ Excel de trazabilidad del grupo</button>
+            <button class="btn bs" style="font-size:12px;" onclick="trazGrupoLimpiar()">✕ Limpiar selección</button>
+          </div>
+        </details>
+
         <!-- Timeline de la factura seleccionada -->
         <div id="traz-detalle" style="display:none;">
 
@@ -8095,6 +8124,7 @@ window.go=(id)=>{
   }
   if(id==='traz'){
     trazLimpiar();
+    try{ trazGrupoPintar(); }catch(e){}
   }
   if(id==='adres-sync'){
     if(USER?.rol!=='superadmin'){toast('Solo el Super Admin puede acceder.','w');return;}
@@ -11486,6 +11516,135 @@ window.trazMostrar = function(rec){
 
   if(detalle) detalle.style.display='block';
   if(empty) empty.style.display='none';
+};
+
+
+// ── Trazabilidad de un GRUPO de cuentas: selección múltiple y/o listado en Excel → un solo Excel ──
+window.TRAZ_SEL = new Set();       // ids de reclamaciones elegidas
+window.TRAZ_NOENC = [];            // facturas del listado que no se encontraron
+const trazNorm = v => String(v==null?'':v).toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9]/g,'');
+const trazFuente = () => (window.FURIPS_STATE?.getRecs()||(typeof RECS!=='undefined'?RECS:[]));
+window.trazGrupoPintar = function(){
+  const el = document.getElementById('trg-lista'); if(!el) return;
+  const q = (document.getElementById('trg-filtro')?.value||'').trim().toLowerCase();
+  let src = trazFuente();
+  if(q) src = src.filter(r => (r.factura||'').toLowerCase().includes(q) || String(r.consec||'').toLowerCase().includes(q));
+  src = [...src].sort((a,b)=>String(a.factura||'').localeCompare(String(b.factura||'')));
+  const tope = 300;
+  el.innerHTML = src.slice(0,tope).map(r=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--brd);font-size:12px;cursor:pointer;"><input type="checkbox" ${window.TRAZ_SEL.has(r.id)?'checked':''} onchange="trazGrupoToggle('${r.id}',this.checked)"><strong>${r.factura||''}</strong><span style="color:var(--tx3);font-family:var(--mono);font-size:10px;">${r.consec||''}</span></label>`).join('')
+    + (src.length>tope?`<div style="padding:6px 10px;font-size:10px;color:var(--tx3);">Mostrando ${tope} de ${src.length}: filtra para ver el resto.</div>`:'')
+    + (!src.length?'<div style="padding:10px;font-size:11px;color:var(--tx3);">Sin resultados.</div>':'');
+  trazGrupoEstado();
+};
+window.trazGrupoEstado = function(){
+  const e = document.getElementById('trg-estado'); if(!e) return;
+  const n = window.TRAZ_SEL.size, ne = window.TRAZ_NOENC.length;
+  e.innerHTML = `<strong>${n}</strong> cuenta(s) seleccionada(s)` + (ne?` · <span style="color:var(--warn,#e3b341);">⚠ ${ne} del listado no se encontraron: ${window.TRAZ_NOENC.slice(0,8).join(', ')}${ne>8?'…':''} (irán a la hoja «No encontradas»)</span>`:'');
+};
+window.trazGrupoToggle = (id,on) => { on ? window.TRAZ_SEL.add(id) : window.TRAZ_SEL.delete(id); trazGrupoEstado(); };
+window.trazGrupoMarcarVisibles = function(on){
+  document.querySelectorAll('#trg-lista input[type=checkbox]').forEach(cb=>{ cb.checked=on; const m=cb.getAttribute('onchange').match(/'([^']+)'/); if(m) on?window.TRAZ_SEL.add(m[1]):window.TRAZ_SEL.delete(m[1]); });
+  trazGrupoEstado();
+};
+window.trazGrupoLimpiar = function(){ window.TRAZ_SEL.clear(); window.TRAZ_NOENC=[]; const f=document.getElementById('trg-filtro'); if(f) f.value=''; const t=document.getElementById('trg-pegar'); if(t) t.value=''; trazGrupoPintar(); };
+// Marca las reclamaciones que corresponden a una lista de facturas
+window.trazGrupoAgregarFacturas = function(lista){
+  const src = trazFuente(); const idx = new Map();
+  src.forEach(r => { const k=trazNorm(r.factura); if(k){ if(!idx.has(k)) idx.set(k,[]); idx.get(k).push(r); } });
+  const porConsec = new Map(); src.forEach(r => { const k=trazNorm(r.consec); if(k && !porConsec.has(k)) porConsec.set(k,r); });
+  let ok=0; const vistos=new Set();
+  lista.forEach(raw => {
+    const k = trazNorm(raw); if(!k || vistos.has(k)) return; vistos.add(k);
+    const hit = idx.get(k) || (porConsec.get(k)?[porConsec.get(k)]:null);
+    if(hit){ hit.forEach(r=>window.TRAZ_SEL.add(r.id)); ok++; }
+    else if(!window.TRAZ_NOENC.includes(String(raw).trim())) window.TRAZ_NOENC.push(String(raw).trim());
+  });
+  trazGrupoPintar();
+  toast(`📦 Listado: ${ok} factura(s) encontradas`+(window.TRAZ_NOENC.length?` · ${window.TRAZ_NOENC.length} no encontradas`:''), window.TRAZ_NOENC.length?'w':'ok');
+};
+window.trazGrupoAplicarPegado = function(){
+  const t = document.getElementById('trg-pegar')?.value||'';
+  const l = t.split(/[\n\r,;\t]+/).map(x=>x.trim()).filter(Boolean);
+  if(!l.length){ toast('Pega al menos una factura.','w'); return; }
+  trazGrupoAgregarFacturas(l);
+};
+window.trazGrupoLeerExcel = async function(file){
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  try{
+    const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), {type:'array'});
+    const filas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:false, defval:''});
+    let col = 0, ini = 0;
+    for(let i=0;i<Math.min(filas.length,10);i++){
+      const j = (filas[i]||[]).findIndex(c=>/factura/i.test(String(c)));
+      if(j>=0){ col=j; ini=i+1; break; }
+    }
+    const lista = filas.slice(ini).map(f=>String((f||[])[col]??'').trim()).filter(Boolean);
+    if(!lista.length){ toast('No encontré facturas en el Excel (usa una columna llamada «Factura»).','w'); return; }
+    trazGrupoAgregarFacturas(lista);
+  }catch(e){ toast('No pude leer el Excel: '+e.message,'e'); }
+};
+// Rondas de una reclamación (misma lógica de la línea de tiempo), de la más antigua a la más reciente
+function trazRondasDe(rec){
+  let rs = Array.isArray(rec.respuestasAdres) ? [...rec.respuestasAdres] : [];
+  if(!rs.length && rec.radicado?.numero) rs.push({numero:rec.radicado.numero, lote:rec.radicado.lote, fecha:rec.radicado.fecha, estado:rec.respuestaAdres?.estado,
+    valorAprobado:rec.respuestaAdres?.valorAprobado, valorGlosado:rec.respuestaAdres?.valorGlosado, descripcion:rec.respuestaAdres?.descripcion, valorReclamado:rec.valorRadicadoConfirmado});
+  const f = x => { const v=String(x||''); return v.includes('/') ? v.split('/').reverse().join('-') : v; };
+  return rs.sort((a,b)=>f(a.fecha).localeCompare(f(b.fecha)));
+}
+window.trazGrupoExcel = function(){
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  const src = trazFuente();
+  const recs = src.filter(r=>window.TRAZ_SEL.has(r.id)).sort((a,b)=>String(a.factura||'').localeCompare(String(b.factura||'')));
+  if(!recs.length){ toast('Elige cuentas o sube un listado primero.','w'); return; }
+  const R = v => Math.round(Number(v)||0);
+  const val = r => parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
+  const lblE = k => (EST_ADRES[k]?.lbl)||k||'';
+  const filas = recs.map(r => {
+    const rondas = trazRondasDe(r).reverse();       // última radicación primero, igual que la exportación general
+    const v = window.getValoresAdresTotal(r), rec = val(r);
+    return {r, rondas, rec, porRec:Math.max(0, rec - v.valorAprobado - v.valorGlosado), apr:v.valorAprobado, glo:v.valorGlosado};
+  });
+  const max = Math.max(1, ...filas.map(f=>f.rondas.length));
+  const head = ['Factura','Consecutivo','Valor Factura','Valor Total por Recuperar','IPS','Estado gestión','N° Radicado'];
+  for(let i=1;i<=max;i++) head.push(`Ronda ${i} - Fecha Radicación`,`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`);
+  head.push('Total Aprobado','Total Glosado');
+  const rows = filas.map(f => {
+    const row = [f.r.factura||'', f.r.consec||'', f.rec, R(f.porRec), IPS_NOMBRES?.[f.r.codHab]||f.r.codHab||'', EST_GESTION[getEstadoGestion(f.r)]?.lbl||'', f.r.radicado?.numero||''];
+    for(let i=0;i<max;i++){ const d=f.rondas[i]; if(d) row.push(d.fecha||'', lblE(d.estado), R(d.valorReclamado), R(d.valorAprobado), R(d.valorGlosado)); else row.push('','','','',''); }
+    row.push(R(f.apr), R(f.glo)); return row;
+  });
+  // Totales del grupo
+  const tot = ['TOTAL GRUPO','', filas.reduce((a,f)=>a+f.rec,0), filas.reduce((a,f)=>a+R(f.porRec),0), '','','']; 
+  for(let i=0;i<max;i++) tot.push('','','','','');
+  tot.push(filas.reduce((a,f)=>a+R(f.apr),0), filas.reduce((a,f)=>a+R(f.glo),0));
+  const ws = XLSX.utils.aoa_to_sheet([head,...rows,tot]);
+  ws['!cols'] = [{wch:16},{wch:12},{wch:14},{wch:20},{wch:22},{wch:16},{wch:16}].concat(Array.from({length:max*5},(_,i)=>({wch:[16,14,14,14,14][i%5]}))).concat([{wch:14},{wch:14}]);
+  const money = [2,3]; for(let i=0;i<max;i++){ const b=7+i*5; money.push(b+2,b+3,b+4); } money.push(7+max*5, 8+max*5);
+  for(let r=1;r<=rows.length+1;r++) money.forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws[a]) ws[a].z='#,##0'; });
+  ws['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(head.length-1)}${rows.length+1}`}; ws['!freeze']={xSplit:2,ySplit:1};
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
+  // Hoja de movimientos: una fila por hecho, ordenado por factura y fecha
+  const mov = [];
+  const fd = d => d ? (d.toDate ? d.toDate() : new Date(d)) : null;
+  const fs = d => { const x=fd(d); return x && !isNaN(x) ? x.toLocaleDateString('es-CO') : ''; };
+  recs.forEach(r => {
+    if(r.creado?.toDate) mov.push([r.factura||'', fs(r.creado), 'Ingresada al sistema', '', '', '', '', '', 'Por '+(r.creadoPorNombre||'CONEXA')]);
+    trazRondasDe(r).forEach((d,i) => {
+      mov.push([r.factura||'', d.fecha||'', `Radicación ${i+1} ante ADRES`, d.numero||'', d.lote||'', '', '', '', '']);
+      if(d.estado) mov.push([r.factura||'', d.fechaRespuesta||d.fechaDevolucion||'', `Respuesta ADRES: ${lblE(d.estado)}`, d.numero||'', d.lote||'', R(d.valorAprobado), R(d.valorGlosado), lblE(d.estado), d.descripcion||'']);
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet([['Factura','Fecha','Movimiento','N° Radicación','Lote','Valor Aprobado','Valor Glosado','Estado','Detalle'], ...mov]);
+  ws2['!cols'] = [16,14,32,16,14,14,14,16,60].map(w=>({wch:w}));
+  for(let r=1;r<=mov.length;r++) [5,6].forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws2[a] && typeof ws2[a].v==='number') ws2[a].z='#,##0'; });
+  XLSX.utils.book_append_sheet(wb, ws2, 'Movimientos');
+  if(window.TRAZ_NOENC.length){
+    const ws3 = XLSX.utils.aoa_to_sheet([['Facturas del listado que no se encontraron'], ...window.TRAZ_NOENC.map(x=>[x])]); ws3['!cols']=[{wch:40}];
+    XLSX.utils.book_append_sheet(wb, ws3, 'No encontradas');
+  }
+  XLSX.writeFile(wb, `Trazabilidad_grupo_${recs.length}_cuentas_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast(`✔ Excel de trazabilidad: ${recs.length} cuenta(s), hasta ${max} ronda(s)`+(window.TRAZ_NOENC.length?` · ${window.TRAZ_NOENC.length} no encontradas`:''),'ok');
 };
 
 window.trazLimpiar = function(){
