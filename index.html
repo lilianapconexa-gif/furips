@@ -11601,48 +11601,47 @@ window.trazGrupoExcel = function(){
   const val = r => parseInt(r.furips1?.valorOriginalFactura||r.furips1?.c97||r.furips1?.c96||0)||0;
   const lblE = k => (EST_ADRES[k]?.lbl)||k||'';
   const filas = recs.map(r => {
-    const rondas = trazRondasDe(r).reverse();       // última radicación primero, igual que la exportación general
+    const rondas = trazRondasDe(r);       // misma numeración que la hoja Movimientos (1 = la más antigua)
     const v = window.getValoresAdresTotal(r), rec = val(r);
     return {r, rondas, rec, porRec:Math.max(0, rec - v.valorAprobado - v.valorGlosado), apr:v.valorAprobado, glo:v.valorGlosado};
   });
+  // HOJA 1 «Trazabilidad»: solo VALORES y ESTADOS (una fila por factura)
   const max = Math.max(1, ...filas.map(f=>f.rondas.length));
-  const head = ['Factura','Consecutivo','Valor Factura','Valor Total por Recuperar','IPS','Estado gestión','N° Radicado'];
-  for(let i=1;i<=max;i++) head.push(`Ronda ${i} - Fecha Radicación`,`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`);
+  const head = ['Factura','Consecutivo','Valor Factura','Valor Total por Recuperar','IPS','Estado gestión'];
+  for(let i=1;i<=max;i++) head.push(`Ronda ${i} - Estado`,`Ronda ${i} - Valor Reclamado`,`Ronda ${i} - Valor Aprobado`,`Ronda ${i} - Valor Glosado`);
   head.push('Total Aprobado','Total Glosado');
   const rows = filas.map(f => {
-    const row = [f.r.factura||'', f.r.consec||'', f.rec, R(f.porRec), IPS_NOMBRES?.[f.r.codHab]||f.r.codHab||'', EST_GESTION[getEstadoGestion(f.r)]?.lbl||'', f.r.radicado?.numero||''];
-    for(let i=0;i<max;i++){ const d=f.rondas[i]; if(d) row.push(d.fecha||'', lblE(d.estado), R(d.valorReclamado), R(d.valorAprobado), R(d.valorGlosado)); else row.push('','','','',''); }
+    const row = [f.r.factura||'', f.r.consec||'', f.rec, R(f.porRec), IPS_NOMBRES?.[f.r.codHab]||f.r.codHab||'', EST_GESTION[getEstadoGestion(f.r)]?.lbl||''];
+    for(let i=0;i<max;i++){ const d=f.rondas[i]; if(d) row.push(lblE(d.estado), R(d.valorReclamado), R(d.valorAprobado), R(d.valorGlosado)); else row.push('','','',''); }
     row.push(R(f.apr), R(f.glo)); return row;
   });
-  // Totales del grupo
-  const tot = ['TOTAL GRUPO','', filas.reduce((a,f)=>a+f.rec,0), filas.reduce((a,f)=>a+R(f.porRec),0), '','','']; 
-  for(let i=0;i<max;i++) tot.push('','','','','');
+  const tot = ['TOTAL GRUPO','', filas.reduce((a,f)=>a+f.rec,0), filas.reduce((a,f)=>a+R(f.porRec),0), '',''];
+  for(let i=0;i<max;i++) tot.push('','','','');
   tot.push(filas.reduce((a,f)=>a+R(f.apr),0), filas.reduce((a,f)=>a+R(f.glo),0));
   const ws = XLSX.utils.aoa_to_sheet([head,...rows,tot]);
-  ws['!cols'] = [{wch:16},{wch:12},{wch:14},{wch:20},{wch:22},{wch:16},{wch:16}].concat(Array.from({length:max*5},(_,i)=>({wch:[16,14,14,14,14][i%5]}))).concat([{wch:14},{wch:14}]);
-  const money = [2,3]; for(let i=0;i<max;i++){ const b=7+i*5; money.push(b+2,b+3,b+4); } money.push(7+max*5, 8+max*5);
+  ws['!cols'] = [{wch:16},{wch:12},{wch:14},{wch:20},{wch:22},{wch:16}].concat(Array.from({length:max*4},(_,i)=>({wch:[14,16,16,16][i%4]}))).concat([{wch:14},{wch:14}]);
+  const money = [2,3]; for(let i=0;i<max;i++){ const b=6+i*4; money.push(b+1,b+2,b+3); } money.push(6+max*4, 7+max*4);
   for(let r=1;r<=rows.length+1;r++) money.forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws[a]) ws[a].z='#,##0'; });
   ws['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(head.length-1)}${rows.length+1}`}; ws['!freeze']={xSplit:2,ySplit:1};
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
-  // Hoja de movimientos: UNA fila por factura, el historial organizado en COLUMNAS (cronológico, sin nombres de usuarios)
+  // HOJA 2 «Movimientos»: solo FECHAS, N° de radicación, lote y observación (una fila por factura, sin valores, sin usuarios)
   const fd = d => d ? (d.toDate ? d.toDate() : new Date(d)) : null;
   const fs = d => { const x=fd(d); return x && !isNaN(x) ? x.toLocaleDateString('es-CO') : ''; };
   const rondasAsc = recs.map(r => trazRondasDe(r));
   const maxM = Math.max(1, ...rondasAsc.map(x=>x.length));
-  const headM = ['Factura','Consecutivo','Estado gestión','Fecha ingreso al sistema'];
-  for(let i=1;i<=maxM;i++) headM.push(`Radicación ${i} - Fecha`,`Radicación ${i} - N°`,`Radicación ${i} - Lote`,`Respuesta ${i} - Fecha`,`Respuesta ${i} - Estado`,`Respuesta ${i} - Valor Aprobado`,`Respuesta ${i} - Valor Glosado`,`Respuesta ${i} - Observación`);
+  const headM = ['Factura','Consecutivo','Fecha ingreso al sistema'];
+  for(let i=1;i<=maxM;i++) headM.push(`Radicación ${i} - Fecha`,`Radicación ${i} - N°`,`Radicación ${i} - Lote`,`Respuesta ${i} - Fecha`,`Respuesta ${i} - Observación`);
   const mov = recs.map((r,k) => {
-    const row = [r.factura||'', r.consec||'', EST_GESTION[getEstadoGestion(r)]?.lbl||'', fs(r.creado)];
+    const row = [r.factura||'', r.consec||'', fs(r.creado)];
     for(let i=0;i<maxM;i++){
       const d = rondasAsc[k][i];
-      if(d) row.push(d.fecha||'', d.numero||'', d.lote||'', d.estado?(d.fechaRespuesta||d.fechaDevolucion||''):'', lblE(d.estado), d.estado?R(d.valorAprobado):'', d.estado?R(d.valorGlosado):'', d.descripcion||'');
-      else row.push('','','','','','','','');
+      if(d) row.push(d.fecha||'', d.numero||'', d.lote||'', d.estado?(d.fechaRespuesta||d.fechaDevolucion||''):'', d.descripcion||'');
+      else row.push('','','','','');
     }
     return row;
   });
   const ws2 = XLSX.utils.aoa_to_sheet([headM, ...mov]);
-  ws2['!cols'] = [{wch:16},{wch:12},{wch:16},{wch:18}].concat(Array.from({length:maxM*8},(_,i)=>({wch:[16,16,12,16,16,16,16,40][i%8]})));
-  for(let r=1;r<=mov.length;r++) for(let i=0;i<maxM;i++) [5,6].forEach(o=>{ const a=XLSX.utils.encode_cell({r,c:4+i*8+o}); if(ws2[a] && typeof ws2[a].v==='number') ws2[a].z='#,##0'; });
+  ws2['!cols'] = [{wch:16},{wch:12},{wch:18}].concat(Array.from({length:maxM*5},(_,i)=>({wch:[16,16,12,16,40][i%5]})));
   ws2['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(headM.length-1)}${mov.length+1}`}; ws2['!freeze']={xSplit:2,ySplit:1};
   XLSX.utils.book_append_sheet(wb, ws2, 'Movimientos');
   if(window.TRAZ_NOENC.length){
