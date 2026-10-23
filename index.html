@@ -11624,21 +11624,26 @@ window.trazGrupoExcel = function(){
   for(let r=1;r<=rows.length+1;r++) money.forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(ws[a]) ws[a].z='#,##0'; });
   ws['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(head.length-1)}${rows.length+1}`}; ws['!freeze']={xSplit:2,ySplit:1};
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
-  // Hoja de movimientos: UNA fila por factura; todo el historial va condensado en la columna «Detalle» (cronológico)
+  // Hoja de movimientos: UNA fila por factura, el historial organizado en COLUMNAS (cronológico, sin nombres de usuarios)
   const fd = d => d ? (d.toDate ? d.toDate() : new Date(d)) : null;
   const fs = d => { const x=fd(d); return x && !isNaN(x) ? x.toLocaleDateString('es-CO') : ''; };
-  const mon = v => '$'+R(v).toLocaleString('es-CO');
-  const mov = recs.map(r => {
-    const partes = [];
-    if(r.creado?.toDate) partes.push(`${fs(r.creado)} Ingresada al sistema (${r.creadoPorNombre||'CONEXA'})`);
-    trazRondasDe(r).forEach((d,i) => {
-      partes.push(`${d.fecha||'s/f'} Radicación ${i+1} ante ADRES N° ${d.numero||'—'}${d.lote?' · Lote '+d.lote:''}`);
-      if(d.estado) partes.push(`${d.fechaRespuesta||d.fechaDevolucion||'s/f'} Respuesta ADRES: ${lblE(d.estado)} · aprobado ${mon(d.valorAprobado)} · glosado ${mon(d.valorGlosado)}${d.descripcion?' — '+d.descripcion:''}`);
-    });
-    return [r.factura||'', r.consec||'', EST_GESTION[getEstadoGestion(r)]?.lbl||'', partes.join('  ||  ')];
+  const rondasAsc = recs.map(r => trazRondasDe(r));
+  const maxM = Math.max(1, ...rondasAsc.map(x=>x.length));
+  const headM = ['Factura','Consecutivo','Estado gestión','Fecha ingreso al sistema'];
+  for(let i=1;i<=maxM;i++) headM.push(`Radicación ${i} - Fecha`,`Radicación ${i} - N°`,`Radicación ${i} - Lote`,`Respuesta ${i} - Fecha`,`Respuesta ${i} - Estado`,`Respuesta ${i} - Valor Aprobado`,`Respuesta ${i} - Valor Glosado`,`Respuesta ${i} - Observación`);
+  const mov = recs.map((r,k) => {
+    const row = [r.factura||'', r.consec||'', EST_GESTION[getEstadoGestion(r)]?.lbl||'', fs(r.creado)];
+    for(let i=0;i<maxM;i++){
+      const d = rondasAsc[k][i];
+      if(d) row.push(d.fecha||'', d.numero||'', d.lote||'', d.estado?(d.fechaRespuesta||d.fechaDevolucion||''):'', lblE(d.estado), d.estado?R(d.valorAprobado):'', d.estado?R(d.valorGlosado):'', d.descripcion||'');
+      else row.push('','','','','','','','');
+    }
+    return row;
   });
-  const ws2 = XLSX.utils.aoa_to_sheet([['Factura','Consecutivo','Estado gestión','Detalle'], ...mov]);
-  ws2['!cols'] = [16,12,16,160].map(w=>({wch:w}));
+  const ws2 = XLSX.utils.aoa_to_sheet([headM, ...mov]);
+  ws2['!cols'] = [{wch:16},{wch:12},{wch:16},{wch:18}].concat(Array.from({length:maxM*8},(_,i)=>({wch:[16,16,12,16,16,16,16,40][i%8]})));
+  for(let r=1;r<=mov.length;r++) for(let i=0;i<maxM;i++) [5,6].forEach(o=>{ const a=XLSX.utils.encode_cell({r,c:4+i*8+o}); if(ws2[a] && typeof ws2[a].v==='number') ws2[a].z='#,##0'; });
+  ws2['!autofilter'] = {ref:`A1:${XLSX.utils.encode_col(headM.length-1)}${mov.length+1}`}; ws2['!freeze']={xSplit:2,ySplit:1};
   XLSX.utils.book_append_sheet(wb, ws2, 'Movimientos');
   if(window.TRAZ_NOENC.length){
     const ws3 = XLSX.utils.aoa_to_sheet([['Facturas del listado que no se encontraron'], ...window.TRAZ_NOENC.map(x=>[x])]); ws3['!cols']=[{wch:40}];
