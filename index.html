@@ -11967,6 +11967,21 @@ window.procesarReporteADRES = async function(){
       }
     });
 
+
+    // ── Diagnóstico de APROBADO / GLOSADO: radicaciones donde lo guardado no coincide con el reporte ADRES ──
+    const diagAprGlo = [];
+    adresRowsDeduped.forEach(row=>{
+      const fac = normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
+      const rec = srcEnAdres.find(r=>normalizarFactura(r.factura)===fac);
+      if(!rec) return; // facturas que no están en FURIPS: ya cuentan en la diferencia de reclamaciones
+      const numRad = String(row['Número de Radicación']||'').trim().replace(/\.0$/,'');
+      const vA = parseFloat(String(row['Valor Aprobado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0, vG = parseFloat(String(row['Valor Glosado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;
+      const rg = (rec.respuestasAdres||[]).find(x=>String(x.numero||'').trim().replace(/\.0$/,'')===numRad);
+      if(!rg){ if(vA>=100||vG>=100) diagAprGlo.push({factura:rec.factura, numRad, aE:vA, gE:vG, aS:0, gS:0, motivo:'La radicación no está guardada en el historial de la factura'}); return; }
+      const aS=rg.valorAprobado||0, gS=rg.valorGlosado||0;
+      if(Math.abs(aS-vA)>=100 || Math.abs(gS-vG)>=100) diagAprGlo.push({factura:rec.factura, numRad, aE:vA, gE:vG, aS, gS, motivo:'Los valores guardados difieren del reporte ADRES'});
+    });
+
     const diff = (a,b)=>Math.abs(a-b)<100?0:a-b;
     const cuadreRows = [
       {concepto:'Reclamaciones en reporte ADRES', adres:adresTotRec, furips:furipsTotRec, esN:true,
@@ -12024,6 +12039,36 @@ window.procesarReporteADRES = async function(){
         <div style="margin-top:10px;font-size:10px;color:var(--tx3);">
           ℹ️ <strong>Sobre "Valor glosado por ADRES"</strong>: esta fila compara el bruto histórico (todo lo glosado alguna vez, sin descontar nada) entre el Excel y lo guardado. El Portafolio muestra en cambio el <strong>NETO</strong> (bruto menos lo recuperado por gestión) — es normal y esperado que esos dos números NO coincidan entre sí.
         </div>
+        ${diagAprGlo.length?`<div style="margin-top:14px;">
+          <div style="font-size:11px;font-weight:700;color:#f85149;margin-bottom:6px;">
+            🔍 Detalle — ${diagAprGlo.length} radicación(es) cuyo aprobado/glosado guardado NO coincide con el reporte ADRES (corrígelas y vuelve a sincronizar):
+          </div>
+          <div style="max-height:260px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;">
+            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+              <thead><tr style="background:var(--sur2);position:sticky;top:0;">
+                <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--brd);">Factura</th>
+                <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--brd);">N° Radicación</th>
+                <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--brd);">Aprobado ADRES</th>
+                <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--brd);">Aprobado guardado</th>
+                <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--brd);">Glosado ADRES</th>
+                <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--brd);">Glosado guardado</th>
+                <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--brd);">Motivo</th>
+              </tr></thead>
+              <tbody>
+                ${diagAprGlo.slice(0,500).map(d=>`<tr style="border-bottom:1px solid var(--brd);">
+                  <td style="padding:5px 8px;font-family:var(--mono);font-weight:600;">${d.factura}</td>
+                  <td style="padding:5px 8px;font-family:var(--mono);color:var(--tx3);">${d.numRad||'—'}</td>
+                  <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm2(d.aE)}</td>
+                  <td style="padding:5px 8px;text-align:right;font-family:var(--mono);${Math.abs(d.aE-d.aS)>=100?'color:#f85149;font-weight:700;':''}">${fm2(d.aS)}</td>
+                  <td style="padding:5px 8px;text-align:right;font-family:var(--mono);">${fm2(d.gE)}</td>
+                  <td style="padding:5px 8px;text-align:right;font-family:var(--mono);${Math.abs(d.gE-d.gS)>=100?'color:#f85149;font-weight:700;':''}">${fm2(d.gS)}</td>
+                  <td style="padding:5px 8px;color:#f85149;">${d.motivo}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          ${diagAprGlo.length>500?`<div style="font-size:10px;color:var(--tx3);margin-top:4px;">Mostrando las primeras 500 de ${diagAprGlo.length}.</div>`:''}
+        </div>`:''}
         ${diagPendiente.length?`<div style="margin-top:14px;">
           <div style="font-size:11px;font-weight:700;color:#f85149;margin-bottom:6px;">
             🔍 Detalle — ${diagPendiente.length} fila${diagPendiente.length!==1?'s':''} responsable${diagPendiente.length!==1?'s':''} del residual en "Valor pendiente":
