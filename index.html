@@ -11658,6 +11658,30 @@ window.trazLimpiar = function(){
 
 // ── Actualizar sincronización ADRES con trazabilidad ──
 // Override de procesarReporteADRES para manejar múltiples radicaciones
+
+// Excel con las facturas que ADRES reporta y NO existen en FURIPS: hoja lista para la carga masiva + detalle de ADRES
+window.adresExcelFuera = function(){
+  const rows = window._ADRES_FUERA||[];
+  if(!rows.length){ toast('No hay facturas fuera de FURIPS en la última sincronización.','w'); return; }
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  const porFac = new Map();
+  rows.forEach(r=>{ const f=String(r['Número de Factura']||'').trim(); if(!porFac.has(f)) porFac.set(f,[]); porFac.get(f).push(r); });
+  const facs = [...porFac.keys()].sort();
+  const plantilla = [['factura','consecutivo','codHab','ips','rgo','fechaEvento','fechaEgreso','cedula']];
+  facs.forEach(f=>{ const cod = (porFac.get(f).map(r=>String(r['Código Habilitación']||'').trim()).find(Boolean))||''; plantilla.push([f,'',cod,(typeof IPS_NOMBRES!=='undefined'&&IPS_NOMBRES[cod])||'','','','','']); });
+  const det = [['Factura','Código habilitación','NIT','N° radicación','N° consolidado','Fecha radicación','Estado reclamación','Descripción','Valor reclamado','Valor aprobado','Valor glosado']];
+  facs.forEach(f=>porFac.get(f).forEach(r=>det.push([f,r['Código Habilitación']||'',r['Nit']||'',r['Número de Radicación']||'',r['Número Consolidado']||'',r['Fecha Radicación']||'',r['Estado reclamación']||'',r['Descripción tipo Aprobación']||'',Math.round(r['Valor Reclamado']||0),Math.round(r['Valor Aprobado']||0),Math.round(r['Valor Glosado']||0)])));
+  det.push(['TOTAL','','','','','','','',...[8,9,10].map(c=>det.slice(1).reduce((a,x)=>a+x[c],0))]);
+  const wb = XLSX.utils.book_new();
+  const w1 = XLSX.utils.aoa_to_sheet(plantilla); w1['!cols']=[{wch:18},{wch:12},{wch:18},{wch:30},{wch:8},{wch:14},{wch:14},{wch:15}];
+  XLSX.utils.book_append_sheet(wb,w1,'Reclamaciones');
+  const w2 = XLSX.utils.aoa_to_sheet(det); w2['!cols']=[18,18,14,16,16,16,18,30,16,16,16].map(w=>({wch:w}));
+  for(let r=1;r<det.length;r++) [8,9,10].forEach(c=>{ const a=XLSX.utils.encode_cell({r,c}); if(w2[a]) w2[a].z='#,##0'; });
+  XLSX.utils.book_append_sheet(wb,w2,'Detalle ADRES');
+  XLSX.writeFile(wb,`Facturas_ADRES_no_existen_en_FURIPS_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast(`✔ ${facs.length} facturas exportadas`,'ok');
+};
+
 window.procesarReporteADRES = async function(){
   if(USER?.rol !== 'superadmin'){ toast('Solo el Super Admin puede sincronizar.','w'); return; }
 
@@ -11945,6 +11969,17 @@ window.procesarReporteADRES = async function(){
     adresTotAproV = rowsEnFurips.reduce((a,r)=>a+(r['Valor Aprobado']||0),0);
     adresTotGloV  = rowsEnFurips.reduce((a,r)=>a+(r['Valor Glosado']||0),0);
     const fueraFacturas = [...new Set(rowsFuera.map(_facDe))];
+    window._ADRES_FUERA = rowsFuera;
+    // Diagnóstico: ¿esas facturas "no existen" de verdad o existen con otro formato / en otro cliente?
+    const _limp = x => String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const _lev = (a,b)=>{ if(Math.abs(a.length-b.length)>1) return 9; const d=[...Array(b.length+1).keys()]; for(let i=1;i<=a.length;i++){ let prev=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const t=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a[i-1]===b[j-1]?0:1)); prev=t; } } return d[b.length]; };
+    const _todas = (typeof RECS_ALL!=='undefined' && RECS_ALL.length) ? RECS_ALL : srcFinal;
+    const _digs = x => _limp(x).replace(/^[A-Z]+/,'').replace(/^0+/,'');
+    const fueraDiag = fueraFacturas.slice(0,60).map(f=>{
+      const lf=_limp(f), df=_digs(f);
+      const hit = _todas.filter(r=>{ const lr=_limp(r.factura); return lr===lf || (df && _digs(r.factura)===df) || _lev(lr,lf)<=1; }).slice(0,2);
+      return {f, hit:hit.map(r=>`${r.factura} [largo ${String(r.factura||'').length}${(String(r.factura||'').length!==_limp(r.factura).length)?' · tiene caracteres ocultos o especiales':''}] · IPS ${r.codHab||''} · consec ${r.consec||''}${srcFinal.includes(r)?'':' · OTRO CLIENTE'}`)};
+    }).filter(x=>x.hit.length);
     const fueraApro = rowsFuera.reduce((a,r)=>a+_num(r['Valor Aprobado']),0), fueraGlo = rowsFuera.reduce((a,r)=>a+_num(r['Valor Glosado']),0), fueraRec = rowsFuera.reduce((a,r)=>a+_num(r['Valor Reclamado']),0);
 
     // ── Valor pendiente (en trámite) — mismo criterio que el dashboard ──
@@ -12056,7 +12091,9 @@ window.procesarReporteADRES = async function(){
         </div>
         ${fueraFacturas.length?`<div style="margin-top:10px;padding:10px 12px;background:rgba(227,179,65,.08);border:1px solid rgba(227,179,65,.3);border-radius:6px;font-size:11px;color:var(--tx2);">
           📋 <strong>${fueraFacturas.length} factura(s) del reporte ADRES no existen en FURIPS</strong> (reclamado ${fm2(fueraRec)} · aprobado ${fm2(fueraApro)} · glosado ${fm2(fueraGlo)}). Los valores de la tabla de arriba <strong>ya no las incluyen</strong>, para comparar solo lo que está en el sistema. Si son tuyas, créalas o corrige el número de factura.
+          <div style="margin-top:8px;"><button class="btn bp" style="font-size:11px;" onclick="adresExcelFuera()">⬇ Descargar listado en Excel (con plantilla de carga masiva)</button></div>
           <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--tx3);max-height:70px;overflow-y:auto;">${fueraFacturas.slice(0,150).join(' · ')}${fueraFacturas.length>150?' …':''}</div>
+          ${fueraDiag.length?`<div style="margin-top:8px;font-size:10px;color:var(--tx2);"><strong>🔎 Posibles coincidencias en el sistema</strong> (factura de ADRES → factura parecida ya creada):<div style="font-family:var(--mono);margin-top:4px;max-height:110px;overflow-y:auto;">${fueraDiag.map(x=>`${x.f} → ${x.hit.join(' | ')}`).join('<br>')}</div></div>`:'<div style="margin-top:8px;font-size:10px;color:var(--tx3);">🔎 No hay facturas parecidas en el sistema: de verdad no existen.</div>'}
         </div>`:''}
         ${diagAprGlo.length?`<div style="margin-top:14px;">
           <div style="font-size:11px;font-weight:700;color:#f85149;margin-bottom:6px;">
