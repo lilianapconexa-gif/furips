@@ -10877,7 +10877,10 @@ function verificarAlertaADRES(){
 // Normalizar número de factura para comparación flexible
 function normalizarFactura(f){
   if(!f) return '';
-  return String(f).trim().toUpperCase().replace(/[\s\-_\.]/g,'');
+  // Deja SOLO letras y números ASCII: quita espacios, guiones, caracteres invisibles (ej. espacio de ancho cero) y
+  // convierte letras de otros alfabetos que se ven igual (cirílico/griego) a su equivalente latino.
+  const HOMO = {'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','І':'I','Ѕ':'S','Α':'A','Β':'B','Ε':'E','Ζ':'Z','Η':'H','Ι':'I','Κ':'K','Μ':'M','Ν':'N','Ο':'O','Ρ':'P','Τ':'T','Υ':'Y','Χ':'X'};
+  return String(f).normalize('NFKC').toUpperCase().replace(/[^\x00-\x7F]/g,ch=>HOMO[ch]||'').replace(/[^A-Z0-9]/g,'');
 }
 
 // Mapear descripción ADRES → estado interno FURIPS
@@ -11978,7 +11981,9 @@ window.procesarReporteADRES = async function(){
     const fueraDiag = fueraFacturas.slice(0,60).map(f=>{
       const lf=_limp(f), df=_digs(f);
       const hit = _todas.filter(r=>{ const lr=_limp(r.factura); return lr===lf || (df && _digs(r.factura)===df) || _lev(lr,lf)<=1; }).slice(0,2);
-      return {f, hit:hit.map(r=>`${r.factura} [largo ${String(r.factura||'').length}${(String(r.factura||'').length!==_limp(r.factura).length)?' · tiene caracteres ocultos o especiales':''}] · IPS ${r.codHab||''} · consec ${r.consec||''}${srcFinal.includes(r)?'':' · OTRO CLIENTE'}`)};
+      const _raw = (rowsFuera.find(r=>_facDe(r)===f)||{})['Número de Factura']||'';
+      const _raro = /^[A-Za-z0-9]+$/.test(_raw) ? '' : ' [ADRES trae caracteres raros: '+[..._raw].filter(c=>!/[A-Za-z0-9]/.test(c)).map(c=>'U+'+c.codePointAt(0).toString(16).toUpperCase()).join(' ')+']';
+      return {f:f+_raro, hit:hit.map(r=>`${r.factura} [largo ${String(r.factura||'').length}${(String(r.factura||'').length!==_limp(r.factura).length)?' · tiene caracteres ocultos o especiales':''}] · IPS ${r.codHab||''} · consec ${r.consec||''}${srcFinal.includes(r)?'':' · OTRO CLIENTE'}`)};
     }).filter(x=>x.hit.length);
     const fueraApro = rowsFuera.reduce((a,r)=>a+_num(r['Valor Aprobado']),0), fueraGlo = rowsFuera.reduce((a,r)=>a+_num(r['Valor Glosado']),0), fueraRec = rowsFuera.reduce((a,r)=>a+_num(r['Valor Reclamado']),0);
 
