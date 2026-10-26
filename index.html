@@ -11906,9 +11906,9 @@ window.procesarReporteADRES = async function(){
     // Sumar las filas YA deduplicadas (una por radicación única) — no las filas
     // crudas del Excel, que pueden traer la misma radicación repetida en distintas
     // fechas (actualizaciones de ADRES sobre el mismo número).
-    const adresTotVal   = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
-    const adresTotAproV = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Aprobado']||0),0);
-    const adresTotGloV  = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Glosado']||0),0);
+    let adresTotVal   = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
+    let adresTotAproV = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Aprobado']||0),0);
+    let adresTotGloV  = adresRowsDeduped.reduce((a,r)=>a+(r['Valor Glosado']||0),0);
     const adresTotApro  = adresRowsDeduped.filter(r=>{
       const e=mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado']);
       return e==='aprobada'||e==='aprobada_parcial';
@@ -11934,9 +11934,21 @@ window.procesarReporteADRES = async function(){
     const furiGloN = srcEnAdres.filter(r=>
       (r.respuestasAdres||[]).some(rad=>rad.estado==='glosada')).length;
     const noEnAdres = srcFinal.length - furipsTotRec;
+    // Para comparar manzanas con manzanas: los totales ADRES de valores se toman SOLO de las facturas que existen en FURIPS.
+    // Lo que ADRES reporta de facturas que no están en FURIPS se muestra aparte.
+    const _facFurips = new Set(srcFinal.map(r=>normalizarFactura(r.factura)));
+    const _facDe = row => normalizarFactura(row['Número de Factura']||row['Numero de Factura']||'');
+    const _num = v => parseFloat(String(v||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;
+    const rowsEnFurips = adresRowsDeduped.filter(r=>_facFurips.has(_facDe(r)));
+    const rowsFuera = adresRowsDeduped.filter(r=>!_facFurips.has(_facDe(r)));
+    adresTotVal   = rowsEnFurips.reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
+    adresTotAproV = rowsEnFurips.reduce((a,r)=>a+(r['Valor Aprobado']||0),0);
+    adresTotGloV  = rowsEnFurips.reduce((a,r)=>a+(r['Valor Glosado']||0),0);
+    const fueraFacturas = [...new Set(rowsFuera.map(_facDe))];
+    const fueraApro = rowsFuera.reduce((a,r)=>a+_num(r['Valor Aprobado']),0), fueraGlo = rowsFuera.reduce((a,r)=>a+_num(r['Valor Glosado']),0), fueraRec = rowsFuera.reduce((a,r)=>a+_num(r['Valor Reclamado']),0);
 
     // ── Valor pendiente (en trámite) — mismo criterio que el dashboard ──
-    const adresTotPendV = adresRowsDeduped.filter(r=>
+    const adresTotPendV = rowsEnFurips.filter(r=>
       mapearEstadoADRES(r['Descripción tipo Aprobación'],r['Estado reclamación'],r['Valor Aprobado'],r['Valor Glosado'])==='en_tramite'
     ).reduce((a,r)=>a+(r['Valor Reclamado']||0),0);
     const furipsPendV = srcEnAdres.reduce((a,r)=>{
@@ -11957,7 +11969,8 @@ window.procesarReporteADRES = async function(){
         diagPendiente.push({factura:row['Número de Factura']||fac, numRad, valor:vRecFila, motivo:'Factura no encontrada en FURIPS'});
         return;
       }
-      const rondaGuardada = (rec.respuestasAdres||[]).find(x=>String(x.numero||'').trim().replace(/\.0$/,'')===numRad.replace(/\.0$/,''));
+      const _fRow = String(row['Fecha Radicación']||row['Fecha Radicacion']||'').trim();
+      const rondaGuardada = (rec.respuestasAdres||[]).find(x=>String(x.numero||'').trim().replace(/\.0$/,'')===numRad.replace(/\.0$/,'') && String(x.fecha||'').trim()===_fRow);
       if(!rondaGuardada){
         diagPendiente.push({factura:rec.factura, numRad, valor:vRecFila, motivo:'Radicación no encontrada en el historial guardado'});
       } else if(rondaGuardada.estado!=='en_tramite'){
@@ -11976,13 +11989,15 @@ window.procesarReporteADRES = async function(){
       if(!rec) return; // facturas que no están en FURIPS: ya cuentan en la diferencia de reclamaciones
       const numRad = String(row['Número de Radicación']||'').trim().replace(/\.0$/,'');
       const vA = parseFloat(String(row['Valor Aprobado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0, vG = parseFloat(String(row['Valor Glosado']||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;
-      const rg = (rec.respuestasAdres||[]).find(x=>String(x.numero||'').trim().replace(/\.0$/,'')===numRad);
+      const _fR = String(row['Fecha Radicación']||row['Fecha Radicacion']||'').trim();
+      const rg = (rec.respuestasAdres||[]).find(x=>String(x.numero||'').trim().replace(/\.0$/,'')===numRad && String(x.fecha||'').trim()===_fR);
       if(!rg){ if(vA>=100||vG>=100) diagAprGlo.push({factura:rec.factura, numRad, aE:vA, gE:vG, aS:0, gS:0, motivo:'La radicación no está guardada en el historial de la factura'}); return; }
       const aS=rg.valorAprobado||0, gS=rg.valorGlosado||0;
       if(Math.abs(aS-vA)>=100 || Math.abs(gS-vG)>=100) diagAprGlo.push({factura:rec.factura, numRad, aE:vA, gE:vG, aS, gS, motivo:'Los valores guardados difieren del reporte ADRES'});
     });
 
     const diff = (a,b)=>Math.abs(a-b)<100?0:a-b;
+    const diffN = (a,b)=>a-b;
     const cuadreRows = [
       {concepto:'Reclamaciones en reporte ADRES', adres:adresTotRec, furips:furipsTotRec, esN:true,
        nota:furipsTotRec<adresTotRec?`${adresTotRec-furipsTotRec} facturas del reporte no encontradas en FURIPS`:''},
@@ -11994,7 +12009,7 @@ window.procesarReporteADRES = async function(){
       {concepto:'Valor pendiente (en trámite)', adres:adresTotPendV, furips:furipsPendV,
        nota:diagPendiente.length?`${diagPendiente.length} filas explican la diferencia — ver detalle abajo`:''},
     ];
-    const todosCuadra = cuadreRows.every(r=>diff(r.adres,r.furips)===0);
+    const todosCuadra = cuadreRows.every(r=>(r.esN?diffN(r.adres,r.furips):diff(r.adres,r.furips))===0);
 
     // Mostrar resumen de sync
     const resumen = document.getElementById('adres-resumen');
@@ -12015,7 +12030,7 @@ window.procesarReporteADRES = async function(){
           </thead>
           <tbody>
             ${cuadreRows.map(row=>{
-              const d = diff(row.adres, row.furips);
+              const d = row.esN ? diffN(row.adres, row.furips) : diff(row.adres, row.furips);
               const ok = d===0;
               const fmV = v => row.esN ? v.toLocaleString('es-CO') : fm2(v);
               return `<tr style="border-bottom:1px solid var(--brd);${ok?'':'background:rgba(248,81,73,.04);'}">
@@ -12039,6 +12054,10 @@ window.procesarReporteADRES = async function(){
         <div style="margin-top:10px;font-size:10px;color:var(--tx3);">
           ℹ️ <strong>Sobre "Valor glosado por ADRES"</strong>: esta fila compara el bruto histórico (todo lo glosado alguna vez, sin descontar nada) entre el Excel y lo guardado. El Portafolio muestra en cambio el <strong>NETO</strong> (bruto menos lo recuperado por gestión) — es normal y esperado que esos dos números NO coincidan entre sí.
         </div>
+        ${fueraFacturas.length?`<div style="margin-top:10px;padding:10px 12px;background:rgba(227,179,65,.08);border:1px solid rgba(227,179,65,.3);border-radius:6px;font-size:11px;color:var(--tx2);">
+          📋 <strong>${fueraFacturas.length} factura(s) del reporte ADRES no existen en FURIPS</strong> (reclamado ${fm2(fueraRec)} · aprobado ${fm2(fueraApro)} · glosado ${fm2(fueraGlo)}). Los valores de la tabla de arriba <strong>ya no las incluyen</strong>, para comparar solo lo que está en el sistema. Si son tuyas, créalas o corrige el número de factura.
+          <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--tx3);max-height:70px;overflow-y:auto;">${fueraFacturas.slice(0,150).join(' · ')}${fueraFacturas.length>150?' …':''}</div>
+        </div>`:''}
         ${diagAprGlo.length?`<div style="margin-top:14px;">
           <div style="font-size:11px;font-weight:700;color:#f85149;margin-bottom:6px;">
             🔍 Detalle — ${diagAprGlo.length} radicación(es) cuyo aprobado/glosado guardado NO coincide con el reporte ADRES (corrígelas y vuelve a sincronizar):
