@@ -11993,7 +11993,9 @@ window.procesarReporteADRES = async function(){
     window._ADRES_FUERA = rowsFuera;
     // Diagnóstico: ¿esas facturas "no existen" de verdad o existen con otro formato / en otro cliente?
     const _limp = x => String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-    const _lev = (a,b)=>{ if(Math.abs(a.length-b.length)>1) return 9; const d=[...Array(b.length+1).keys()]; for(let i=1;i<=a.length;i++){ let prev=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const t=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a[i-1]===b[j-1]?0:1)); prev=t; } } return d[b.length]; };
+    const _lev = (a,b)=>{ if(Math.abs(a.length-b.length)>1) return 9; const d=[]; for(let i=0;i<=a.length;i++){ d[i]=[i]; } for(let j=0;j<=b.length;j++) d[0][j]=j;
+      for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++){ const c=a[i-1]===b[j-1]?0:1; d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+c); if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1); }
+      return d[a.length][b.length]; };
     const _todas = (typeof RECS_ALL!=='undefined' && RECS_ALL.length) ? RECS_ALL : srcFinal;
     const _digs = x => _limp(x).replace(/^[A-Z]+/,'').replace(/^0+/,'');
     const fueraDiag = fueraFacturas.slice(0,60).map(f=>{
@@ -12005,12 +12007,19 @@ window.procesarReporteADRES = async function(){
       return {f:f+_raro, hit:hit.map(r=>`${r.factura} [largo ${String(r.factura||'').length}${(String(r.factura||'').length!==_limp(r.factura).length)?' · tiene caracteres ocultos o especiales':''}] · IPS ${r.codHab||''} · consec ${r.consec||''}${srcFinal.includes(r)?'':' · OTRO CLIENTE'}${_dif(r)}`)};
     }).filter(x=>x.hit.length);
     // Pares corregibles: UNA sola reclamación parecida (1 carácter de diferencia), sin historial ADRES y cuyo número correcto no exista ya
-    window._ADRES_PARES = fueraFacturas.map(f=>{
+    const _pp = fueraFacturas.map(f=>{
       const lf=_limp(f);
-      const cand = _todas.filter(r=>_lev(_limp(r.factura),lf)===1 && !(r.respuestasAdres||[]).length);
+      const cand = _todas.filter(r=>_lev(_limp(r.factura),lf)===1);
       const yaExiste = _todas.some(r=>_limp(r.factura)===lf);
-      return (cand.length===1 && !yaExiste) ? {id:cand[0].id, actual:cand[0].factura, nuevo:f} : null;
-    }).filter(Boolean);
+      if(yaExiste) return {f, motivo:'el número correcto ya existe en otra reclamación'};
+      if(!cand.length) return {f, motivo:'no hay ninguna reclamación parecida (hay que crearla)'};
+      const libres = cand.filter(r=>!(r.respuestasAdres||[]).length);
+      if(cand.length>1) return {f, motivo:'hay varias reclamaciones parecidas ('+cand.map(r=>r.factura).join(', ')+'): corrige a mano la correcta con ✏️'};
+      if(!libres.length) return {f, motivo:'la parecida ('+cand[0].factura+') ya tiene historial de ADRES: puede ser otra factura'};
+      return {f, id:libres[0].id, actual:libres[0].factura, nuevo:f};
+    });
+    window._ADRES_PARES = _pp.filter(x=>x.id).map(x=>({id:x.id,actual:x.actual,nuevo:x.nuevo}));
+    window._ADRES_NOPARES = _pp.filter(x=>!x.id);
     const fueraApro = rowsFuera.reduce((a,r)=>a+_num(r['Valor Aprobado']),0), fueraGlo = rowsFuera.reduce((a,r)=>a+_num(r['Valor Glosado']),0), fueraRec = rowsFuera.reduce((a,r)=>a+_num(r['Valor Reclamado']),0);
 
     // ── Valor pendiente (en trámite) — mismo criterio que el dashboard ──
@@ -12125,6 +12134,7 @@ window.procesarReporteADRES = async function(){
           <div style="margin-top:8px;"><button class="btn bp" style="font-size:11px;" onclick="adresExcelFuera()">⬇ Descargar listado en Excel (con plantilla de carga masiva)</button></div>
           <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--tx3);max-height:70px;overflow-y:auto;">${fueraFacturas.slice(0,150).join(' · ')}${fueraFacturas.length>150?' …':''}</div>
           ${(window._ADRES_PARES||[]).length?`<div style="margin:10px 0;"><button class="btn bp" style="font-size:11px;" onclick="adresCorregirFacturas()">🔧 Corregir ${(window._ADRES_PARES||[]).length} número(s) de factura para que coincidan con ADRES</button></div>`:''}
+          ${(window._ADRES_NOPARES||[]).length?`<div style="margin:8px 0;font-size:10px;color:var(--tx2);"><strong>⚠ No se corrigen solas:</strong><div style="font-family:var(--mono);margin-top:3px;">${window._ADRES_NOPARES.map(x=>x.f+' — '+x.motivo).join('<br>')}</div></div>`:''}
           ${fueraDiag.length?`<div style="margin-top:8px;font-size:10px;color:var(--tx2);"><strong>🔎 Posibles coincidencias en el sistema</strong> (factura de ADRES → factura parecida ya creada):<div style="font-family:var(--mono);margin-top:4px;max-height:110px;overflow-y:auto;">${fueraDiag.map(x=>`${x.f} → ${x.hit.join(' | ')}`).join('<br>')}</div></div>`:'<div style="margin-top:8px;font-size:10px;color:var(--tx3);">🔎 No hay facturas parecidas en el sistema: de verdad no existen.</div>'}
         </div>`:''}
         ${diagAprGlo.length?`<div style="margin-top:14px;">
