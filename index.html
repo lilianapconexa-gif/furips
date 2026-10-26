@@ -11685,6 +11685,24 @@ window.adresExcelFuera = function(){
   toast(`✔ ${facs.length} facturas exportadas`,'ok');
 };
 
+
+// Corrige el número de factura de reclamaciones creadas con un carácter distinto al de ADRES
+window.adresCorregirFacturas = async function(){
+  const pares = window._ADRES_PARES||[];
+  if(!pares.length){ toast('No hay números para corregir.','w'); return; }
+  const lista = pares.map(x=>`${x.actual} → ${x.nuevo}`).join('\n');
+  if(!confirm(`Se corregirá el número de factura de ${pares.length} reclamación(es):\n\n${lista}\n\n¿Continuar?`)) return;
+  let ok=0, fallos=0;
+  for(const x of pares){
+    try{
+      await updateDoc(doc(db,'reclamaciones',x.id),{ factura:x.nuevo, 'furips1.c2':x.nuevo, actualizado:serverTimestamp() });
+      const rec = RECS_ALL.find(r=>r.id===x.id); if(rec){ rec.factura=x.nuevo; if(rec.furips1) rec.furips1.c2=x.nuevo; }
+      ok++;
+    }catch(e){ fallos++; console.warn('Corregir factura',x,e); }
+  }
+  toast(`✔ ${ok} factura(s) corregidas`+(fallos?` · ❌ ${fallos} con error`:'')+'. Ahora sincroniza de nuevo el Excel de ADRES.', fallos?'w':'ok');
+};
+
 window.procesarReporteADRES = async function(){
   if(USER?.rol !== 'superadmin'){ toast('Solo el Super Admin puede sincronizar.','w'); return; }
 
@@ -11986,6 +12004,13 @@ window.procesarReporteADRES = async function(){
       const _dif = r => { const A=normalizarFactura(_raw||f), B=normalizarFactura(r.factura); if(A===B) return ' · IGUALES tras normalizar (el problema no es el texto)'; let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return ` · DIFIEREN en la posición ${k+1}: ADRES «${A[k]||'∅'}» vs sistema «${B[k]||'∅'}»`; };
       return {f:f+_raro, hit:hit.map(r=>`${r.factura} [largo ${String(r.factura||'').length}${(String(r.factura||'').length!==_limp(r.factura).length)?' · tiene caracteres ocultos o especiales':''}] · IPS ${r.codHab||''} · consec ${r.consec||''}${srcFinal.includes(r)?'':' · OTRO CLIENTE'}${_dif(r)}`)};
     }).filter(x=>x.hit.length);
+    // Pares corregibles: UNA sola reclamación parecida (1 carácter de diferencia), sin historial ADRES y cuyo número correcto no exista ya
+    window._ADRES_PARES = fueraFacturas.map(f=>{
+      const lf=_limp(f);
+      const cand = _todas.filter(r=>_lev(_limp(r.factura),lf)===1 && !(r.respuestasAdres||[]).length);
+      const yaExiste = _todas.some(r=>_limp(r.factura)===lf);
+      return (cand.length===1 && !yaExiste) ? {id:cand[0].id, actual:cand[0].factura, nuevo:f} : null;
+    }).filter(Boolean);
     const fueraApro = rowsFuera.reduce((a,r)=>a+_num(r['Valor Aprobado']),0), fueraGlo = rowsFuera.reduce((a,r)=>a+_num(r['Valor Glosado']),0), fueraRec = rowsFuera.reduce((a,r)=>a+_num(r['Valor Reclamado']),0);
 
     // ── Valor pendiente (en trámite) — mismo criterio que el dashboard ──
@@ -12099,6 +12124,7 @@ window.procesarReporteADRES = async function(){
           📋 <strong>${fueraFacturas.length} factura(s) del reporte ADRES no existen en FURIPS</strong> (reclamado ${fm2(fueraRec)} · aprobado ${fm2(fueraApro)} · glosado ${fm2(fueraGlo)}). Los valores de la tabla de arriba <strong>ya no las incluyen</strong>, para comparar solo lo que está en el sistema. Si son tuyas, créalas o corrige el número de factura.
           <div style="margin-top:8px;"><button class="btn bp" style="font-size:11px;" onclick="adresExcelFuera()">⬇ Descargar listado en Excel (con plantilla de carga masiva)</button></div>
           <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--tx3);max-height:70px;overflow-y:auto;">${fueraFacturas.slice(0,150).join(' · ')}${fueraFacturas.length>150?' …':''}</div>
+          ${(window._ADRES_PARES||[]).length?`<div style="margin:10px 0;"><button class="btn bp" style="font-size:11px;" onclick="adresCorregirFacturas()">🔧 Corregir ${(window._ADRES_PARES||[]).length} número(s) de factura para que coincidan con ADRES</button></div>`:''}
           ${fueraDiag.length?`<div style="margin-top:8px;font-size:10px;color:var(--tx2);"><strong>🔎 Posibles coincidencias en el sistema</strong> (factura de ADRES → factura parecida ya creada):<div style="font-family:var(--mono);margin-top:4px;max-height:110px;overflow-y:auto;">${fueraDiag.map(x=>`${x.f} → ${x.hit.join(' | ')}`).join('<br>')}</div></div>`:'<div style="margin-top:8px;font-size:10px;color:var(--tx3);">🔎 No hay facturas parecidas en el sistema: de verdad no existen.</div>'}
         </div>`:''}
         ${diagAprGlo.length?`<div style="margin-top:14px;">
