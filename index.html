@@ -2221,6 +2221,7 @@ select option{background:var(--sur2);}
           <button class="btn btn-sm bp" id="paq-t-nuevo" onclick="paqTab('nuevo')">➕ Nuevo paquete</button>
           <button class="btn btn-sm bs" id="paq-t-lista" onclick="paqTab('lista')">📋 Paquetes recibidos</button>
           <button class="btn btn-sm bs" id="paq-t-plazo" onclick="paqTab('plazo')">⏰ Plazo 22 días hábiles</button>
+          <button class="btn btn-sm bs" id="paq-t-pend" onclick="paqTab('pend')">⏸ Control de pendientes</button>
         </div>
 
         <!-- NUEVO -->
@@ -2265,6 +2266,7 @@ select option{background:var(--sur2);}
 
         <!-- CONTROL DE PLAZO -->
         <div id="paq-v-plazo" style="display:none;"><div id="paq-plazo"></div></div>
+        <div id="paq-v-pend" style="display:none;"><div id="paq-pend"></div></div>
 
         <!-- DETALLE / REVISIÓN -->
         <div id="paq-v-det" style="display:none;"><div id="paq-det"></div></div>
@@ -15313,10 +15315,11 @@ const paqIpsNom = cod => (CLIENTES_IPS.find(c=>c.nit===cod)||{}).razon || cod ||
 
 window.paqTab = (t) => { try{ paqTabInner(t); }catch(e){ console.error(e); toast('Error en Paquetes: '+e.message,'e'); } };
 function paqTabInner(t){
-  ['nuevo','lista','det','plazo'].forEach(k => { const v=g('paq-v-'+k); if(v) v.style.display = (k===t)?'block':'none'; });
-  ['nuevo','lista','plazo'].forEach(k => { const b=g('paq-t-'+k); if(b) b.className = 'btn btn-sm ' + ((k===t || (t==='det'&&k==='lista'))?'bp':'bs'); });
+  ['nuevo','lista','det','plazo','pend'].forEach(k => { const v=g('paq-v-'+k); if(v) v.style.display = (k===t)?'block':'none'; });
+  ['nuevo','lista','plazo','pend'].forEach(k => { const b=g('paq-t-'+k); if(b) b.className = 'btn btn-sm ' + ((k===t || (t==='det'&&k==='lista'))?'bp':'bs'); });
   if(t==='lista'){ paqRenderLista(); paqCargarLista(); }
   if(t==='plazo') paqRenderPlazo();
+  if(t==='pend'){ paqRenderPend(); paqCargarLista().then(()=>paqRenderPend()); }
 }
 
 window.paqLoad = async () => {
@@ -15586,7 +15589,9 @@ function paqConteo(p){
 function paqEstadoLbl(p){
   const c = paqConteo(p), n=(p.cuentas||[]).length;
   if(c.sin_revisar===n) return {t:'Recibido', col:'#8b949e'};
-  if(c.sin_revisar>0 || c.pendiente>0) return {t:'En revisión', col:'#e3b341'};
+  if(c.sin_revisar>0) return {t:'En revisión', col:'#e3b341'};
+  // Todas las cuentas ya tienen decisión, pero alguna quedó pendiente de subsanar con la IPS
+  if(c.pendiente>0) return {t:`⚠ Revisado · ${c.pendiente} pendiente${c.pendiente>1?'s':''} por subsanar`, col:'#db6d28'};
   return {t:'Revisado', col:'#3fb950'};
 }
 window.paqRenderLista = () => {
@@ -15631,6 +15636,7 @@ window.paqRenderDet = () => {
         <div style="font-size:12px;"><span style="color:#3fb950;">📬 ${cont2.radicacion}</span> · <span style="color:#db6d28;">↩ ${cont2.devolucion}</span> · <span style="color:#e3b341;">⏸ ${cont2.pendiente}</span> · <span style="color:#8b949e;">⏳ ${cont2.sin_revisar}</span></div>
       </div>
     </div>
+    ${(cont2.sin_revisar===0 && cont2.pendiente>0)?`<div style="background:rgba(219,109,40,.12);border:1px solid rgba(219,109,40,.4);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:var(--tx);">✔ <strong>Revisión completa.</strong> ⚠ Quedan <strong>${cont2.pendiente}</strong> cuenta${cont2.pendiente>1?'s':''} <strong>pendiente${cont2.pendiente>1?'s':''} por subsanar con la IPS</strong> (ya revisada${cont2.pendiente>1?'s':''}; falta que la IPS envíe lo solicitado).</div>`:''}
     ${puede?'':'<div class="alert aw" style="margin-bottom:10px;">Solo admin o superadmin pueden guardar la revisión. Puedes consultar el paquete y la trazabilidad.</div>'}
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
       <div class="field" style="margin:0;"><label class="fl">Aplicar a las ${PAQ_SEL.size} seleccionadas</label><select id="paq-b-dec">${opts('radicacion')}</select></div>
@@ -15802,7 +15808,7 @@ window.paqGuardarRevision = async () => {
       const b = writeBatch(db); ops.slice(k,k+400).forEach(o=>b.update(o.ref,o.data)); await b.commit();
     }
     const cnt = {sin_revisar:0}; nuevasCuentas.forEach(c=>{ cnt[c.decision]=(cnt[c.decision]||0)+1; });
-    const estado = cnt.sin_revisar===nuevasCuentas.length ? 'recibido' : (cnt.sin_revisar||cnt.pendiente) ? 'en_revision' : 'revisado';
+    const estado = cnt.sin_revisar===nuevasCuentas.length ? 'recibido' : cnt.sin_revisar ? 'en_revision' : (cnt.pendiente ? 'revisado_pendientes' : 'revisado');
     await updateDoc(doc(db,'paquetes',p.id), {cuentas:nuevasCuentas, estado, actualizado:serverTimestamp()});
     p.cuentas = nuevasCuentas; p.estado = estado;
     loader(false);
@@ -15899,6 +15905,69 @@ window.paqGuardarFexp = async () => {
   }catch(e){ loader(false); console.error(e); toast('Error al guardar: '+e.message,'e'); }
 };
 window.paqTogglePlazoIncl = (v) => { PAQ_PLAZO_INCL = v; paqRenderPlazo(); };
+
+/* ─────────── Control general de PENDIENTES (todos los paquetes) ─────────── */
+let PAQ_PEND_INCL = false, PAQ_PEND_IPS = '', PAQ_PEND_Q = '';
+function paqFilasPend(){
+  const hoy = hoyISO(), out = [];
+  PAQS.forEach(p => (p.cuentas||[]).forEach(c => {
+    if((c.decision||'sin_revisar')!=='pendiente') return;
+    const rec = paqRecDe(c);
+    const est = rec ? getEstadoGestion(rec) : 'eliminada';
+    const resuelta = ['radicada','anulada','eliminada'].includes(est);
+    if(resuelta && !PAQ_PEND_INCL) return;
+    if(PAQ_PEND_IPS && p.codHab!==PAQ_PEND_IPS) return;
+    const q = PAQ_PEND_Q.trim().toLowerCase();
+    if(q && ![c.factura,c.radicadoCuenta,p.radicadoInterno,c.obs,c.consec].some(v=>String(v||'').toLowerCase().includes(q))) return;
+    const desde = String(c.fechaRev||p.fechaRecepcion||'').slice(0,10);
+    const dias = desde ? Math.max(0, Math.round((new Date(hoy)-new Date(desde))/86400000)) : null;
+    out.push({p, c, rec, est, resuelta, desde, dias, pi: plazoInfo(c.fechaExpedicion, rec?.radicado?.fecha, p.fechaRecepcion)});
+  }));
+  return out.sort((a,b)=>(b.dias??-1)-(a.dias??-1));
+}
+window.paqRenderPend = () => {
+  const cont = g('paq-pend'); if(!cont) return;
+  const filas = paqFilasPend();
+  const abiertas = filas.filter(f=>!f.resuelta);
+  const valor = abiertas.reduce((t,f)=>t+(Number(f.c.valor)||0),0);
+  const viejas = abiertas.filter(f=>f.dias!=null && f.dias>10).length;
+  const porIps = {}; abiertas.forEach(f=>{ const n=paqIpsNom(f.p.codHab); porIps[n]=(porIps[n]||0)+1; });
+  cont.innerHTML = `
+    <div class="alert ai" style="margin-bottom:10px;">Todas las cuentas que quedaron <strong>«Pendiente»</strong> en la revisión de paquetes, de todos los paquetes. Quedan aquí hasta que la cuenta se radique o se anule. Los días se cuentan desde la fecha de revisión.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <div class="stat"><div class="sv" style="color:#e3b341;">${abiertas.length}</div><div class="sl">Pendientes por subsanar</div></div>
+      <div class="stat"><div class="sv" style="color:#00B2E2;">${fmtM(valor)}</div><div class="sl">Valor en pendientes</div></div>
+      <div class="stat"><div class="sv" style="color:#f85149;">${viejas}</div><div class="sl">Con más de 10 días</div></div>
+    </div>
+    ${Object.keys(porIps).length>1?`<div style="font-size:11px;color:var(--tx2);margin-bottom:8px;">${Object.entries(porIps).map(([n,k])=>`<span style="margin-right:12px;">${escH(n)}: <strong>${k}</strong></span>`).join('')}</div>`:''}
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+      <select onchange="PAQ_PEND_IPS=this.value;paqRenderPend()" style="font-size:12px;"><option value="">Todas las IPS</option>${(typeof CLIENTES_IPS!=='undefined'?CLIENTES_IPS:[]).map(c=>`<option value="${c.nit}" ${PAQ_PEND_IPS===c.nit?'selected':''}>${escH(c.razon)}</option>`).join('')}</select>
+      <input id="paq-pend-q" value="${escH(PAQ_PEND_Q)}" placeholder="Buscar factura, paquete u observación…" oninput="PAQ_PEND_Q=this.value;clearTimeout(window._pq);window._pq=setTimeout(()=>{paqRenderPend();const i=document.getElementById('paq-pend-q');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},250)" style="flex:1;min-width:220px;font-size:12px;">
+      <label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${PAQ_PEND_INCL?'checked':''} onchange="PAQ_PEND_INCL=this.checked;paqRenderPend()"> Incluir ya resueltas</label>
+      <button class="btn btn-sm bp" onclick="paqExcelPend()">📊 Descargar Excel</button>
+    </div>
+    ${!filas.length?'<div style="padding:24px;text-align:center;color:var(--tx3);font-size:12px;">No hay cuentas pendientes. ✔</div>':`
+    <div style="max-height:560px;overflow:auto;border:1px solid var(--brd);border-radius:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--sur2);position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;">Paquete</th><th style="padding:6px 8px;text-align:left;">IPS</th><th style="padding:6px 8px;text-align:left;">Factura</th><th style="padding:6px 8px;text-align:right;">Valor</th><th style="padding:6px 8px;text-align:left;">Qué falta / observación</th><th style="padding:6px 8px;text-align:left;">Revisada</th><th style="padding:6px 8px;text-align:right;">Días</th><th style="padding:6px 8px;text-align:left;">Plazo radicación</th><th style="padding:6px 8px;text-align:left;">Estado actual</th></tr></thead>
+      <tbody>${filas.map(f=>`<tr style="border-top:1px solid var(--brd);${f.resuelta?'opacity:.55;':''}"><td style="padding:5px 8px;font-family:var(--mono);font-size:11px;cursor:pointer;color:var(--acc);" onclick="paqAbrir('${f.p.id}')" title="Abrir el paquete">${escH(f.p.radicadoInterno)}</td>
+        <td style="padding:5px 8px;">${escH(paqIpsNom(f.p.codHab))}</td><td style="padding:5px 8px;font-family:var(--mono);">${escH(f.c.factura)}</td>
+        <td style="padding:5px 8px;text-align:right;">${fmtM(f.c.valor)}</td><td style="padding:5px 8px;color:#e3b341;">${escH(f.c.obs||'—')}</td>
+        <td style="padding:5px 8px;">${f.desde?fmtF(f.desde):'—'}</td><td style="padding:5px 8px;text-align:right;font-weight:600;${f.dias>10?'color:#f85149;':''}">${f.dias??'—'}</td>
+        <td style="padding:5px 8px;color:${f.pi?f.pi.col:'var(--tx3)'};">${f.pi?escH(f.pi.txt):'Sin fecha'}</td>
+        <td style="padding:5px 8px;">${f.est==='eliminada'?'(cuenta eliminada)':escH(EST_GESTION[f.est]?.lbl||f.est)}</td></tr>`).join('')}</tbody></table></div>`}`;
+};
+window.paqExcelPend = () => {
+  if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
+  const filas = paqFilasPend();
+  if(!filas.length){ toast('No hay pendientes para descargar.','w'); return; }
+  const cab = ['Paquete','Radicado cuenta','Factura','Consecutivo','IPS','Valor','Qué falta / observación','Fecha recepción paquete','Fecha revisión','Días pendiente',`Límite radicación (${PLAZO_HABILES} d. hábiles)`,'Plazo','Estado actual'];
+  const ws = XLSX.utils.aoa_to_sheet([cab, ...filas.map(f=>[f.p.radicadoInterno,f.c.radicadoCuenta,f.c.factura,f.c.consec,paqIpsNom(f.p.codHab),paqM(f.c.valor),f.c.obs||'',fmtF(f.p.fechaRecepcion),f.desde?fmtF(f.desde):'',f.dias??'',f.pi?fmtF(f.pi.limite):'Sin fecha de expedición',f.pi?f.pi.txt:'',f.est==='eliminada'?'(cuenta eliminada)':(EST_GESTION[f.est]?.lbl||f.est)])]);
+  ws['!cols']=[16,24,16,12,28,16,50,16,16,12,22,26,18].map(w=>({wch:w}));
+  ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(cab.length-1)}${filas.length+1}`}; ws['!freeze']={xSplit:0,ySplit:1};
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pendientes');
+  paqXlsxGuardar(wb, `Pendientes_paquetes_${hoyISO()}.xlsx`);
+};
+
 window.paqRenderPlazo = () => {
   const cont = g('paq-plazo'); if(!cont) return;
   const filas = paqFilasPlazo();
