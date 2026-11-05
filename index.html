@@ -15921,7 +15921,10 @@ function paqFilasPend(){
     if(q && ![c.factura,c.radicadoCuenta,p.radicadoInterno,c.obs,c.consec].some(v=>String(v||'').toLowerCase().includes(q))) return;
     const desde = String(c.fechaRev||p.fechaRecepcion||'').slice(0,10);
     const dias = desde ? Math.max(0, Math.round((new Date(hoy)-new Date(desde))/86400000)) : null;
-    out.push({p, c, rec, est, resuelta, desde, dias, pi: plazoInfo(c.fechaExpedicion, rec?.radicado?.fecha, p.fechaRecepcion)});
+    // Mismo cálculo que la pestaña «Plazo 22 días hábiles»: fecha de expedición ACTUAL de la cuenta y conteo desde HOY
+    const fexp = rec?.fechaExpedicion || c.fechaExpedicion || '';
+    const pi = plazoInfo(fexp, est==='radicada' ? (rec?.radicado?.fecha||hoy) : null);
+    out.push({p, c, rec, est, resuelta, desde, dias, fexp, pi});
   }));
   return out.sort((a,b)=>(b.dias??-1)-(a.dias??-1));
 }
@@ -15948,21 +15951,22 @@ window.paqRenderPend = () => {
     </div>
     ${!filas.length?'<div style="padding:24px;text-align:center;color:var(--tx3);font-size:12px;">No hay cuentas pendientes. ✔</div>':`
     <div style="max-height:560px;overflow:auto;border:1px solid var(--brd);border-radius:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead><tr style="background:var(--sur2);position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;">Paquete</th><th style="padding:6px 8px;text-align:left;">IPS</th><th style="padding:6px 8px;text-align:left;">Factura</th><th style="padding:6px 8px;text-align:right;">Valor</th><th style="padding:6px 8px;text-align:left;">Qué falta / observación</th><th style="padding:6px 8px;text-align:left;">Revisada</th><th style="padding:6px 8px;text-align:right;">Días</th><th style="padding:6px 8px;text-align:left;">Plazo radicación</th><th style="padding:6px 8px;text-align:left;">Estado actual</th></tr></thead>
+      <thead><tr style="background:var(--sur2);position:sticky;top:0;"><th style="padding:6px 8px;text-align:left;">Paquete</th><th style="padding:6px 8px;text-align:left;">IPS</th><th style="padding:6px 8px;text-align:left;">Factura</th><th style="padding:6px 8px;text-align:right;">Valor</th><th style="padding:6px 8px;text-align:left;">Qué falta / observación</th><th style="padding:6px 8px;text-align:left;">Revisada</th><th style="padding:6px 8px;text-align:right;">Días</th><th style="padding:6px 8px;text-align:left;">F. expedición</th><th style="padding:6px 8px;text-align:left;">Límite</th><th style="padding:6px 8px;text-align:left;">Plazo radicación</th><th style="padding:6px 8px;text-align:left;">Estado actual</th></tr></thead>
       <tbody>${filas.map(f=>`<tr style="border-top:1px solid var(--brd);${f.resuelta?'opacity:.55;':''}"><td style="padding:5px 8px;font-family:var(--mono);font-size:11px;cursor:pointer;color:var(--acc);" onclick="paqAbrir('${f.p.id}')" title="Abrir el paquete">${escH(f.p.radicadoInterno)}</td>
         <td style="padding:5px 8px;">${escH(paqIpsNom(f.p.codHab))}</td><td style="padding:5px 8px;font-family:var(--mono);">${escH(f.c.factura)}</td>
         <td style="padding:5px 8px;text-align:right;">${fmtM(f.c.valor)}</td><td style="padding:5px 8px;color:#e3b341;">${escH(f.c.obs||'—')}</td>
         <td style="padding:5px 8px;">${f.desde?fmtF(f.desde):'—'}</td><td style="padding:5px 8px;text-align:right;font-weight:600;${f.dias>10?'color:#f85149;':''}">${f.dias??'—'}</td>
-        <td style="padding:5px 8px;color:${f.pi?f.pi.col:'var(--tx3)'};">${f.pi?escH(f.pi.txt):'Sin fecha'}</td>
+        <td style="padding:5px 8px;">${f.fexp?fmtF(f.fexp):'—'}</td><td style="padding:5px 8px;">${f.pi?fmtF(f.pi.limite):'—'}</td>
+        <td style="padding:5px 8px;color:${f.pi?f.pi.col:'var(--tx3)'};font-weight:600;">${f.pi?escH(f.pi.txt):'Sin fecha de expedición'}</td>
         <td style="padding:5px 8px;">${f.est==='eliminada'?'(cuenta eliminada)':escH(EST_GESTION[f.est]?.lbl||f.est)}</td></tr>`).join('')}</tbody></table></div>`}`;
 };
 window.paqExcelPend = () => {
   if(typeof XLSX==='undefined'){ toast('Librería Excel no disponible.','w'); return; }
   const filas = paqFilasPend();
   if(!filas.length){ toast('No hay pendientes para descargar.','w'); return; }
-  const cab = ['Paquete','Radicado cuenta','Factura','Consecutivo','IPS','Valor','Qué falta / observación','Fecha recepción paquete','Fecha revisión','Días pendiente',`Límite radicación (${PLAZO_HABILES} d. hábiles)`,'Plazo','Estado actual'];
-  const ws = XLSX.utils.aoa_to_sheet([cab, ...filas.map(f=>[f.p.radicadoInterno,f.c.radicadoCuenta,f.c.factura,f.c.consec,paqIpsNom(f.p.codHab),paqM(f.c.valor),f.c.obs||'',fmtF(f.p.fechaRecepcion),f.desde?fmtF(f.desde):'',f.dias??'',f.pi?fmtF(f.pi.limite):'Sin fecha de expedición',f.pi?f.pi.txt:'',f.est==='eliminada'?'(cuenta eliminada)':(EST_GESTION[f.est]?.lbl||f.est)])]);
-  ws['!cols']=[16,24,16,12,28,16,50,16,16,12,22,26,18].map(w=>({wch:w}));
+  const cab = ['Paquete','Radicado cuenta','Factura','Consecutivo','IPS','Valor','Qué falta / observación','Fecha recepción paquete','Fecha revisión','Días pendiente','Fecha expedición factura',`Límite radicación (${PLAZO_HABILES} d. hábiles)`,'Plazo','Estado actual'];
+  const ws = XLSX.utils.aoa_to_sheet([cab, ...filas.map(f=>[f.p.radicadoInterno,f.c.radicadoCuenta,f.c.factura,f.c.consec,paqIpsNom(f.p.codHab),paqM(f.c.valor),f.c.obs||'',fmtF(f.p.fechaRecepcion),f.desde?fmtF(f.desde):'',f.dias??'',f.fexp?fmtF(f.fexp):'',f.pi?fmtF(f.pi.limite):'Sin fecha de expedición',f.pi?f.pi.txt:'',f.est==='eliminada'?'(cuenta eliminada)':(EST_GESTION[f.est]?.lbl||f.est)])]);
+  ws['!cols']=[16,24,16,12,28,16,50,16,16,12,16,22,26,18].map(w=>({wch:w}));
   ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(cab.length-1)}${filas.length+1}`}; ws['!freeze']={xSplit:0,ySplit:1};
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pendientes');
   paqXlsxGuardar(wb, `Pendientes_paquetes_${hoyISO()}.xlsx`);
