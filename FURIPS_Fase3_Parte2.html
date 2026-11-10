@@ -5630,7 +5630,11 @@ function buildFURData() {
 
 // ── Construye la entrada de UNA factura para el JSON FUR (sin el envoltorio Datos_IPS) ──
 // Reutilizable tanto para la descarga individual como para el lote.
-function buildFURReclamacionEntry(d) {
+function buildFURReclamacionEntry(d0) {
+  // ADRES rechaza datos de remisión / transporte cuando el tipo de atención (C49) no los incluye: se envían vacíos.
+  const d = {...d0}; const ta49 = String(d.tipo_aten||'').trim();
+  if(!['3','7','8'].includes(ta49)) ['cod_rem','td_prof','nd_prof','cod_rec_ts','fec_acept','hora_acept','placa_as','tipo_ts'].forEach(k=>{ d[k]=''; });
+  if(!['2','6','8'].includes(ta49)) ['tipo_tp','placa_ap','cod_rec_tp','dir_desde','dir_hasta'].forEach(k=>{ d[k]=''; });
   const toISO = v => {
     if(!v) return null;
     if(/^\d{2}\/\d{2}\/\d{4}$/.test(v)){ const [dd,mm,yy]=v.split('/'); return `${yy}-${mm}-${dd}`; }
@@ -6903,6 +6907,8 @@ function furSerValidar(rec){
     if(['1','5','6','7','8'].includes(t) && soatOk && cod && SOAT_DB[cod]) out.push(`${n}: el código ${cod} es SOAT pero el tipo es ${t}; no coincide`);
     if(['1','5','6','7','8'].includes(t) && cupsOk && cod && CUPS_DB[cod] && !(soatOk && SOAT_DB[cod])) out.push(`${n}: ${cod} es un código CUPS (procedimiento), no de tipo ${t}; debe ser tipo 2 con el código SOAT`);
     if(furSerEsLineaProcedimientoQx(r)) out.push(`${n}: el procedimiento quirúrgico ${cod} debe digitarse discriminado como está en la factura (cirujano, anestesiólogo, ayudante, derechos de sala y materiales), cada línea con código Qx ${cod} y consecutivo`);
+    { const cq = String(r.codQx||'').trim();
+      if(cq && typeof GRUPOS_READY!=='undefined' && GRUPOS_READY && !furSerQxGrupo(cq)) out.push(`${n}: el código general del procedimiento quirúrgico (C4) "${cq}" no corresponde a un procedimiento quirúrgico de los arts. 2 a 18 del Decreto 780/2016; ADRES no lo permite. Si la actividad no es un acto quirúrgico de esa lista, deja Código Qx y Consecutivo vacíos y digita la cantidad.`); }
     if(String(r.codQx||'').trim() && !String(r.consecQx||'').trim() && t==='2') out.push(`${n}: tiene código Qx pero falta el consecutivo del procedimiento quirúrgico`);
     // Descripción
     if(!furSerLimpiarDesc(r.descripcion)) out.push(`${n}: falta la descripción del servicio (C8)`);
@@ -6914,6 +6920,13 @@ function furSerValidar(rec){
     ['vrUnitFact','vrUnitRec'].forEach(k=>{ const v=String(r[k]??'').trim(); if(v && !/^\d+$/.test(v)) out.push(`${n}: ${k==='vrUnitFact'?'valor unitario facturado':'valor unitario reclamado'} debe ser un entero sin puntos, comas ni decimales`); });
     if(vf>0 && vr>vf) out.push(`${n}: el valor reclamado (${vr}) no puede superar el facturado (${vf})`);
   });
+  // Coherencia con el FUR: transporte primario (tipo 3) exige C49 = 2, 6 u 8; transporte secundario (tipo 4) exige C49 = 3, 7 u 8
+  { const el = (typeof REC!=='undefined' && rec===REC) ? g('fur-tipo_aten') : null;
+    const ta = String((el && el.value) || (rec.fur||{}).tipo_aten || '').trim();
+    if(ta){
+      if(f.some(r=>String(r.tipo||'').trim()==='3') && !['2','6','8'].includes(ta)) out.push(`Hay servicios de transporte primario (tipo 3): en el FUR el campo «Es atención inicial / remitido / control» (C49) debe ser 2, 6 u 8 y hoy es ${ta}`);
+      if(f.some(r=>String(r.tipo||'').trim()==='4') && !['3','7','8'].includes(ta)) out.push(`Hay servicios de transporte secundario (tipo 4): en el FUR el campo «Es atención inicial / remitido / control» (C49) debe ser 3, 7 u 8 y hoy es ${ta}`);
+    } }
   const nit=String(nitIPS(rec,g('fur-nit')?.value)||'');
   if(!nit) out.push('Falta el NIT del prestador');
   else if(nit.length>10 || !/^\d+$/.test(nit)) out.push('NIT: solo dígitos, máximo 10 (IPS: máx. 9, sin dígito de verificación)');
