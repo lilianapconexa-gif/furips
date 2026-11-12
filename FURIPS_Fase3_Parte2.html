@@ -5638,6 +5638,12 @@ function furCamposOmitidos(d){
   grupos.forEach(([ok,ids,nom]) => { if(!ok.includes(ta)) ids.forEach(id => { if(String(d[id]||'').trim()){ const sp=(typeof FUR_SPEC!=='undefined'?FUR_SPEC:[]).find(x=>x[2]===id); out.push({c:'C'+(sp?sp[3]:'?'), nom}); } }); });
   return {ta, out};
 }
+// Si la IPS cobra el transporte secundario (C49 = 3, 7 u 8), quien REMITE al paciente es la propia IPS: C52 debe ser su código de habilitación
+function furRemiteAviso(d, codHab){
+  const ta = String(d.tipo_aten||'').trim(), rem = String(d.cod_rem||'').trim();
+  if(!['3','7','8'].includes(ta) || !rem || !codHab || rem===String(codHab)) return '';
+  return `El prestador que REMITE (C52) es ${rem}, pero la IPS de esta factura es ${codHab}. Si tu IPS cobra el transporte secundario (C49 = ${ta}), el prestador que remite es tu IPS y el que recibe (C53) es la IPS de destino. Si el paciente llegó remitido a tu IPS desde otra, el tipo de atención (C49) debería ser 4 y la remisión no se reporta.`;
+}
 function buildFURReclamacionEntry(d0) {
   // ADRES rechaza datos de remisión / transporte cuando el tipo de atención (C49) no los incluye: se envían vacíos.
   const d = {...d0}; const ta49 = String(d.tipo_aten||'').trim();
@@ -5717,22 +5723,22 @@ function buildFURReclamacionEntry(d0) {
     },
 
     Datos_de_remision: {
+      Placa_ambulancia_que_realiza_el_traslado_secundario: d.placa_as    || null,
+      Tipo_de_servicio_del_transporte_secundario:          d.tipo_ts     || null,
       Codigo_de_habilitacion_del_prestador_que_remite:     d.cod_rem     || null,
+      Codigo_de_habilitacion_del_prestador_que_recibe:     d.cod_rec_ts  || null,
       TIPO_de_documento_Profesional_que_recibe:            d.td_prof     || null,
       Numero_de_documento_Profesional_que_recibe:          d.nd_prof     || null,
-      Codigo_de_habilitacion_del_prestador_que_recibe:     d.cod_rec_ts  || null,
       Fecha_de_aceptacion:                                 toISO(d.fec_acept),
-      Hora_aceptacion:                                     d.hora_acept  || null,
-      Placa_ambulancia_que_realiza_el_traslado_secundario: d.placa_as    || null,
-      Tipo_de_servicio_del_transporte_secundario:          d.tipo_ts     || null
+      Hora_aceptacion:                                     d.hora_acept  || null
     },
 
     Datos_Transporte_y_movilizacion_de_la_victima: {
+      Tipo_de_servicio_del_transporte:                                    d.tipo_tp    || null,
       Placa_ambulancia_que_realiza_el_traslado:                           d.placa_ap   || null,
       Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario: d.cod_rec_tp || null,
       Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion:       d.dir_desde  || null,
-      Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS:  d.dir_hasta  || null,
-      Tipo_de_servicio_del_transporte:                                    d.tipo_tp    || null
+      Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS:  d.dir_hasta  || null
     }
   };
 }
@@ -5806,19 +5812,19 @@ const FUR_SPEC = [
  ['Datos_del_conductor_del_vehiculo_involucrado','Telefono_de_residencia_del_conductor','tel_cond',47,'num',10],
  ['Datos_Relacionados_con_la_Atencion_de_La_Victima','Uso_material_de_osteosintesis_en_la_atencion','osteosint',48,'enum',1,['1','2']],
  ['Datos_Relacionados_con_la_Atencion_de_La_Victima','Es_atencion_inicial_paciente_remitido_o_control','tipo_aten',49,'enum',1,'1,2,3,4,5,6,7,8'.split(',')],
- ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_remite','cod_rem',52,'num',12],
- ['Datos_de_remision','TIPO_de_documento_Profesional_que_recibe','td_prof',54,'enum',2,'CC,CE,CD,PA,PE,DE,PT'.split(',')],
- ['Datos_de_remision','Numero_de_documento_Profesional_que_recibe','nd_prof',55,'alnum',20],
- ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_recibe','cod_rec_ts',53,'num',12],
- ['Datos_de_remision','Fecha_de_aceptacion','fec_acept',56,'fecha',10],
- ['Datos_de_remision','Hora_aceptacion','hora_acept',57,'hora',5],
  ['Datos_de_remision','Placa_ambulancia_que_realiza_el_traslado_secundario','placa_as',50,'alnum',7],
  ['Datos_de_remision','Tipo_de_servicio_del_transporte_secundario','tipo_ts',51,'enum',1,['1','2']],
+ ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_remite','cod_rem',52,'num',12],
+ ['Datos_de_remision','Codigo_de_habilitacion_del_prestador_que_recibe','cod_rec_ts',53,'num',12],
+ ['Datos_de_remision','TIPO_de_documento_Profesional_que_recibe','td_prof',54,'enum',2,'CC,CE,CD,PA,PE,DE,PT'.split(',')],
+ ['Datos_de_remision','Numero_de_documento_Profesional_que_recibe','nd_prof',55,'alnum',20],
+ ['Datos_de_remision','Fecha_de_aceptacion','fec_acept',56,'fecha',10],
+ ['Datos_de_remision','Hora_aceptacion','hora_acept',57,'hora',5],
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Tipo_de_servicio_del_transporte','tipo_tp',58,'enum',1,['1','2']],
  ['Datos_Transporte_y_movilizacion_de_la_victima','Placa_ambulancia_que_realiza_el_traslado','placa_ap',59,'alnum',7],
  ['Datos_Transporte_y_movilizacion_de_la_victima','Codigo_de_habilitacion_del_prestador_que_recibe_transporte_primario','cod_rec_tp',60,'num',12],
  ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_desde_el_sitio_del_evento_Direccion','dir_desde',61,'dir',100],
- ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS','dir_hasta',62,'dir',100],
- ['Datos_Transporte_y_movilizacion_de_la_victima','Tipo_de_servicio_del_transporte','tipo_tp',58,'enum',1,['1','2']]
+ ['Datos_Transporte_y_movilizacion_de_la_victima','Transporte_de_la_victima_hasta_el_fin_del_recorrido_direccion_IPS','dir_hasta',62,'dir',100]
 ];
 const FUR_RE = {
   num:/^[0-9]+$/, alnum:/^[A-Za-z0-9]+$/, texto:/^[A-Za-zÀ-ÿñÑ0-9 ]+$/,
@@ -6123,6 +6129,8 @@ window.descargarFURjson = (fmt) => {
       const cs = om.out.map(x=>x.c).join(', ');
       alert(`Ojo: el tipo de atención (C49) es ${om.ta||'(vacío)'} y NO incluye ${[...new Set(om.out.map(x=>x.nom))].join(' ni ')}.\n\nLos campos ${cs} que digitaste NO se incluyen en el JSON (ADRES los rechaza cuando el tipo de atención no los contempla).\n\nSi sí debes reportarlos, cambia el tipo de atención (C49): 3, 7 u 8 para remisión / transporte secundario; 2, 6 u 8 para transporte primario.`);
     } }
+  { const av = furRemiteAviso(buildFURData(), (typeof REC!=='undefined' && REC) ? REC.codHab : '');
+    if(av && !confirm('Revisa la remisión:\n\n'+av+'\n\n¿Descargar de todas formas?')) return; }
   const json = buildFURJson();
   if(fmt==='xlsx') return window.descargarExcel('fur', json, nit);
   const filename = `FUR_${nit}.json`;
