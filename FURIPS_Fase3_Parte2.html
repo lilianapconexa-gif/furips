@@ -5630,6 +5630,14 @@ function buildFURData() {
 
 // ── Construye la entrada de UNA factura para el JSON FUR (sin el envoltorio Datos_IPS) ──
 // Reutilizable tanto para la descarga individual como para el lote.
+// Campos digitados que NO saldrán en el JSON porque el tipo de atención (C49) no los incluye
+function furCamposOmitidos(d){
+  const ta = String(d.tipo_aten||'').trim(), out = [];
+  const grupos = [[['3','7','8'],['placa_as','tipo_ts','cod_rem','cod_rec_ts','td_prof','nd_prof','fec_acept','hora_acept'],'remisión / transporte secundario'],
+                  [['2','6','8'],['tipo_tp','placa_ap','cod_rec_tp','dir_desde','dir_hasta'],'transporte primario']];
+  grupos.forEach(([ok,ids,nom]) => { if(!ok.includes(ta)) ids.forEach(id => { if(String(d[id]||'').trim()){ const sp=(typeof FUR_SPEC!=='undefined'?FUR_SPEC:[]).find(x=>x[2]===id); out.push({c:'C'+(sp?sp[3]:'?'), nom}); } }); });
+  return {ta, out};
+}
 function buildFURReclamacionEntry(d0) {
   // ADRES rechaza datos de remisión / transporte cuando el tipo de atención (C49) no los incluye: se envían vacíos.
   const d = {...d0}; const ta49 = String(d.tipo_aten||'').trim();
@@ -6110,6 +6118,11 @@ window.descargarFURjson = (fmt) => {
     return;
   }
   if(!furPuerta()) return;
+  { const om = furCamposOmitidos(buildFURData());
+    if(om.out.length){
+      const cs = om.out.map(x=>x.c).join(', ');
+      alert(`Ojo: el tipo de atención (C49) es ${om.ta||'(vacío)'} y NO incluye ${[...new Set(om.out.map(x=>x.nom))].join(' ni ')}.\n\nLos campos ${cs} que digitaste NO se incluyen en el JSON (ADRES los rechaza cuando el tipo de atención no los contempla).\n\nSi sí debes reportarlos, cambia el tipo de atención (C49): 3, 7 u 8 para remisión / transporte secundario; 2, 6 u 8 para transporte primario.`);
+    } }
   const json = buildFURJson();
   if(fmt==='xlsx') return window.descargarExcel('fur', json, nit);
   const filename = `FUR_${nit}.json`;
