@@ -15586,13 +15586,30 @@ function paqConteo(p){
   (p.cuentas||[]).forEach(x=>{ c[x.decision||'sin_revisar']++; });
   return c;
 }
+// Avance de radicación real en ADRES: cuántas cuentas del paquete ya están en estado "Radicada".
+// Las anuladas o eliminadas no cuentan (ni a favor ni en contra).
+function paqRadAvance(p){
+  let tot=0, rad=0;
+  (p.cuentas||[]).forEach(c=>{
+    const rec = RECS_ALL.find(r=>r.id===c.recId); if(!rec) return;
+    const est = getEstadoGestion(rec); if(est==='anulada') return;
+    tot++; if(est==='radicada') rad++;
+  });
+  return {tot, rad};
+}
 function paqEstadoLbl(p){
-  const c = paqConteo(p), n=(p.cuentas||[]).length;
+  const c = paqConteo(p), n=(p.cuentas||[]).length, a = paqRadAvance(p);
   if(c.sin_revisar===n) return {t:'Recibido', col:'#8b949e'};
   if(c.sin_revisar>0) return {t:'En revisión', col:'#e3b341'};
+  // Todas las cuentas del paquete ya están radicadas en ADRES
+  if(a.tot>0 && a.rad===a.tot) return {t:`✔ Radicado 100% (${a.rad}/${a.tot})`, col:'#3fb950'};
+  // Todas las que debían radicarse ya se radicaron; el resto está devuelto a la IPS
+  if(c.pendiente===0 && c.radicacion>0 && c.devolucion>0 && a.rad>0 && a.rad>=c.radicacion)
+    return {t:`✔ Radicado · ${c.devolucion} devuelta${c.devolucion>1?'s':''} a la IPS`, col:'#3fb950'};
+  const av = a.rad>0 ? ` · radicadas ${a.rad}/${a.tot}` : '';
   // Todas las cuentas ya tienen decisión, pero alguna quedó pendiente de subsanar con la IPS
-  if(c.pendiente>0) return {t:`⚠ Revisado · ${c.pendiente} pendiente${c.pendiente>1?'s':''} por subsanar`, col:'#db6d28'};
-  return {t:'Revisado', col:'#3fb950'};
+  if(c.pendiente>0) return {t:`⚠ Revisado · ${c.pendiente} pendiente${c.pendiente>1?'s':''} por subsanar${av}`, col:'#db6d28'};
+  return {t:'Revisado'+av, col:'#3fb950'};
 }
 window.paqRenderLista = () => {
   const cont = g('paq-lista-pq'); if(!cont) return;
@@ -15636,6 +15653,7 @@ window.paqRenderDet = () => {
         <div style="font-size:12px;"><span style="color:#3fb950;">📬 ${cont2.radicacion}</span> · <span style="color:#db6d28;">↩ ${cont2.devolucion}</span> · <span style="color:#e3b341;">⏸ ${cont2.pendiente}</span> · <span style="color:#8b949e;">⏳ ${cont2.sin_revisar}</span></div>
       </div>
     </div>
+    ${(()=>{ const a=paqRadAvance(p); return (a.tot>0 && a.rad===a.tot)?`<div style="background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.4);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:var(--tx);">✔ <strong>Paquete radicado al 100 %</strong> en ADRES (${a.rad} de ${a.tot} cuentas).</div>`:(a.rad>0?`<div style="background:rgba(121,192,255,.1);border:1px solid rgba(121,192,255,.35);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:var(--tx);">📬 Radicación en ADRES: <strong>${a.rad} de ${a.tot}</strong> cuentas.</div>`:''); })()}
     ${(cont2.sin_revisar===0 && cont2.pendiente>0)?`<div style="background:rgba(219,109,40,.12);border:1px solid rgba(219,109,40,.4);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:var(--tx);">✔ <strong>Revisión completa.</strong> ⚠ Quedan <strong>${cont2.pendiente}</strong> cuenta${cont2.pendiente>1?'s':''} <strong>pendiente${cont2.pendiente>1?'s':''} por subsanar con la IPS</strong> (ya revisada${cont2.pendiente>1?'s':''}; falta que la IPS envíe lo solicitado).</div>`:''}
     ${puede?'':'<div class="alert aw" style="margin-bottom:10px;">Solo admin o superadmin pueden guardar la revisión. Puedes consultar el paquete y la trazabilidad.</div>'}
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:var(--sur2);border:1px solid var(--brd);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
